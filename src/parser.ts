@@ -1,21 +1,7 @@
-import { Rule, Parser, apply, rule, seq, tok } from "typescript-parsec";
+import { apply, rep, rule, seq, tok } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
 
-function newRule<TResult>(initializer: (rule: Rule<TokenType, TResult>) => void) {
-  const empty = rule<TokenType, TResult>();
-  initializer(empty);
-  return empty;
-}
-
-function toRule(parser: Parser<TokenType, unknown>) {
-  const newRule = rule();
-  newRule.setPattern(parser);
-  return newRule;
-}
-
-const OPTIONAL_WHITESPACE = toRule(
-  tok(TokenType.whitespace)
-);
+const OPTIONAL_WHITESPACE = rep(tok(TokenType.whitespace));
 
 const EXPR = rule<TokenType, number>();
 EXPR.setPattern(
