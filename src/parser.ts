@@ -1,5 +1,11 @@
-import { apply, rule, seq, tok } from "typescript-parsec";
+import { Rule, apply, rule, seq, tok } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
+
+function newRule<TResult>(initializer: (rule: Rule<TokenType, TResult>) => void) {
+  const empty = rule<TokenType, TResult>();
+  initializer(empty);
+  return empty;
+}
 
 const EXPR = rule<TokenType, number>();
 EXPR.setPattern(
