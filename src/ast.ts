@@ -6,6 +6,7 @@ export enum AstNodeType {
   assign,
   ident,
   int_literal,
+  expressions,
 }
 
 export interface AstNodeParams {

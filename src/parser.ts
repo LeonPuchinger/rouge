@@ -1,4 +1,4 @@
-import { apply, rep, seq, tok } from "typescript-parsec";
+import { apply, list_sc, seq, tok } from "typescript-parsec";
 import { AstNode, AstNodeType } from "./ast.ts";
 import { TokenType } from "./lexer.ts";
 
@@ -33,17 +33,22 @@ const ASSIGNMENT = apply(
   (values) =>
     new AstNode({
       nodeType: AstNodeType.assign,
-      token: values[1],
-      value: values[1].text,
       children: [values[0], values[2]],
     }),
 );
 
 const EXPRESSION = ASSIGNMENT;
 
-export const EXPRESSIONS = rep(
-  seq(
+const EXPRESSIONS = apply(
+  list_sc(
     EXPRESSION,
     BREAKING_WHITESPACE,
   ),
+  (expressions) =>
+    new AstNode({
+      nodeType: AstNodeType.expressions,
+      children: expressions,
+    }),
 );
+
+export const parser = EXPRESSIONS;
