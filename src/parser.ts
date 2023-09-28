@@ -1,7 +1,8 @@
-import { alt, apply, seq, tok } from "typescript-parsec";
+import { apply, rep, seq, tok } from "typescript-parsec";
 import { AstNode, AstNodeType } from "./ast.ts";
 import { TokenType } from "./lexer.ts";
 
+const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
 const IDENTIFIER = apply(
   tok(TokenType.ident),
@@ -36,4 +37,13 @@ const ASSIGNMENT = apply(
       value: values[1].text,
       children: [values[0], values[2]],
     }),
+);
+
+const EXPRESSION = ASSIGNMENT;
+
+export const EXPRESSIONS = rep(
+  seq(
+    EXPRESSION,
+    BREAKING_WHITESPACE,
+  ),
 );
