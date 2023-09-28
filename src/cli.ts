@@ -1,8 +1,4 @@
-import { lexer } from "./lexer.ts"
+import { interpret } from "./main.ts";
 
 // test with example string
-let result = lexer.parse("hello = 1");
-while (result != undefined) {
-    console.log(result);
-    result = result.next;
-}
+interpret("hello = 1");
