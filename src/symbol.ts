@@ -36,10 +36,25 @@ export class Table {
     }
   }
 
-  private findSymbolInScope(name: string, scope: Scope, symbolType?: SymbolType): Option<Symbol> {
+  private findSymbolInScope(
+    name: string,
+    scope: Scope,
+    symbolType?: SymbolType,
+  ): Option<Symbol> {
     const symbol = scope.get(name);
     if (symbolType && symbol?.symbolType) {
       return some(symbol);
+    }
+    return none();
+  }
+
+  findSymbolInCurrentScope(
+    name: string,
+    symbolType?: SymbolType,
+  ): Option<Symbol> {
+    const current = this.scopes.toReversed().at(0);
+    if (current !== undefined) {
+      return this.findSymbolInScope(name, current, symbolType);
     }
     return none();
   }
