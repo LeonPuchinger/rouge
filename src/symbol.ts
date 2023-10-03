@@ -36,22 +36,23 @@ export class Table {
     }
   }
 
-  private findSymbolInScope(name: string, scope: Scope): Symbol | undefined {
-    return scope.get(name);
+  private findSymbolInScope(name: string, scope: Scope, symbolType?: SymbolType): Option<Symbol> {
+    const symbol = scope.get(name);
+    if (symbolType && symbol?.symbolType) {
+      return some(symbol);
+    }
+    return none();
   }
 
-  findSymbol(name: string, symbolType?: SymbolType): Symbol | undefined {
-    for (const current_scope of this.scopes) {
-      const symbol = this.findSymbolInScope(name, current_scope);
-      if (symbol === undefined) {
-        continue;
-      }
-      if (symbolType && symbol.symbolType !== symbolType) {
+  findSymbol(name: string, symbolType?: SymbolType): Option<Symbol> {
+    for (const current_scope of this.scopes.toReversed()) {
+      const symbol = this.findSymbolInScope(name, current_scope, symbolType);
+      if (symbol.kind === "none") {
         continue;
       }
       return symbol;
     }
-    return undefined;
+    return none();
   }
 
   setSymbol(name: string, symbol: Symbol) {
