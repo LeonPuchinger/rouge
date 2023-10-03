@@ -1,6 +1,8 @@
 import { AstNode } from "./ast.ts";
 import { none, Option, some } from "./util/monad.ts";
 
+// Symbol
+
 export enum SymbolType {
   variable,
 }
@@ -8,17 +10,43 @@ export enum SymbolType {
 interface SymbolParams {
   symbolType: SymbolType;
   node?: AstNode;
+  value?: SymbolValue<unknown>;
 }
 
 export class Symbol {
   symbolType: SymbolType;
   node: Option<AstNode>;
+  value: Option<SymbolValue<unknown>>;
 
   constructor(params: SymbolParams) {
     this.node = params.node ? some(params.node) : none();
     this.symbolType = params.symbolType;
+    this.value = params.value ? some(params.value) : none();
   }
 }
+
+// Symbol Value
+
+enum SymbolValueType {
+  number,
+}
+
+interface SymbolValueParams<T> {
+  valueType: SymbolValueType;
+  value: T;
+}
+
+class SymbolValue<T> {
+  valueType: SymbolValueType;
+  value: T;
+
+  constructor(params: SymbolValueParams<T>) {
+    this.valueType = params.valueType;
+    this.value = params.value;
+  }
+}
+
+// Symbol Table
 
 type Scope = Map<string, Symbol>;
 
