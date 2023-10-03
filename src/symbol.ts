@@ -44,6 +44,14 @@ class SymbolValue<T> {
     this.valueType = params.valueType;
     this.value = params.value;
   }
+
+  asNumber(): SymbolValue<number> {
+    if (this.valueType !== SymbolValueType.number) {
+      // safety
+      // TODO: error handling, logging, ...
+    }
+    return this as SymbolValue<number>;
+  }
 }
 
 // Symbol Table
