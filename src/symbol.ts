@@ -27,7 +27,7 @@ export class Symbol {
 
 // Symbol Value
 
-enum SymbolValueType {
+export enum SymbolValueType {
   number,
 }
 
@@ -36,7 +36,7 @@ interface SymbolValueParams<T> {
   value: T;
 }
 
-class SymbolValue<T> {
+export class SymbolValue<T> {
   valueType: SymbolValueType;
   value: T;
 
