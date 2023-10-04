@@ -58,7 +58,7 @@ class SymbolValue<T> {
 
 type Scope = Map<string, Symbol>;
 
-export class Table {
+export class SymbolTable {
   private scopes: Scope[] = [new Map()];
 
   pushScope() {
