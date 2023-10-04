@@ -36,4 +36,8 @@ export class AstNode {
   addChild(child: AstNode) {
     this.children.push(child);
   }
+
+  child(index: number): AstNode | undefined {
+    return this.children.at(index);
+  } 
 }
