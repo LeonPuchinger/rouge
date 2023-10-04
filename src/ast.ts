@@ -1,6 +1,6 @@
 import { Token } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
-import { none, Option, some } from "./util/monad.ts";
+import { None, Option, Some } from "./util/monad.ts";
 
 export enum AstNodeType {
   assign,
@@ -25,11 +25,11 @@ export class AstNode {
   constructor(params: AstNodeParams) {
     this.nodeType = params.nodeType;
     this.token = (params.token !== undefined && params.token !== null)
-      ? some(params.token)
-      : none();
+      ? Some(params.token)
+      : None();
     this.value = (params.value !== undefined && params.value !== null)
-      ? some(params.value)
-      : none();
+      ? Some(params.value)
+      : None();
     this.children = params.children ?? [];
   }
 

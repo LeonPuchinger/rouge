@@ -1,5 +1,5 @@
 import { AstNode } from "./ast.ts";
-import { none, Option, some } from "./util/monad.ts";
+import { None, Option, Some } from "./util/monad.ts";
 
 // Symbol
 
@@ -19,9 +19,9 @@ export class Symbol {
   value: Option<SymbolValue<unknown>>;
 
   constructor(params: SymbolParams) {
-    this.node = params.node ? some(params.node) : none();
+    this.node = params.node ? Some(params.node) : None();
     this.symbolType = params.symbolType;
-    this.value = params.value ? some(params.value) : none();
+    this.value = params.value ? Some(params.value) : None();
   }
 }
 
@@ -79,9 +79,9 @@ export class SymbolTable {
   ): Option<Symbol> {
     const symbol = scope.get(name);
     if (symbolType && symbol?.symbolType) {
-      return some(symbol);
+      return Some(symbol);
     }
-    return none();
+    return None();
   }
 
   findSymbolInCurrentScope(
@@ -92,7 +92,7 @@ export class SymbolTable {
     if (current !== undefined) {
       return this.findSymbolInScope(name, current, symbolType);
     }
-    return none();
+    return None();
   }
 
   findSymbol(name: string, symbolType?: SymbolType): Option<Symbol> {
@@ -103,7 +103,7 @@ export class SymbolTable {
       }
       return symbol;
     }
-    return none();
+    return None();
   }
 
   setSymbol(name: string, symbol: Symbol) {
