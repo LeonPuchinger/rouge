@@ -20,21 +20,26 @@ export function unwrapOr<T>(option: Option<T>, defaultValue: T): T {
 // operations on Option(al) can be called as methods
 
 interface Optional<T> {
+  kind: "some" | "none";
   map<U>(fn: (value: T) => U): Optional<U>;
 }
 
 export function Some<T>(value: T): Optional<T> {
   return {
+    kind: "some",
+
     map: function<U> (fn: (value: T) => U): Optional<U> {
       return Some(fn(value));
-    }
+    },
   }
 }
 
 export function None<T>(): Optional<T> {
   return {
+    kind: "none",
+    
     map: function<U> (_fn: (value: T) => U): Optional<U> {
       return None() as Optional<U>;
-    }
+    },
   }
 }
