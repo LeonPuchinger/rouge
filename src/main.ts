@@ -1,4 +1,5 @@
 import { AstNode } from "./ast.ts";
+import { interpret } from "./interpreter.ts";
 import { lexer } from "./lexer.ts";
 import { parser } from "./parser.ts";
 
@@ -23,6 +24,5 @@ export function run(source: string) {
     console.log("Use the debugger to inspect the other results.");
   }
   const first_candidate = parseResult.candidates[0];
-  // language is not implemented yet, preorder through AST instead
-  preorder_ast(first_candidate.result);
+  interpret(first_candidate.result);
 }
