@@ -7,7 +7,7 @@ function preorder_ast(node: AstNode) {
   node.children.forEach((child) => preorder_ast(child));
 }
 
-export function interpret(source: string) {
+export function run(source: string) {
   const tokenStream = lexer.parse(source);
   const parseResult = parser.parse(tokenStream);
   if (!parseResult.successful) {

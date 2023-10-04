@@ -1,4 +1,4 @@
-import { interpret } from "./main.ts";
+import { run } from "./main.ts";
 
 // test with example string
-interpret("hello = 1");
+run("hello = 1");
