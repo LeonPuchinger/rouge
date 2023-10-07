@@ -1,12 +1,6 @@
-import { AstNode } from "./ast.ts";
 import { interpret } from "./interpreter.ts";
 import { lexer } from "./lexer.ts";
 import { parser } from "./parser.ts";
-
-function preorder_ast(node: AstNode) {
-  console.log(node);
-  node.children.forEach((child) => preorder_ast(child));
-}
 
 export function run(source: string) {
   const tokenStream = lexer.parse(source);
