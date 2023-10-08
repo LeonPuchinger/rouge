@@ -1,6 +1,6 @@
 import { Token } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
-import { None, Option, Some } from "./util/monad.ts";
+import { None, Option, Some } from "./util/monad/index.ts";
 
 export enum AstNodeType {
   assign,
