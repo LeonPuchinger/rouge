@@ -28,12 +28,12 @@ export function None<T>(): Option<T> {
     kind: "none",
 
     map<U>(_fn: (value: T) => U): Option<U> {
-      return None() as Option<U>;
+      return None();
     },
 
     unwrap(): T {
       // TODO: error handling: panic!
-      throw new Error("not implemented!");
+      throw new Error("this should panic, not implemented yet!");
     },
 
     unwrapOr(defaultValue: T): T {
