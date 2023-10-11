@@ -1,3 +1,5 @@
+import { Panic } from "../error.ts";
+
 export interface Option<T> {
   kind: "some" | "none";
   map<U>(fn: (value: T) => U): Option<U>;
@@ -32,8 +34,7 @@ export function None<T>(): Option<T> {
     },
 
     unwrap(): T {
-      // TODO: error handling: panic!
-      throw new Error("this should panic, not implemented yet!");
+      throw Panic("Unwrap called on None object");
     },
 
     unwrapOr(defaultValue: T): T {

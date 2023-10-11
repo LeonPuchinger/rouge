@@ -1,3 +1,5 @@
+import { Panic } from "../error.ts"
+
 export interface Result<T, E> {
   kind: "ok" | "err";
   map<U>(fn: (value: T) => U): Result<U, E>;
@@ -24,8 +26,7 @@ export function Ok<T, E>(value: T): Result<T, E> {
     },
 
     unwrapError(): E {
-      // TODO: error handling: panic!
-      throw new Error("this should panic, not implemented yet!");
+      throw Panic("umwrapError called on Result");
     },
 
     unwrapOr(_defaultValue: T): T {
@@ -47,8 +48,7 @@ export function Err<T, E>(value: E): Result<T, E> {
     },
 
     unwrap(): T {
-      // TODO: error handling: panic!
-      throw new Error("this should panic, not implemented yet!");
+      throw Panic("unwrap called on Err");
     },
 
     unwrapError(): E {
