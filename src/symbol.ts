@@ -1,5 +1,5 @@
 import { AstNode } from "./ast.ts";
-import { None, Option, Some } from "./util/monad.ts";
+import { None, Option, Some } from "./util/monad/index.ts";
 
 // Symbol
 

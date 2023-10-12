@@ -6,24 +6,35 @@ import {
   SymbolValue,
   SymbolValueType,
 } from "./symbol.ts";
+import { AppError, InternalError } from "./util/error.ts";
+import { None, Some } from "./util/monad/index.ts";
+import { Option } from "./util/monad/option.ts";
 
 const table = new SymbolTable();
 
 // TODO: error handling: multiple cases are essentially testing the same thing here
 // idea: use some sort of assert call that triggers a panic if its cond. is not met
-function handleAssign(node: AstNode) {
+function handleAssign(node: AstNode): Option<AppError> {
   if (node.children.length !== 2) {
-    // TODO: error handling, assign always has two nodes
+    return Some(
+      InternalError(
+        "Assignments always have to have two AST nodes as children",
+      ),
+    );
   }
   if (node.child(0)?.nodeType !== AstNodeType.ident) {
-    // TODO: error handling, always have to assign to an identifier
+    return Some(
+      InternalError("Assignments always need to be done to a variable."),
+    );
   }
   if (node.child(1)?.nodeType !== AstNodeType.int_literal) {
-    // TODO: error handling, (right now), variables can only be assigned integers
+    return Some(
+      InternalError("Variables can only be assigned integers right now"),
+    );
   }
   const identNode = node.child(0)!;
   if (identNode.value.kind === "none") {
-    // TODO: error handling, safety, parser seems to have screwed up setting the value
+    return Some(InternalError("AST node does not have a value"));
   }
   const ident = identNode.value.unwrap() as string;
   const valueNode = node.child(1)!;
@@ -42,19 +53,25 @@ function handleAssign(node: AstNode) {
       }),
     }),
   );
+  return None();
 }
 
-export function interpret(node: AstNode) {
+export function interpret(node: AstNode): Option<AppError> {
   switch (node.nodeType) {
     case AstNodeType.assign:
       return handleAssign(node);
     case AstNodeType.ident:
       break;
     case AstNodeType.int_literal:
-      return;
+      break;
     case AstNodeType.expressions:
-      node.children.forEach((child) => interpret(child));
-      return;
+      for (const child of node.children) {
+        const result = interpret(child);
+        if (result.kind === "some") {
+          return result;
+        }
+      }
+      break;
   }
-  // Using preorder to traverse AST
+  return None();
 }

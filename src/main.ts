@@ -20,5 +20,8 @@ export function run(source: string) {
     console.log("Use the debugger to inspect the other results.");
   }
   const ast = parseResult.candidates[0].result;
-  interpret(ast);
+  const interpretationError = interpret(ast);
+  if (interpretationError.kind === "some") {
+    console.log(interpretationError.unwrap().toString());
+  }
 }
