@@ -1,7 +1,7 @@
 import { AppError } from "./error.ts";
 
 type Loggable = string | AppError;
-enum Loglevel {
+export enum Loglevel {
   debug,
   info,
   warning,
@@ -20,7 +20,7 @@ interface LoggerConfig {
   format: (message: Loggable, loglevel: Loglevel) => string;
 }
 
-const defaultConfig: LoggerConfig = {
+let loggerConfig: LoggerConfig = {
   loglevel: Loglevel.info,
   format: (message: Loggable, loglevel: Loglevel) => {
     const now = new Date();
@@ -31,9 +31,16 @@ const defaultConfig: LoggerConfig = {
   },
 };
 
+export function updateLoggerConfig(updateConfig: Partial<LoggerConfig>) {
+  loggerConfig = {
+    ...loggerConfig,
+    ...updateConfig,
+  };
+}
+
 function log(message: Loggable, loglevel: Loglevel) {
-  if (loglevel >= defaultConfig.loglevel) {
-    console.log(defaultConfig.format(message, loglevel));
+  if (loglevel >= loggerConfig.loglevel) {
+    console.log(loggerConfig.format(message, loglevel));
   }
 }
 
