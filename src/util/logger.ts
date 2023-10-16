@@ -18,6 +18,7 @@ const loglevelToString: Record<Loglevel, string> = {
 interface LoggerConfig {
   loglevel: Loglevel;
   format: (message: Loggable, loglevel: Loglevel) => string;
+  colors: Partial<Record<Loglevel, string>>;
 }
 
 let loggerConfig: LoggerConfig = {
@@ -28,6 +29,11 @@ let loggerConfig: LoggerConfig = {
       `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
     const formattedLevel = loglevelToString[loglevel].toUpperCase();
     return `[${formattedLevel}, ${formattedTime}]: ${message}`;
+  },
+  colors: {
+    [Loglevel.debug]: "\x1b[90m%s\x1b[0m",
+    [Loglevel.error]: "\x1b[31m%s\x1b[0m",
+    [Loglevel.warning]: "\x1b[33m%s\x1b[0m",
   },
 };
 
@@ -40,7 +46,8 @@ export function updateLoggerConfig(updateConfig: Partial<LoggerConfig>) {
 
 function log(message: Loggable, loglevel: Loglevel) {
   if (loglevel >= loggerConfig.loglevel) {
-    console.log(loggerConfig.format(message, loglevel));
+    const color = loggerConfig.colors[loglevel] ?? "";
+    console.log(color, loggerConfig.format(message, loglevel));
   }
 }
 
