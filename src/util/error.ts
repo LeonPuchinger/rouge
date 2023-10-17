@@ -2,6 +2,15 @@ export function Panic(reason: string): Error {
   return new Error(`PANIC: ${reason}.`);
 }
 
+export function assert(
+  test: boolean,
+  message: string,
+) {
+  if (!test) {
+    throw Panic(`assertion failed: ${message}`);
+  }
+}
+
 export interface LocatableError {
   stacktrace: string[];
 }
