@@ -1,3 +1,5 @@
+import { toMultiline } from "./string.ts";
+
 export function Panic(reason: string): Error {
   return new Error(`PANIC: ${reason}.`);
 }
@@ -32,20 +34,16 @@ function captureStackTrace(subtractFrames = 0): string[] {
   }
 }
 
-function toMultiline(lines: string[]): string {
-  return lines.join("\n");
-}
-
 export function InternalError(
   message: string,
 ): AppError {
   return {
     stacktrace: captureStackTrace(1),
     toString() {
-      return toMultiline([
+      return toMultiline(
         `INTERNAL ERROR: ${message}`,
-        `${toMultiline(this.stacktrace)}`,
-      ]);
+        `${toMultiline(...this.stacktrace)}`,
+      );
     },
   };
 }
