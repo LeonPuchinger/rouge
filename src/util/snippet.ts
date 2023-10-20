@@ -3,6 +3,26 @@ import { Option } from "./monad/index.ts";
 import { toMultiline } from "./string.ts";
 
 /**
+ * Create a marker that highlights a section of code in a snippet.
+ * The marker is points towards the specified section and includes a message.
+ *
+ * @param message
+ */
+function createAnnotationMarker(
+  message: string,
+  firstPosition: TokenPosition,
+  nextPosition: Option<TokenPosition>,
+): string {
+  const indentSize = firstPosition.columnBegin;
+  const markerEnd = nextPosition.unwrapOr(firstPosition).columnEnd;
+  const markerSize = markerEnd - indentSize;
+  return toMultiline(
+    `${" ".repeat(indentSize)}${"~".repeat(markerSize)}`,
+    message,
+  );
+}
+
+/**
  * Create an annotated snippet of code for a specified range of an input string.
  * The snippet consists of a core section which can stretch over multiple lines.
  * The core section can be annotated with a message.
@@ -34,7 +54,7 @@ export function createSnippet(
   }
   return toMultiline(
     lines.slice(snippetBegin, coreEnd + 1).join("\n"),
-    `${message}`,
+    createAnnotationMarker(message, firstPosition, nextPosition),
     lines.slice(coreEnd + 1, snippetEnd + 1).join("\n"),
   );
 }
