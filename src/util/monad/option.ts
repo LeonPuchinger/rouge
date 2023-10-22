@@ -7,7 +7,11 @@ export interface Option<T> {
   unwrapOr(defaultValue: T): T;
 }
 
-export function Some<T>(value: T): Option<T> {
+export function Some<T>(value: T | undefined): Option<T> {
+  if (value === undefined) {
+    return None();
+  }
+
   return {
     kind: "some",
 
