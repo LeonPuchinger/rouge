@@ -1,3 +1,6 @@
+import { AstNode } from "../ast.ts";
+import { Option } from "./monad/index.ts";
+import { createSnippet } from "./snippet.ts";
 import { toMultiline } from "./string.ts";
 
 export function Panic(reason: string): Error {
@@ -44,6 +47,29 @@ export function InternalError(
         `INTERNAL ERROR: ${message}`,
         `${toMultiline(...this.stacktrace)}`,
       );
+    },
+  };
+}
+
+function InterpreterError(
+  message: string,
+  beginHighlight: AstNode,
+  endHighlight: Option<AstNode>,
+  messageHighlight: Option<string>,
+): AppError {
+  return {
+    stacktrace: captureStackTrace(1),
+    toString() {
+      return toMultiline(
+        message,
+        createSnippet(
+          "", // TODO: somehow get a hold of the source
+          beginHighlight.token.unwrap().pos,
+          endHighlight.map(node => node.token.unwrap().pos),
+          3,
+          messageHighlight,
+        ),
+      )
     },
   };
 }

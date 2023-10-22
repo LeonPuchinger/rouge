@@ -9,16 +9,19 @@ import { toMultiline } from "./string.ts";
  * @param message
  */
 function createAnnotationMarker(
-  message: string,
+  message: Option<string>,
   firstPosition: TokenPosition,
   nextPosition: Option<TokenPosition>,
 ): string {
+  if (message.kind === "none") {
+    return "";
+  }
   const indentSize = firstPosition.columnBegin;
   const markerEnd = nextPosition.unwrapOr(firstPosition).columnEnd;
   const markerSize = markerEnd - indentSize;
   return toMultiline(
     `${" ".repeat(indentSize)}${"~".repeat(markerSize)}`,
-    message,
+    message.unwrap(),
   );
 }
 
@@ -39,7 +42,7 @@ export function createSnippet(
   firstPosition: TokenPosition,
   nextPosition: Option<TokenPosition>,
   linesPadding: number,
-  message: string,
+  message: Option<string>,
 ): string {
   const lines = source.split("\n");
   const coreBegin = firstPosition.rowBegin;
