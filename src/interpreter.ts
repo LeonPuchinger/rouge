@@ -6,7 +6,7 @@ import {
   SymbolValue,
   SymbolValueType,
 } from "./symbol.ts";
-import { AppError, assert, InternalError } from "./util/error.ts";
+import { AppError, assert, InterpreterError } from "./util/error.ts";
 import { None, Some } from "./util/monad/index.ts";
 import { Option } from "./util/monad/option.ts";
 
@@ -18,23 +18,21 @@ function handleAssign(node: AstNode): Option<AppError> {
     "Assignment AST nodes always have to have two AST nodes as their children",
   );
   if (node.child(0)?.nodeType !== AstNodeType.ident) {
-    return Some(
-      // TODO: transition to different error type
-      // This is an error that is supposed to reach the user of the language.
-      // The interpreter itself has done nothing wrong.
-      // The error is solely caused by the users input (the program).
-      // A type of error needs to be generated which can be displayed to the user.
-      // The error could take the AST node(s) and generate a snippet for the error message.
-      // Additionally, consider removing InternalError altogether, use panic/assert if something
-      // in the interpreter itself goes wrong as those errors are not recoverable from the
-      // perspective of the user.
-      InternalError("Assignments always need to be done to a variable."),
-    );
+    return Some(InterpreterError(
+      "Assignments always need to be done to a variable",
+      node.childOrPanic(0),
+      Some(node.child(1)),
+      None(),
+    ));
   }
   if (node.child(1)?.nodeType !== AstNodeType.int_literal) {
     return Some(
-      // TODO: transition to different error type, see comment above
-      InternalError("Variables can only be assigned integers right now."),
+      InterpreterError(
+        "Variables can only be assigned integers right now",
+        node.childOrPanic(0),
+        Some(node.child(1)),
+        None(),
+      ),
     );
   }
   const identNode = node.child(0)!;

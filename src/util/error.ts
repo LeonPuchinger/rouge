@@ -51,7 +51,7 @@ export function InternalError(
   };
 }
 
-function InterpreterError(
+export function InterpreterError(
   message: string,
   beginHighlight: AstNode,
   endHighlight: Option<AstNode>,
