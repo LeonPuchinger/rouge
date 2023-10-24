@@ -5,6 +5,7 @@ export interface Option<T> {
   map<U>(fn: (value: T) => U): Option<U>;
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
+  then(fn: (value: T) => void): void;
 }
 
 export function Some<T>(value: T | undefined): Option<T> {
@@ -26,6 +27,10 @@ export function Some<T>(value: T | undefined): Option<T> {
     unwrapOr(_defaultValue: T): T {
       return value;
     },
+
+    then(fn) {
+      fn(value);
+    },
   };
 }
 
@@ -43,6 +48,10 @@ export function None<T>(): Option<T> {
 
     unwrapOr(defaultValue: T): T {
       return defaultValue;
+    },
+
+    then(_fn) {
+      // do nothing
     },
   };
 }

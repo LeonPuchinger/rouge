@@ -1,4 +1,4 @@
-import { Panic } from "../error.ts"
+import { Panic } from "../error.ts";
 
 export interface Result<T, E> {
   kind: "ok" | "err";
@@ -7,6 +7,8 @@ export interface Result<T, E> {
   unwrap(): T;
   unwrapError(): E;
   unwrapOr(defaultValue: T): T;
+  then(fn: (value: T) => void): void;
+  thenError(fn: (error: E) => void): void;
 }
 
 export function Ok<T, E>(value: T): Result<T, E> {
@@ -31,6 +33,14 @@ export function Ok<T, E>(value: T): Result<T, E> {
 
     unwrapOr(_defaultValue: T): T {
       return value;
+    },
+
+    then(fn) {
+      fn(value);
+    },
+
+    thenError(_fn) {
+      // do nothing
     },
   };
 }
@@ -57,6 +67,14 @@ export function Err<T, E>(value: E): Result<T, E> {
 
     unwrapOr(defaultValue: T): T {
       return defaultValue;
+    },
+
+    then(_fn) {
+      // do nothing
+    },
+
+    thenError(fn) {
+      fn(value);
     },
   };
 }
