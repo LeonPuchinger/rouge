@@ -20,9 +20,9 @@ export function run(source: string): Option<AppError> {
   const ast = parseResult.unwrap();
   const interpretationError = interpret(ast);
   if (interpretationError.kind === "some") {
-    const abc = interpretationError.unwrap(); // TODO: rename
-    console.log(abc);
-    return Some(abc);
+    const error = interpretationError.unwrap();
+    console.log(error);
+    return Some(error);
   }
   return None();
 }
