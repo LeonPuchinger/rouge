@@ -6,7 +6,9 @@ import {
   SymbolValue,
   SymbolValueType,
 } from "./symbol.ts";
-import { AppError, InterpreterError, assert } from "./util/error.ts";
+// required for extension methods to be usable
+import {} from "./util/array.ts";
+import { AppError, assert, InterpreterError } from "./util/error.ts";
 import { None, Some } from "./util/monad/index.ts";
 import { Option } from "./util/monad/option.ts";
 
@@ -17,7 +19,7 @@ function handleAssign(node: AstNode): Option<AppError> {
     node.children.length === 2,
     "Assignment AST nodes always have to have two AST nodes as their children",
   );
-  if (node.child(0)?.nodeType !== AstNodeType.ident) {
+  if (node.child(0)?.nodeType === AstNodeType.ident) {
     return Some(InterpreterError(
       "Assignments always need to be done to a variable",
       node.childOrPanic(0),
