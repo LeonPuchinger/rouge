@@ -69,6 +69,7 @@ export function parse(
   const parseResult = expectEOF(START.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
+    // TODO: replace with different error type that shows a snippet, e.g. InterpreterError
     return Err(InternalError(toMultiline(
       "Encountered Syntax Error:",
       parseError.message,
