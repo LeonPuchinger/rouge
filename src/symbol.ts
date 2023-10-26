@@ -47,8 +47,7 @@ export class SymbolValue<T> {
 
   asNumber(): SymbolValue<number> {
     if (this.valueType !== SymbolValueType.number) {
-      // safety
-      // TODO: error handling, logging, ...
+      throw Panic("tried to access the value of a non-numeric symbol as a number")
     }
     return this as SymbolValue<number>;
   }
