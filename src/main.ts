@@ -1,28 +1,21 @@
 import { interpret } from "./interpreter.ts";
-import { lexer } from "./lexer.ts";
+import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
-import { AppError, Panic } from "./util/error.ts";
+import { AppError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 
 export function run(source: string): Option<AppError> {
-  const tokenStream = lexer.parse(source);
-  if (tokenStream === undefined) {
-    // TODO: move responsibility of checking this to the lexer
-    // move logic to `tokenize` function in lexer (analogous to parser)
-    throw Panic("tokenStream is empty");
+  const tokenStream = tokenize(source);
+  if (tokenStream.kind === "err") {
+    return Some(tokenStream.unwrapError());
   }
-  const parseResult = parse(tokenStream);
-  if (parseResult.kind === "err") {
-    const parseError = parseResult.unwrapError();
-    console.log(parseError);
-    return Some(parseError);
+  const ast = parse(tokenStream.unwrap());
+  if (ast.kind === "err") {
+    return Some(ast.unwrapError());
   }
-  const ast = parseResult.unwrap();
-  const interpretationError = interpret(ast);
+  const interpretationError = interpret(ast.unwrap());
   if (interpretationError.kind === "some") {
-    const error = interpretationError.unwrap();
-    console.log(error);
-    return Some(error);
+    return Some(interpretationError.unwrap());
   }
   return None();
 }
