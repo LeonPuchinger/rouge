@@ -57,10 +57,16 @@ const EXPRESSIONS = apply(
 
 export const START = EXPRESSIONS;
 
+/**
+ * Parse a sequence of tokens into an AST based the grammar of the language.
+ *
+ * @param tokenStream A linked list of tokens to parse
+ * @returns An abstract syntax tree that has not been semantically analyzed yet
+ */
 export function parse(
   tokenStream: Token<TokenType>,
 ): Result<AstNode, AppError> {
-  const parseResult = START.parse(tokenStream);
+  const parseResult = expectEOF(START.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
     return Err(InternalError(toMultiline(
