@@ -16,8 +16,8 @@ function createAnnotationMarker(
   if (message.kind === "none") {
     return "";
   }
-  const indentSize = firstPosition.columnBegin;
-  const markerEnd = nextPosition.unwrapOr(firstPosition).columnEnd;
+  const indentSize = firstPosition.columnBegin - 1;
+  const markerEnd = nextPosition.unwrapOr(firstPosition).columnEnd - 1;
   const markerSize = markerEnd - indentSize;
   return toMultiline(
     `${" ".repeat(indentSize)}${"~".repeat(markerSize)}`,
@@ -45,12 +45,12 @@ export function createSnippet(
   message: Option<string>,
 ): string {
   const lines = source.split("\n");
-  const coreBegin = firstPosition.rowBegin;
+  const coreBegin = firstPosition.rowBegin - 1;
   let snippetBegin = coreBegin - linesPadding;
   if (snippetBegin < 0) {
     snippetBegin = 0;
   }
-  const coreEnd = nextPosition.unwrapOr(firstPosition).rowEnd;
+  const coreEnd = nextPosition.unwrapOr(firstPosition).rowEnd - 1;
   let snippetEnd = coreEnd + linesPadding;
   if (snippetEnd > lines.length) {
     snippetEnd = lines.length;
