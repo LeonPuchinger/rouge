@@ -1,4 +1,4 @@
-import { apply, list_sc, seq, tok, Token } from "typescript-parsec";
+import { apply, expectEOF, list_sc, seq, tok, Token } from "typescript-parsec";
 import { AstNode, AstNodeType } from "./ast.ts";
 import { TokenType } from "./lexer.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
