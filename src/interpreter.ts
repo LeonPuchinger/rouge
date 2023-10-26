@@ -6,7 +6,7 @@ import {
   SymbolValue,
   SymbolValueType,
 } from "./symbol.ts";
-import { AppError, assert, InterpreterError } from "./util/error.ts";
+import { AppError, InterpreterError, assert } from "./util/error.ts";
 import { None, Some } from "./util/monad/index.ts";
 import { Option } from "./util/monad/option.ts";
 
@@ -70,13 +70,11 @@ export function interpret(node: AstNode): Option<AppError> {
     case AstNodeType.int_literal:
       break;
     case AstNodeType.expressions:
-      for (const child of node.children) {
-        const result = interpret(child);
-        if (result.kind === "some") {
-          return result;
-        }
-      }
-      break;
+      return node.children.mapUntil(
+        (node) => interpret(node),
+        (result) => result.kind === "some",
+        None(),
+      );
   }
   return None();
 }
