@@ -19,7 +19,7 @@ function handleAssign(node: AstNode): Option<AppError> {
     node.children.length === 2,
     "Assignment AST nodes always have to have two AST nodes as their children",
   );
-  if (node.child(0)?.nodeType === AstNodeType.ident) {
+  if (node.child(0)?.nodeType !== AstNodeType.ident) {
     return Some(InterpreterError(
       "Assignments always need to be done to a variable",
       node.childOrPanic(0),
