@@ -1,4 +1,5 @@
 import { AstNode } from "./ast.ts";
+import { Panic } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 
 // Symbol
