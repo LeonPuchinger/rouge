@@ -6,30 +6,48 @@ import {
   SymbolValue,
   SymbolValueType,
 } from "./symbol.ts";
+// required for extension methods to be usable
+import {} from "./util/array.ts";
+import { AppError, assert, InterpreterError } from "./util/error.ts";
+import { None, Some } from "./util/monad/index.ts";
+import { Option } from "./util/monad/option.ts";
 
 const table = new SymbolTable();
 
-// TODO: error handling: multiple cases are essentially testing the same thing here
-// idea: use some sort of assert call that triggers a panic if its cond. is not met
-function handleAssign(node: AstNode) {
-  if (node.children.length !== 2) {
-    // TODO: error handling, assign always has two nodes
-  }
+function handleAssign(node: AstNode): Option<AppError> {
+  assert(
+    node.children.length === 2,
+    "Assignment AST nodes always have to have two AST nodes as their children",
+  );
   if (node.child(0)?.nodeType !== AstNodeType.ident) {
-    // TODO: error handling, always have to assign to an identifier
+    return Some(InterpreterError(
+      "Assignments always need to be done to a variable",
+      node.childOrPanic(0),
+      Some(node.child(1)),
+      None(),
+    ));
   }
   if (node.child(1)?.nodeType !== AstNodeType.int_literal) {
-    // TODO: error handling, (right now), variables can only be assigned integers
+    return Some(
+      InterpreterError(
+        "Variables can only be assigned integers right now",
+        node.childOrPanic(0),
+        Some(node.child(1)),
+        None(),
+      ),
+    );
   }
   const identNode = node.child(0)!;
-  if (identNode.value.kind === "none") {
-    // TODO: error handling, safety, parser seems to have screwed up setting the value
-  }
+  assert(
+    identNode.value.kind !== "none",
+    "AST node has an empty value",
+  );
   const ident = identNode.value.unwrap() as string;
   const valueNode = node.child(1)!;
-  if (valueNode.value.kind === "none") {
-    // TODO: error handling, safety, parser seems to have screwed up setting the value
-  }
+  assert(
+    valueNode.value.kind !== "none",
+    "AST node has an empty value",
+  );
   const value = valueNode.value.unwrap() as number;
   table.setSymbol(
     ident,
@@ -42,19 +60,23 @@ function handleAssign(node: AstNode) {
       }),
     }),
   );
+  return None();
 }
 
-export function interpret(node: AstNode) {
+export function interpret(node: AstNode): Option<AppError> {
   switch (node.nodeType) {
     case AstNodeType.assign:
       return handleAssign(node);
     case AstNodeType.ident:
       break;
     case AstNodeType.int_literal:
-      return;
+      break;
     case AstNodeType.expressions:
-      node.children.forEach((child) => interpret(child));
-      return;
+      return node.children.mapUntil(
+        (node) => interpret(node),
+        (result) => result.kind === "some",
+        None(),
+      );
   }
-  // Using preorder to traverse AST
+  return None();
 }

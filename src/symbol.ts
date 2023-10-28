@@ -1,5 +1,6 @@
 import { AstNode } from "./ast.ts";
-import { None, Option, Some } from "./util/monad.ts";
+import { Panic } from "./util/error.ts";
+import { None, Option, Some } from "./util/monad/index.ts";
 
 // Symbol
 
@@ -47,8 +48,7 @@ export class SymbolValue<T> {
 
   asNumber(): SymbolValue<number> {
     if (this.valueType !== SymbolValueType.number) {
-      // safety
-      // TODO: error handling, logging, ...
+      throw Panic("tried to access the value of a non-numeric symbol as a number")
     }
     return this as SymbolValue<number>;
   }

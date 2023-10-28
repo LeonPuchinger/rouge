@@ -1,24 +1,21 @@
 import { interpret } from "./interpreter.ts";
-import { lexer } from "./lexer.ts";
-import { parser } from "./parser.ts";
+import { tokenize } from "./lexer.ts";
+import { parse } from "./parser.ts";
+import { AppError } from "./util/error.ts";
+import { None, Option, Some } from "./util/monad/index.ts";
 
-export function run(source: string) {
-  const tokenStream = lexer.parse(source);
-  const parseResult = parser.parse(tokenStream);
-  if (!parseResult.successful) {
-    // TODO: error handling, logging
-    console.log("An error occured while parsing:");
-    console.log(parseResult.error);
-    return;
+export function run(source: string): Option<AppError> {
+  const tokenStream = tokenize(source);
+  if (tokenStream.kind === "err") {
+    return Some(tokenStream.unwrapError());
   }
-  const numberCandidates = parseResult.candidates.length;
-  if (numberCandidates > 1) {
-    // TODO: error handling, logging
-    console.log("Ambiguity detected");
-    console.log(`There are ${numberCandidates} ways to parse the input.`);
-    console.log("In the following, the first possible AST is used.");
-    console.log("Use the debugger to inspect the other results.");
+  const ast = parse(tokenStream.unwrap());
+  if (ast.kind === "err") {
+    return Some(ast.unwrapError());
   }
-  const ast = parseResult.candidates[0].result;
-  interpret(ast);
+  const interpretationError = interpret(ast.unwrap());
+  if (interpretationError.kind === "some") {
+    return Some(interpretationError.unwrap());
+  }
+  return None();
 }

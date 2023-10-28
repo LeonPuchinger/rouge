@@ -1,11 +1,18 @@
+import { Panic } from "../error.ts";
+
 export interface Option<T> {
   kind: "some" | "none";
   map<U>(fn: (value: T) => U): Option<U>;
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
+  then(fn: (value: T) => void): void;
 }
 
-export function Some<T>(value: T): Option<T> {
+export function Some<T>(value: T | undefined): Option<T> {
+  if (value === undefined) {
+    return None();
+  }
+
   return {
     kind: "some",
 
@@ -20,6 +27,10 @@ export function Some<T>(value: T): Option<T> {
     unwrapOr(_defaultValue: T): T {
       return value;
     },
+
+    then(fn) {
+      fn(value);
+    },
   };
 }
 
@@ -28,16 +39,19 @@ export function None<T>(): Option<T> {
     kind: "none",
 
     map<U>(_fn: (value: T) => U): Option<U> {
-      return None() as Option<U>;
+      return None();
     },
 
     unwrap(): T {
-      // TODO: error handling: panic!
-      throw new Error("not implemented!");
+      throw Panic("Unwrap called on None object");
     },
 
     unwrapOr(defaultValue: T): T {
       return defaultValue;
+    },
+
+    then(_fn) {
+      // do nothing
     },
   };
 }

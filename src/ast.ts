@@ -1,6 +1,7 @@
 import { Token } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
-import { None, Option, Some } from "./util/monad.ts";
+import { Panic } from "./util/error.ts";
+import { None, Option, Some } from "./util/monad/index.ts";
 
 export enum AstNodeType {
   assign,
@@ -39,5 +40,15 @@ export class AstNode {
 
   child(index: number): AstNode | undefined {
     return this.children.at(index);
-  } 
+  }
+
+  childOrPanic(index: number): AstNode {
+    const c = this.child(index);
+    if (!c) {
+      throw Panic(
+        `Tried to access child of AST node at index ${index} with only ${this.children.length} children`,
+      );
+    }
+    return c;
+  }
 }
