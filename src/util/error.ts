@@ -7,6 +7,12 @@ export function Panic(reason: string): Error {
   return new Error(`PANIC: ${reason}.`);
 }
 
+/**
+ * Panics when the given boolean equals to `false`
+ * 
+ * @param test The boolean deciding whether to panic or not.
+ * @param message A message that is displayed along with the error in case of a panic.
+ */
 export function assert(
   test: boolean,
   message: string,
