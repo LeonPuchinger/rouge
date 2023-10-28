@@ -37,6 +37,12 @@ let loggerConfig: LoggerConfig = {
   },
 };
 
+/**
+ * Configure the logger globally
+ * 
+ * @param updateConfig The configuration to override the current one.
+ * Only entries present in the new config are replaced in the current one.
+ */
 export function updateLoggerConfig(updateConfig: Partial<LoggerConfig>) {
   loggerConfig = {
     ...loggerConfig,
