@@ -1,4 +1,4 @@
-import { AstNode, AstNodeType } from "./ast.ts";
+import { AstNodeType, UncheckedAstNode } from "./ast.ts";
 import {
   Symbol,
   SymbolTable,
@@ -7,14 +7,14 @@ import {
   SymbolValueType,
 } from "./symbol.ts";
 // required for extension methods to be usable
-import {} from "./util/array.ts";
+import { } from "./util/array.ts";
 import { AppError, assert, InterpreterError } from "./util/error.ts";
 import { None, Some } from "./util/monad/index.ts";
 import { Option } from "./util/monad/option.ts";
 
 const table = new SymbolTable();
 
-function handleAssign(node: AstNode): Option<AppError> {
+function handleAssign(node: UncheckedAstNode): Option<AppError> {
   assert(
     node.children.length === 2,
     "Assignment AST nodes always have to have two AST nodes as their children",
@@ -63,7 +63,7 @@ function handleAssign(node: AstNode): Option<AppError> {
   return None();
 }
 
-export function interpret(node: AstNode): Option<AppError> {
+export function interpret(node: UncheckedAstNode): Option<AppError> {
   switch (node.nodeType) {
     case AstNodeType.assign:
       return handleAssign(node);

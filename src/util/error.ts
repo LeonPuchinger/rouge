@@ -1,4 +1,4 @@
-import { AstNode } from "../ast.ts";
+import { UncheckedAstNode } from "../ast.ts";
 import { accessEnvironment } from "./environment.ts";
 import { Option } from "./monad/index.ts";
 import { createSnippet } from "./snippet.ts";
@@ -77,8 +77,8 @@ export function InternalError(
  */
 export function InterpreterError(
   message: string,
-  beginHighlight: AstNode,
-  endHighlight: Option<AstNode>,
+  beginHighlight: UncheckedAstNode,
+  endHighlight: Option<UncheckedAstNode>,
   messageHighlight: Option<string>,
 ): AppError {
   return {

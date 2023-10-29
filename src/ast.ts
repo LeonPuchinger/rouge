@@ -10,20 +10,20 @@ export enum AstNodeType {
   expressions,
 }
 
-export interface AstNodeParams {
+export interface UncheckedAstNodeParams {
   nodeType: AstNodeType;
   token?: Token<TokenType>;
   value?: number | string;
-  children?: Array<AstNode>;
+  children?: Array<UncheckedAstNode>;
 }
 
-export class AstNode {
+export class UncheckedAstNode {
   nodeType: AstNodeType;
   token: Option<Token<TokenType>>;
   value: Option<number | string>;
-  children: Array<AstNode>;
+  children: Array<UncheckedAstNode>;
 
-  constructor(params: AstNodeParams) {
+  constructor(params: UncheckedAstNodeParams) {
     this.nodeType = params.nodeType;
     this.token = (params.token !== undefined && params.token !== null)
       ? Some(params.token)
@@ -34,15 +34,15 @@ export class AstNode {
     this.children = params.children ?? [];
   }
 
-  addChild(child: AstNode) {
+  addChild(child: UncheckedAstNode) {
     this.children.push(child);
   }
 
-  child(index: number): AstNode | undefined {
+  child(index: number): UncheckedAstNode | undefined {
     return this.children.at(index);
   }
 
-  childOrPanic(index: number): AstNode {
+  childOrPanic(index: number): UncheckedAstNode {
     const c = this.child(index);
     if (!c) {
       throw Panic(

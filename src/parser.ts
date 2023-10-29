@@ -1,5 +1,5 @@
 import { apply, expectEOF, list_sc, seq, tok, Token } from "typescript-parsec";
-import { AstNode, AstNodeType } from "./ast.ts";
+import { AstNodeType, UncheckedAstNode } from "./ast.ts";
 import { TokenType } from "./lexer.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
@@ -11,7 +11,7 @@ const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 const IDENTIFIER = apply(
   tok(TokenType.ident),
   (token) =>
-    new AstNode({
+    new UncheckedAstNode({
       nodeType: AstNodeType.ident,
       token: token,
       value: token.text,
@@ -21,7 +21,7 @@ const IDENTIFIER = apply(
 const INT_LITERAL = apply(
   tok(TokenType.int_literal),
   (token) =>
-    new AstNode({
+    new UncheckedAstNode({
       nodeType: AstNodeType.int_literal,
       token: token,
       value: parseInt(token.text),
@@ -35,7 +35,7 @@ const ASSIGNMENT = apply(
     INT_LITERAL,
   ),
   (values) =>
-    new AstNode({
+    new UncheckedAstNode({
       nodeType: AstNodeType.assign,
       children: [values[0], values[2]],
     }),
@@ -49,7 +49,7 @@ const EXPRESSIONS = apply(
     BREAKING_WHITESPACE,
   ),
   (expressions) =>
-    new AstNode({
+    new UncheckedAstNode({
       nodeType: AstNodeType.expressions,
       children: expressions,
     }),
@@ -65,7 +65,7 @@ export const START = EXPRESSIONS;
  */
 export function parse(
   tokenStream: Token<TokenType>,
-): Result<AstNode, AppError> {
+): Result<UncheckedAstNode, AppError> {
   const parseResult = expectEOF(START.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
