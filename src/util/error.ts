@@ -1,4 +1,5 @@
 import { AstNode } from "../ast.ts";
+import { accessEnvironment } from "./environment.ts";
 import { Option } from "./monad/index.ts";
 import { createSnippet } from "./snippet.ts";
 import { toMultiline } from "./string.ts";
@@ -9,7 +10,7 @@ export function Panic(reason: string): Error {
 
 /**
  * Panics when the given boolean equals to `false`
- * 
+ *
  * @param test The boolean deciding whether to panic or not.
  * @param message A message that is displayed along with the error in case of a panic.
  */
@@ -46,7 +47,7 @@ function captureStackTrace(subtractFrames = 0): string[] {
 /**
  * A type of error that is the result of internal behavior
  * of the implementation of the language, not the user's input.
- * 
+ *
  * @param message Header text to display at the top of the error message.
  */
 export function InternalError(
@@ -86,7 +87,7 @@ export function InterpreterError(
       return toMultiline(
         message,
         createSnippet(
-          "", // TODO: somehow get a hold of the source
+          accessEnvironment("source"),
           beginHighlight.token.unwrap().pos,
           endHighlight.map((node) => node.token.unwrap().pos),
           3,
