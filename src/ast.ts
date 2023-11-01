@@ -3,6 +3,26 @@ import { TokenType } from "./lexer.ts";
 import { Panic } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 
+interface BinaryAstNode<L, R> {
+  lhs: L;
+  rhs: R;
+}
+
+interface NaryAstNode<T> {
+  children: [T];
+}
+
+interface ValueAstNode<V> {
+  token: Token<TokenType>;
+  value: V;
+}
+
+export type IntegerAstNode = ValueAstNode<number>;
+export type IdentifierAstNode = ValueAstNode<string>;
+export type AssignAstNode = BinaryAstNode<IdentifierAstNode, IntegerAstNode>;
+export type ExpressionAstNode = AssignAstNode;
+export type ExpressionsAstNode = NaryAstNode<ExpressionAstNode>;
+
 export enum AstNodeType {
   assign,
   ident,
