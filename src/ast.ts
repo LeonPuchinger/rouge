@@ -23,6 +23,8 @@ export type AssignAstNode = BinaryAstNode<IdentifierAstNode, IntegerAstNode>;
 export type ExpressionAstNode = AssignAstNode;
 export type ExpressionsAstNode = NaryAstNode<ExpressionAstNode>;
 
+export type AST = ExpressionsAstNode;
+
 export enum AstNodeType {
   assign,
   ident,
