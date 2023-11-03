@@ -1,3 +1,4 @@
+import * as ast from "./ast.ts";
 import { AstNodeType, UncheckedAstNode } from "./ast.ts";
 import {
   Symbol,
@@ -7,7 +8,7 @@ import {
   SymbolValueType,
 } from "./symbol.ts";
 // required for extension methods to be usable
-import { } from "./util/array.ts";
+import {} from "./util/array.ts";
 import { AppError, assert, InterpreterError } from "./util/error.ts";
 import { None, Some } from "./util/monad/index.ts";
 import { Option } from "./util/monad/option.ts";
@@ -63,20 +64,21 @@ function handleAssign(node: UncheckedAstNode): Option<AppError> {
   return None();
 }
 
-export function interpret(node: UncheckedAstNode): Option<AppError> {
-  switch (node.nodeType) {
-    case AstNodeType.assign:
+function handleExpression(node: ast.ExpressionAstNode): Option<AppError> {
+  // TODO: find out whether it's typescript or me that's stupid
+  switch (node.kind) {
+    case "AssignAstNode":
       return handleAssign(node);
-    case AstNodeType.ident:
-      break;
-    case AstNodeType.int_literal:
-      break;
-    case AstNodeType.expressions:
-      return node.children.mapUntil(
-        (node) => interpret(node),
-        (result) => result.kind === "some",
-        None(),
-      );
   }
   return None();
 }
+
+function handleExpressions(node: ast.ExpressionsAstNode): Option<AppError> {
+  return node.children.mapUntil(
+    (node) => handleExpression(node),
+    (result) => result.kind === "some",
+    None(),
+  );
+}
+
+export const interpret = (node: ast.AST) => handleExpressions(node);
