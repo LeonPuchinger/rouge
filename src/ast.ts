@@ -25,6 +25,8 @@ export type IdentifierAstNode =
 export type AssignAstNode =
   & BinaryAstNode<IdentifierAstNode, IntegerAstNode>
   & Matchable<"AssignAstNode">;
+  // TODO: this is reduced to `never` because `kind` exists on AssignAstNode and Matchable
+  // the language does not know which one to choose
 export type ExpressionAstNode = AssignAstNode & Matchable<"ExpressionAstNode">;
 export type ExpressionsAstNode = NaryAstNode<ExpressionAstNode>;
 

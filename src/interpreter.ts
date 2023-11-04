@@ -66,6 +66,7 @@ function handleAssign(node: UncheckedAstNode): Option<AppError> {
 
 function handleExpression(node: ast.ExpressionAstNode): Option<AppError> {
   // TODO: find out whether it's typescript or me that's stupid
+  // result: both
   switch (node.kind) {
     case "AssignAstNode":
       return handleAssign(node);
