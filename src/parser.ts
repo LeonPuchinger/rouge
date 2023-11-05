@@ -8,6 +8,7 @@ import {
   Token,
 } from "typescript-parsec";
 import * as ast from "./ast.ts";
+import * as interpreter from "./interpreter.ts";
 import { TokenType } from "./lexer.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
@@ -41,6 +42,7 @@ const ASSIGNMENT = apply(
   (values): ast.AssignAstNode => ({
     lhs: values[0],
     rhs: values[2],
+    interpret: interpreter.handleAssign,
   }),
 );
 

@@ -17,20 +17,24 @@ interface ValueAstNode<V> {
   value: V;
 }
 
-interface InterpretableAstNode {
-  interpret(): Option<AppError>;
+interface InterpretableAstNode<Node> {
+  interpret(node: Node): Option<AppError>;
 }
 
-interface EvaluableAstNode<R> {
-  interpret(): Result<R, AppError>;
+interface EvaluableAstNode<Node, R> {
+  interpret(node: Node): Result<R, AppError>;
 }
 
-export type IntegerAstNode = ValueAstNode<number> & EvaluableAstNode<number>;
-export type IdentifierAstNode = ValueAstNode<string> & EvaluableAstNode<string>;
+export type IntegerAstNode =
+  & ValueAstNode<number>
+  & EvaluableAstNode<IntegerAstNode, number>;
+export type IdentifierAstNode =
+  & ValueAstNode<string>
+  & EvaluableAstNode<IdentifierAstNode, string>;
 export type AssignAstNode =
   & BinaryAstNode<IdentifierAstNode, IntegerAstNode>
-  & InterpretableAstNode;
-export type ExpressionAstNode = AssignAstNode & InterpretableAstNode;
+  & InterpretableAstNode<AssignAstNode>;
+export type ExpressionAstNode = AssignAstNode & InterpretableAstNode<ExpressionAstNode>;
 export type ExpressionsAstNode = NaryAstNode<ExpressionAstNode>;
 
 export type AST = ExpressionsAstNode;

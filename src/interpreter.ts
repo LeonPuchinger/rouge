@@ -1,5 +1,4 @@
 import * as ast from "./ast.ts";
-import { AstNodeType, UncheckedAstNode } from "./ast.ts";
 import {
   Symbol,
   SymbolTable,
@@ -15,48 +14,26 @@ import { Option } from "./util/monad/option.ts";
 
 const table = new SymbolTable();
 
-function handleAssign(node: UncheckedAstNode): Option<AppError> {
-  assert(
-    node.children.length === 2,
-    "Assignment AST nodes always have to have two AST nodes as their children",
-  );
-  if (node.child(0)?.nodeType !== AstNodeType.ident) {
-    return Some(InterpreterError(
-      "Assignments always need to be done to a variable",
-      node.childOrPanic(0),
-      Some(node.child(1)),
-      None(),
-    ));
+export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
+  const ident = node.lhs.interpret();
+  if (ident.kind === "err") {
+    return ident.err();
   }
-  if (node.child(1)?.nodeType !== AstNodeType.int_literal) {
-    return Some(
-      InterpreterError(
-        "Variables can only be assigned integers right now",
-        node.childOrPanic(0),
-        Some(node.child(1)),
-        None(),
-      ),
-    );
+  const value = node.rhs.interpret();
+  if (value.kind === "err") {
+    return value.err();
   }
-  const identNode = node.child(0)!;
-  assert(
-    identNode.value.kind !== "none",
-    "AST node has an empty value",
-  );
-  const ident = identNode.value.unwrap() as string;
-  const valueNode = node.child(1)!;
-  assert(
-    valueNode.value.kind !== "none",
-    "AST node has an empty value",
-  );
-  const value = valueNode.value.unwrap() as number;
   table.setSymbol(
-    ident,
+    ident.unwrap(),
     new Symbol({
       symbolType: SymbolType.variable,
-      node: valueNode,
+      node: node.rhs,
       value: new SymbolValue({
-        value: value,
+        value: value.unwrap(),
+        // TODO: let the expression return the result
+        // this way, the expression can have any type.
+        // TODO: check whether the symbol that already exists (if it does)
+        // has the correct type (Static Analysis
         valueType: SymbolValueType.number,
       }),
     }),
@@ -64,7 +41,9 @@ function handleAssign(node: UncheckedAstNode): Option<AppError> {
   return None();
 }
 
-function handleExpression(node: ast.ExpressionAstNode): Option<AppError> {
+export function handleExpression(
+  node: ast.ExpressionAstNode,
+): Option<AppError> {
   // TODO: find out whether it's typescript or me that's stupid
   // result: both
   switch (node.kind) {
