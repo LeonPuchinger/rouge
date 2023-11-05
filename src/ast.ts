@@ -18,11 +18,11 @@ interface ValueAstNode<V> {
 }
 
 interface InterpretableAstNode {
-  interpret: () => Option<AppError>;
+  interpret(): Option<AppError>;
 }
 
 interface EvaluableAstNode<R> {
-  interpret: () => Result<R, AppError>;
+  interpret(): Result<R, AppError>;
 }
 
 export type IntegerAstNode = ValueAstNode<number> & EvaluableAstNode<number>;
