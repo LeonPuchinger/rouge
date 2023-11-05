@@ -42,7 +42,9 @@ const ASSIGNMENT = apply(
   (values): ast.AssignAstNode => ({
     lhs: values[0],
     rhs: values[2],
-    interpret: interpreter.handleAssign,
+    interpret() {
+      return interpreter.handleAssign(this);
+    },
   }),
 );
 
