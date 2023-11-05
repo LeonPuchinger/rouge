@@ -1,7 +1,7 @@
 import { Token } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
-import { Panic } from "./util/error.ts";
-import { None, Option, Some } from "./util/monad/index.ts";
+import { AppError, Panic } from "./util/error.ts";
+import { None, Option, Result, Some } from "./util/monad/index.ts";
 
 interface BinaryAstNode<L, R> {
   lhs: L;
@@ -17,10 +17,20 @@ interface ValueAstNode<V> {
   value: V;
 }
 
-export type IntegerAstNode = ValueAstNode<number>;
-export type IdentifierAstNode = ValueAstNode<string>;
-export type AssignAstNode = BinaryAstNode<IdentifierAstNode, IntegerAstNode>;
-export type ExpressionAstNode = AssignAstNode;
+interface InterpretableAstNode {
+  interpret: () => Option<AppError>;
+}
+
+interface EvaluableAstNode<R> {
+  interpret: () => Result<R, AppError>;
+}
+
+export type IntegerAstNode = ValueAstNode<number> & EvaluableAstNode<number>;
+export type IdentifierAstNode = ValueAstNode<string> & EvaluableAstNode<string>;
+export type AssignAstNode =
+  & BinaryAstNode<IdentifierAstNode, IntegerAstNode>
+  & InterpretableAstNode;
+export type ExpressionAstNode = AssignAstNode & InterpretableAstNode;
 export type ExpressionsAstNode = NaryAstNode<ExpressionAstNode>;
 
 export type AST = ExpressionsAstNode;
