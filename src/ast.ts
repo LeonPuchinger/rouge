@@ -10,7 +10,7 @@ interface BinaryAstNode<L, R> {
 }
 
 interface NaryAstNode<T> {
-  children: [T];
+  children: T[];
 }
 
 interface ValueAstNode<V> {
@@ -37,7 +37,9 @@ export type AssignAstNode =
   & InterpretableAstNode;
 export type ExpressionAstNode = AssignAstNode & EvaluableAstNode<Symbol>;
 export type StatementAstNode = ExpressionAstNode;
-export type StatementAstNodes = StatementAstNode[] & InterpretableAstNode;
+export type StatementAstNodes =
+  & NaryAstNode<StatementAstNode>
+  & InterpretableAstNode;
 
 export type AST = StatementAstNodes;
 

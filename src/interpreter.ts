@@ -64,12 +64,12 @@ export function handleExpression(
   return None();
 }
 
-function handleStatements(node: ast.StatementAstNodes): Option<AppError> {
-  return node.mapUntil(
+export function handleStatements(node: ast.StatementAstNodes): Option<AppError> {
+  return node.children.mapUntil(
     (node) => handleExpression(node),
     (result) => result.kind === "some",
     None(),
   );
 }
 
-export const interpret = (node: ast.AST) => handleExpressions(node);
+export const interpret = (node: ast.AST) => node.interpret();

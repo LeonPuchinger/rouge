@@ -64,7 +64,12 @@ const STATEMENTS = apply(
     EXPRESSION,
     BREAKING_WHITESPACE,
   ),
-  (statements): ast.StatementAstNodes => statements,
+  (statements): ast.StatementAstNodes => ({
+    children: statements,
+    interpret() {
+      return interpreter.handleStatements(this);
+    },
+  }),
 );
 
 export const START = STATEMENTS;
