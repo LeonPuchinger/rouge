@@ -36,10 +36,10 @@ export type AssignAstNode =
   & BinaryAstNode<IdentifierAstNode, IntegerAstNode>
   & InterpretableAstNode;
 export type ExpressionAstNode = AssignAstNode & EvaluableAstNode<Symbol>;
-// TODO: think about whether expressions makes sense, should be statements, right?
-export type ExpressionsAstNode = NaryAstNode<ExpressionAstNode>; // TODO: make interpretable
+export type StatementAstNode = ExpressionAstNode;
+export type StatementAstNodes = StatementAstNode[] & InterpretableAstNode;
 
-export type AST = ExpressionsAstNode;
+export type AST = StatementAstNodes;
 
 export enum AstNodeType {
   assign,

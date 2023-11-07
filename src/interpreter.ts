@@ -64,8 +64,8 @@ export function handleExpression(
   return None();
 }
 
-function handleExpressions(node: ast.ExpressionsAstNode): Option<AppError> {
-  return node.children.mapUntil(
+function handleStatements(node: ast.StatementAstNodes): Option<AppError> {
+  return node.mapUntil(
     (node) => handleExpression(node),
     (result) => result.kind === "some",
     None(),

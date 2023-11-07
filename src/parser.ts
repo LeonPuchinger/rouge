@@ -55,21 +55,19 @@ const ASSIGNMENT = apply(
 );
 
 const EXPRESSION = apply(
-  ASSIGNMENT, // TODO: replace with alt_sc when implementing further assignments
+  ASSIGNMENT, // TODO: replace with alt_sc when implementing further expressions
   (expression): ast.ExpressionAstNode => expression,
 );
 
-const EXPRESSIONS = apply(
+const STATEMENTS = apply(
   list_sc(
     EXPRESSION,
     BREAKING_WHITESPACE,
   ),
-  (expressions): ast.ExpressionsAstNode => ({
-    children: expressions,
-  }),
+  (statements): ast.StatementAstNodes => statements,
 );
 
-export const START = EXPRESSIONS;
+export const START = STATEMENTS;
 
 /**
  * Parse a sequence of tokens into an AST based the grammar of the language.
