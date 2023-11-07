@@ -7,12 +7,23 @@ import {
   SymbolValueType,
 } from "./symbol.ts";
 // required for extension methods to be usable
-import {} from "./util/array.ts";
-import { AppError, assert, InterpreterError } from "./util/error.ts";
-import { None, Some } from "./util/monad/index.ts";
-import { Option } from "./util/monad/option.ts";
+import { } from "./util/array.ts";
+import { AppError } from "./util/error.ts";
+import { None, Ok, Option, Result } from "./util/monad/index.ts";
 
 const table = new SymbolTable();
+
+export function handleIdentifier(
+  node: ast.IdentifierAstNode,
+): Result<string, AppError> {
+  return Ok(node.value);
+}
+
+export function handleInteger(
+  node: ast.IntegerAstNode,
+): Result<number, AppError> {
+  return Ok(node.value);
+}
 
 export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
   const ident = node.lhs.interpret();

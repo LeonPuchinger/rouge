@@ -1,5 +1,6 @@
 import { Token } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
+import { Symbol } from "./symbol.ts";
 import { AppError, Panic } from "./util/error.ts";
 import { None, Option, Result, Some } from "./util/monad/index.ts";
 
@@ -34,8 +35,9 @@ export type IdentifierAstNode =
 export type AssignAstNode =
   & BinaryAstNode<IdentifierAstNode, IntegerAstNode>
   & InterpretableAstNode;
-export type ExpressionAstNode = AssignAstNode & InterpretableAstNode;
-export type ExpressionsAstNode = NaryAstNode<ExpressionAstNode>;
+export type ExpressionAstNode = AssignAstNode & EvaluableAstNode<Symbol>;
+// TODO: think about whether expressions makes sense, should be statements, right?
+export type ExpressionsAstNode = NaryAstNode<ExpressionAstNode>; // TODO: make interpretable
 
 export type AST = ExpressionsAstNode;
 
