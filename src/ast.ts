@@ -28,15 +28,17 @@ interface EvaluableAstNode<R> {
 
 export type IntegerAstNode =
   & ValueAstNode<number>
-  & EvaluableAstNode<number>;
+  & EvaluableAstNode<SymbolValue<number>>;
 export type IdentifierAstNode =
   & ValueAstNode<string>
-  & EvaluableAstNode<string>;
+  & EvaluableAstNode<SymbolValue<string>>;
+export type ExpressionAstNode = EvaluableAstNode<SymbolValue<unknown>>;
 export type AssignAstNode =
-  & BinaryAstNode<IdentifierAstNode, IntegerAstNode>
+  & BinaryAstNode<IdentifierAstNode, ExpressionAstNode>
   & InterpretableAstNode;
-export type ExpressionAstNode = AssignAstNode & EvaluableAstNode<Symbol>;
-export type StatementAstNode = ExpressionAstNode;
+export type StatementAstNode =
+  | ExpressionAstNode
+  | AssignAstNode;
 export type StatementAstNodes =
   & NaryAstNode<StatementAstNode>
   & InterpretableAstNode;

@@ -39,6 +39,14 @@ const INT_LITERAL = apply(
   }),
 );
 
+const EXPRESSION = apply(
+  alt_sc(
+    INT_LITERAL,
+    IDENTIFIER,
+  ),
+  (expression): ast.ExpressionAstNode => expression,
+);
+
 const ASSIGNMENT = apply(
   seq(
     IDENTIFIER,
@@ -54,14 +62,17 @@ const ASSIGNMENT = apply(
   }),
 );
 
-const EXPRESSION = apply(
-  ASSIGNMENT, // TODO: replace with alt_sc when implementing further expressions
-  (expression): ast.ExpressionAstNode => expression,
+const STATEMENT = apply(
+  alt_sc(
+    EXPRESSION,
+    ASSIGNMENT,
+  ),
+  (statement): ast.StatementAstNode => statement,
 );
 
 const STATEMENTS = apply(
   list_sc(
-    EXPRESSION,
+    STATEMENT,
     BREAKING_WHITESPACE,
   ),
   (statements): ast.StatementAstNodes => ({
