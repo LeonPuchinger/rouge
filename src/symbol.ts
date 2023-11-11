@@ -17,7 +17,7 @@ interface SymbolParams {
 export class Symbol {
   symbolType: SymbolType;
   node: Option<UncheckedAstNode>;
-  value: Option<SymbolValue<unknown>>;
+  value: SymbolValue<unknown>;
 
   constructor(params: SymbolParams) {
     this.node = params.node ? Some(params.node) : None();
