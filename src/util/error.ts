@@ -52,12 +52,16 @@ function captureStackTrace(subtractFrames = 0): string[] {
  */
 export function InternalError(
   message: string,
+  extendedMessage = "",
 ): AppError {
+  if (extendedMessage !== "") {
+    extendedMessage = `\n${extendedMessage}`;
+  }
   return {
     stacktrace: captureStackTrace(1),
     toString() {
       return toMultiline(
-        `INTERNAL ERROR: ${message}`,
+        `INTERNAL ERROR: ${message}${extendedMessage}`,
         `${toMultiline(...this.stacktrace)}`,
       );
     },
