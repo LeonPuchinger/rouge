@@ -8,8 +8,8 @@ import {
 } from "./symbol.ts";
 // required for extension methods to be usable
 import { } from "./util/array.ts";
-import { AppError } from "./util/error.ts";
-import { None, Ok, Option, Result } from "./util/monad/index.ts";
+import { AppError, InternalError } from "./util/error.ts";
+import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
 
 const table = new SymbolTable();
 
@@ -36,21 +36,36 @@ export function handleInteger(
 }
 
 export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
-  const ident = node.lhs.interpret();
-  if (ident.kind === "err") {
-    return ident.err();
+  const identResult = node.lhs.interpret();
+  if (identResult.kind === "err") {
+    return identResult.err();
   }
-  const value = node.rhs.interpret();
-  if (value.kind === "err") {
-    return value.err();
+  const ident = identResult.unwrap();
+  const expressionResult = node.rhs.interpret();
+  if (expressionResult.kind === "err") {
+    return expressionResult.err();
+  }
+  let expression = expressionResult.unwrap();
+  // identifiers need to be resolved in the symbol table
+  if (expression.valueType === SymbolValueType.identifier) {
+    const existing = table.findSymbol(expression.value as string);
+    if (existing.kind === "none") {
+      return Some(
+        InternalError(
+          "Could not resolve identifier that",
+          "This should have been checked during static analysis.",
+        ),
+      );
+    }
+    expression = existing.unwrap().value;
   }
   table.setSymbol(
-    ident.unwrap().value,
+    ident.value,
     new Symbol({
       symbolType: SymbolType.variable,
       node: node.rhs,
       value: new SymbolValue({
-        value: value.unwrap(),
+        value: expression,
         // TODO: check whether the symbol that already exists (if it does)
         // has the correct type (Static Analysis
         valueType: SymbolValueType.number,
