@@ -15,14 +15,20 @@ const table = new SymbolTable();
 
 export function handleIdentifier(
   node: ast.IdentifierAstNode,
-): Result<string, AppError> {
-  return Ok(node.value);
+): Result<SymbolValue<string>, AppError> {
+  return Ok(new SymbolValue({
+    valueType: SymbolValueType.identifier,
+    value: node.value,
+  }));
 }
 
 export function handleInteger(
   node: ast.IntegerAstNode,
-): Result<number, AppError> {
-  return Ok(node.value);
+): Result<SymbolValue<number>, AppError> {
+  return Ok(new SymbolValue({
+    valueType: SymbolValueType.number,
+    value: node.value
+  }));
 }
 
 export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
@@ -35,14 +41,12 @@ export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
     return value.err();
   }
   table.setSymbol(
-    ident.unwrap(),
+    ident.unwrap().value,
     new Symbol({
       symbolType: SymbolType.variable,
       node: node.rhs,
       value: new SymbolValue({
         value: value.unwrap(),
-        // TODO: let the expression return the result
-        // this way, the expression can have any type.
         // TODO: check whether the symbol that already exists (if it does)
         // has the correct type (Static Analysis
         valueType: SymbolValueType.number,
