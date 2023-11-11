@@ -56,18 +56,6 @@ export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
   return None();
 }
 
-export function handleExpression(
-  node: ast.ExpressionAstNode,
-): Option<AppError> {
-  // TODO: find out whether it's typescript or me that's stupid
-  // result: both
-  switch (node.kind) {
-    case "AssignAstNode":
-      return handleAssign(node);
-  }
-  return None();
-}
-
 export function handleStatements(node: ast.StatementAstNodes): Option<AppError> {
   return node.children.mapUntil(
     (node) => handleExpression(node),
