@@ -16,19 +16,23 @@ const table = new SymbolTable();
 export function handleIdentifier(
   node: ast.IdentifierAstNode,
 ): Result<SymbolValue<string>, AppError> {
-  return Ok(new SymbolValue({
-    valueType: SymbolValueType.identifier,
-    value: node.value,
-  }));
+  return Ok(
+    new SymbolValue({
+      valueType: SymbolValueType.identifier,
+      value: node.value,
+    }),
+  );
 }
 
 export function handleInteger(
   node: ast.IntegerAstNode,
 ): Result<SymbolValue<number>, AppError> {
-  return Ok(new SymbolValue({
-    valueType: SymbolValueType.number,
-    value: node.value
-  }));
+  return Ok(
+    new SymbolValue({
+      valueType: SymbolValueType.number,
+      value: node.value,
+    }),
+  );
 }
 
 export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
