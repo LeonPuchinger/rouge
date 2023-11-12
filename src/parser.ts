@@ -23,7 +23,7 @@ const IDENTIFIER = apply(
     token: token,
     value: token.text,
     evaluate() {
-      return interpreter.handleIdentifier(this);
+      return interpreter.evaluateIdentifier(this);
     },
   }),
 );
@@ -34,7 +34,7 @@ const INT_LITERAL = apply(
     token: token,
     value: parseInt(token.text),
     evaluate() {
-      return interpreter.handleInteger(this);
+      return interpreter.evaluateInteger(this);
     },
   }),
 );
@@ -67,7 +67,7 @@ const ASSIGNMENT = apply(
     lhs: values[0],
     rhs: values[2],
     interpret() {
-      return interpreter.handleAssign(this);
+      return interpreter.interpretAssign(this);
     },
   }),
 );
@@ -88,7 +88,7 @@ const STATEMENTS = apply(
   (statements): ast.StatementAstNodes => ({
     children: statements,
     interpret() {
-      return interpreter.handleStatements(this);
+      return interpreter.interpretStatements(this);
     },
   }),
 );

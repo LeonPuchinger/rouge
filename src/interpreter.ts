@@ -13,7 +13,7 @@ import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
 
 const table = new SymbolTable();
 
-export function handleIdentifier(
+export function evaluateIdentifier(
   node: ast.IdentifierAstNode,
 ): Result<SymbolValue<string>, AppError> {
   return Ok(
@@ -24,7 +24,7 @@ export function handleIdentifier(
   );
 }
 
-export function handleInteger(
+export function evaluateInteger(
   node: ast.IntegerAstNode,
 ): Result<SymbolValue<number>, AppError> {
   return Ok(
@@ -35,7 +35,7 @@ export function handleInteger(
   );
 }
 
-export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
+export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
   const identResult = node.lhs.evaluate();
   if (identResult.kind === "err") {
     return identResult.err();
@@ -75,7 +75,7 @@ export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
   return None();
 }
 
-export function handleStatements(
+export function interpretStatements(
   node: ast.StatementAstNodes,
 ): Option<AppError> {
   return node.children.mapUntil(
