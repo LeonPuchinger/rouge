@@ -61,7 +61,7 @@ const ASSIGNMENT = apply(
   seq(
     IDENTIFIER,
     tok(TokenType.eq_operator),
-    INT_LITERAL,
+    EXPRESSION,
   ),
   (values): ast.AssignAstNode => ({
     lhs: values[0],
