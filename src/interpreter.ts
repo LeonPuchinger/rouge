@@ -36,12 +36,12 @@ export function handleInteger(
 }
 
 export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
-  const identResult = node.lhs.interpret();
+  const identResult = node.lhs.evaluate();
   if (identResult.kind === "err") {
     return identResult.err();
   }
   const ident = identResult.unwrap();
-  const expressionResult = node.rhs.interpret();
+  const expressionResult = node.rhs.evaluate();
   if (expressionResult.kind === "err") {
     return expressionResult.err();
   }

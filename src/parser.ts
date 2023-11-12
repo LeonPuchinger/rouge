@@ -44,7 +44,17 @@ const EXPRESSION = apply(
     INT_LITERAL,
     IDENTIFIER,
   ),
-  (expression): ast.ExpressionAstNode => expression,
+  (expression): ast.ExpressionAstNode => ({
+    child: expression,
+    evaluate() {
+      // TODO: move to interpreter
+      return expression.evaluate();
+    },
+    interpret() {
+      // TODO: move to interpreter
+      return expression.evaluate().err();
+    }
+  }),
 );
 
 const ASSIGNMENT = apply(

@@ -36,7 +36,10 @@ export type IntegerAstNode =
 export type IdentifierAstNode =
   & ValueAstNode<string>
   & EvaluableAstNode<SymbolValue<string>>;
-export type ExpressionAstNode = EvaluableAstNode<SymbolValue<unknown>>;
+export type ExpressionAstNode = 
+  & WrapperAstNode<EvaluableAstNode<SymbolValue<unknown>>>
+  & EvaluableAstNode<SymbolValue<unknown>>
+  & InterpretableAstNode;
 export type AssignAstNode =
   & BinaryAstNode<IdentifierAstNode, ExpressionAstNode>
   & InterpretableAstNode;
