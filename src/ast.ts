@@ -18,6 +18,10 @@ interface ValueAstNode<V> {
   value: V;
 }
 
+interface WrapperAstNode<T> {
+  child: T;
+}
+
 interface InterpretableAstNode {
   interpret(): Option<AppError>;
 }
