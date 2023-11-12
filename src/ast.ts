@@ -23,7 +23,7 @@ interface InterpretableAstNode {
 }
 
 interface EvaluableAstNode<R> {
-  interpret(): Result<R, AppError>;
+  evaluate(): Result<R, AppError>;
 }
 
 export type IntegerAstNode =

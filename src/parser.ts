@@ -22,7 +22,7 @@ const IDENTIFIER = apply(
   (token): ast.IdentifierAstNode => ({
     token: token,
     value: token.text,
-    interpret() {
+    evaluate() {
       return interpreter.handleIdentifier(this);
     },
   }),
@@ -33,7 +33,7 @@ const INT_LITERAL = apply(
   (token): ast.IntegerAstNode => ({
     token: token,
     value: parseInt(token.text),
-    interpret() {
+    evaluate() {
       return interpreter.handleInteger(this);
     }
   }),
