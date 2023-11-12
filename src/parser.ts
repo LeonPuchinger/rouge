@@ -35,7 +35,7 @@ const INT_LITERAL = apply(
     value: parseInt(token.text),
     evaluate() {
       return interpreter.handleInteger(this);
-    }
+    },
   }),
 );
 
@@ -53,7 +53,7 @@ const EXPRESSION = apply(
     interpret() {
       // TODO: move to interpreter
       return expression.evaluate().err();
-    }
+    },
   }),
 );
 
