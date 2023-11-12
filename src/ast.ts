@@ -1,6 +1,6 @@
 import { Token } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
-import { Symbol } from "./symbol.ts";
+import { SymbolValue } from "./symbol.ts";
 import { AppError, Panic } from "./util/error.ts";
 import { None, Option, Result, Some } from "./util/monad/index.ts";
 
