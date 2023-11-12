@@ -75,9 +75,11 @@ export function handleAssign(node: ast.AssignAstNode): Option<AppError> {
   return None();
 }
 
-export function handleStatements(node: ast.StatementAstNodes): Option<AppError> {
+export function handleStatements(
+  node: ast.StatementAstNodes,
+): Option<AppError> {
   return node.children.mapUntil(
-    (node) => handleExpression(node),
+    (node) => node.interpret(),
     (result) => result.kind === "some",
     None(),
   );
