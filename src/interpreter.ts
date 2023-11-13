@@ -35,6 +35,18 @@ export function evaluateInteger(
   );
 }
 
+export function evaluateExpression(
+  node: ast.ExpressionAstNode,
+) {
+  return node.child.evaluate();
+}
+
+export function interpretExpression(
+  node: ast.ExpressionAstNode,
+) {
+  return node.child.evaluate().err();
+}
+
 export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
   const identResult = node.lhs.evaluate();
   if (identResult.kind === "err") {

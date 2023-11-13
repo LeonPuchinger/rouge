@@ -47,12 +47,10 @@ const EXPRESSION = apply(
   (expression): ast.ExpressionAstNode => ({
     child: expression,
     evaluate() {
-      // TODO: move to interpreter
-      return expression.evaluate();
+      return interpreter.evaluateExpression(this);
     },
     interpret() {
-      // TODO: move to interpreter
-      return expression.evaluate().err();
+      return interpreter.interpretExpression(this);
     },
   }),
 );
