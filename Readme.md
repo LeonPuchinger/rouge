@@ -1,4 +1,4 @@
-# Fluffycakes
+# Rouge Programming Language
 
 Teach your grandmother how to program.
 
