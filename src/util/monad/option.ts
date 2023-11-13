@@ -9,7 +9,7 @@ export interface Option<T> {
 }
 
 export function Some<T>(value: T | undefined): Option<T> {
-  if (value === undefined) {
+  if (value === undefined || value === null) {
     return None();
   }
 

@@ -11,18 +11,18 @@ export enum SymbolType {
 interface SymbolParams {
   symbolType: SymbolType;
   node?: AstNode;
-  value?: SymbolValue<unknown>;
+  value: SymbolValue<unknown>;
 }
 
 export class Symbol {
   symbolType: SymbolType;
   node: Option<AstNode>;
-  value: Option<SymbolValue<unknown>>;
+  value: SymbolValue<unknown>;
 
   constructor(params: SymbolParams) {
     this.node = params.node ? Some(params.node) : None();
     this.symbolType = params.symbolType;
-    this.value = params.value ? Some(params.value) : None();
+    this.value = params.value;
   }
 }
 
@@ -30,6 +30,7 @@ export class Symbol {
 
 export enum SymbolValueType {
   number,
+  identifier,
 }
 
 interface SymbolValueParams<T> {
@@ -48,7 +49,9 @@ export class SymbolValue<T> {
 
   asNumber(): SymbolValue<number> {
     if (this.valueType !== SymbolValueType.number) {
-      throw Panic("tried to access the value of a non-numeric symbol as a number")
+      throw Panic(
+        "tried to access the value of a non-numeric symbol as a number",
+      );
     }
     return this as SymbolValue<number>;
   }

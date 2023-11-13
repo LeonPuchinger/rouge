@@ -1,4 +1,4 @@
-import { AstNode } from "../ast.ts";
+import { UncheckedAstNode } from "../ast.ts";
 import { accessEnvironment } from "./environment.ts";
 import { Option } from "./monad/index.ts";
 import { createSnippet } from "./snippet.ts";
@@ -52,12 +52,16 @@ function captureStackTrace(subtractFrames = 0): string[] {
  */
 export function InternalError(
   message: string,
+  extendedMessage = "",
 ): AppError {
+  if (extendedMessage !== "") {
+    extendedMessage = `\n${extendedMessage}`;
+  }
   return {
     stacktrace: captureStackTrace(1),
     toString() {
       return toMultiline(
-        `INTERNAL ERROR: ${message}`,
+        `INTERNAL ERROR: ${message}${extendedMessage}`,
         `${toMultiline(...this.stacktrace)}`,
       );
     },
@@ -77,8 +81,8 @@ export function InternalError(
  */
 export function InterpreterError(
   message: string,
-  beginHighlight: AstNode,
-  endHighlight: Option<AstNode>,
+  beginHighlight: UncheckedAstNode,
+  endHighlight: Option<UncheckedAstNode>,
   messageHighlight: Option<string>,
 ): AppError {
   return {

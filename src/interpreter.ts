@@ -1,4 +1,4 @@
-import { AstNode, AstNodeType } from "./ast.ts";
+import * as ast from "./ast.ts";
 import {
   Symbol,
   SymbolTable,
@@ -7,55 +7,79 @@ import {
   SymbolValueType,
 } from "./symbol.ts";
 // required for extension methods to be usable
-import {} from "./util/array.ts";
-import { AppError, assert, InterpreterError } from "./util/error.ts";
-import { None, Some } from "./util/monad/index.ts";
-import { Option } from "./util/monad/option.ts";
+import { } from "./util/array.ts";
+import { AppError, InternalError } from "./util/error.ts";
+import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
 
 const table = new SymbolTable();
 
-function handleAssign(node: AstNode): Option<AppError> {
-  assert(
-    node.children.length === 2,
-    "Assignment AST nodes always have to have two AST nodes as their children",
+export function evaluateIdentifier(
+  node: ast.IdentifierAstNode,
+): Result<SymbolValue<string>, AppError> {
+  return Ok(
+    new SymbolValue({
+      valueType: SymbolValueType.identifier,
+      value: node.value,
+    }),
   );
-  if (node.child(0)?.nodeType !== AstNodeType.ident) {
-    return Some(InterpreterError(
-      "Assignments always need to be done to a variable",
-      node.childOrPanic(0),
-      Some(node.child(1)),
-      None(),
-    ));
+}
+
+export function evaluateInteger(
+  node: ast.IntegerAstNode,
+): Result<SymbolValue<number>, AppError> {
+  return Ok(
+    new SymbolValue({
+      valueType: SymbolValueType.number,
+      value: node.value,
+    }),
+  );
+}
+
+export function evaluateExpression(
+  node: ast.ExpressionAstNode,
+) {
+  return node.child.evaluate();
+}
+
+export function interpretExpression(
+  node: ast.ExpressionAstNode,
+) {
+  return node.child.evaluate().err();
+}
+
+export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
+  const identResult = node.lhs.evaluate();
+  if (identResult.kind === "err") {
+    return identResult.err();
   }
-  if (node.child(1)?.nodeType !== AstNodeType.int_literal) {
-    return Some(
-      InterpreterError(
-        "Variables can only be assigned integers right now",
-        node.childOrPanic(0),
-        Some(node.child(1)),
-        None(),
-      ),
-    );
+  const ident = identResult.unwrap();
+  const expressionResult = node.rhs.evaluate();
+  if (expressionResult.kind === "err") {
+    return expressionResult.err();
   }
-  const identNode = node.child(0)!;
-  assert(
-    identNode.value.kind !== "none",
-    "AST node has an empty value",
-  );
-  const ident = identNode.value.unwrap() as string;
-  const valueNode = node.child(1)!;
-  assert(
-    valueNode.value.kind !== "none",
-    "AST node has an empty value",
-  );
-  const value = valueNode.value.unwrap() as number;
+  let expression = expressionResult.unwrap();
+  // identifiers need to be resolved in the symbol table
+  if (expression.valueType === SymbolValueType.identifier) {
+    const existing = table.findSymbol(expression.value as string);
+    if (existing.kind === "none") {
+      return Some(
+        InternalError(
+          "Could not resolve identifier that",
+          "This should have been checked during static analysis.",
+        ),
+      );
+    }
+    expression = existing.unwrap().value;
+  }
   table.setSymbol(
-    ident,
+    ident.value,
     new Symbol({
       symbolType: SymbolType.variable,
-      node: valueNode,
+      node: node.rhs,
       value: new SymbolValue({
-        value: value,
+        value: expression,
+        // TODO: check whether the symbol that already exists (if it does)
+        // has the correct type (Static Analysis)
         valueType: SymbolValueType.number,
       }),
     }),
@@ -63,20 +87,14 @@ function handleAssign(node: AstNode): Option<AppError> {
   return None();
 }
 
-export function interpret(node: AstNode): Option<AppError> {
-  switch (node.nodeType) {
-    case AstNodeType.assign:
-      return handleAssign(node);
-    case AstNodeType.ident:
-      break;
-    case AstNodeType.int_literal:
-      break;
-    case AstNodeType.expressions:
-      return node.children.mapUntil(
-        (node) => interpret(node),
-        (result) => result.kind === "some",
-        None(),
-      );
-  }
-  return None();
+export function interpretStatements(
+  node: ast.StatementAstNodes,
+): Option<AppError> {
+  return node.children.mapUntil(
+    (node) => node.interpret(),
+    (result) => result.kind === "some",
+    None(),
+  );
 }
+
+export const interpret = (node: ast.AST) => node.interpret();
