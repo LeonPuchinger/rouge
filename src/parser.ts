@@ -72,8 +72,8 @@ const ASSIGNMENT = apply(
 
 const STATEMENT = apply(
   alt_sc(
-    EXPRESSION,
     ASSIGNMENT,
+    EXPRESSION,
   ),
   (statement): ast.StatementAstNode => statement,
 );
