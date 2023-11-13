@@ -1,4 +1,4 @@
-import { UncheckedAstNode } from "./ast.ts";
+import { AstNode } from "./ast.ts";
 import { Panic } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 
@@ -10,13 +10,13 @@ export enum SymbolType {
 
 interface SymbolParams {
   symbolType: SymbolType;
-  node?: UncheckedAstNode;
+  node?: AstNode;
   value: SymbolValue<unknown>;
 }
 
 export class Symbol {
   symbolType: SymbolType;
-  node: Option<UncheckedAstNode>;
+  node: Option<AstNode>;
   value: SymbolValue<unknown>;
 
   constructor(params: SymbolParams) {
