@@ -6,8 +6,8 @@ export default defineConfig({
         outDir: 'dist',
         lib: {
             entry: 'src/main.ts',
-            name: 'Fluffycakes',
-            fileName: format => `fluffycakes.${format}.js`,
+            name: 'Rouge',
+            fileName: format => `rouge.${format}.js`,
         },
         rollupOptions: {
             // Make sure to exclude any unwanted files or directories from the build output
