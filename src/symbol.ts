@@ -30,6 +30,7 @@ export class Symbol {
 
 export enum SymbolValueType {
   number,
+  identifier,
 }
 
 interface SymbolValueParams<T> {
