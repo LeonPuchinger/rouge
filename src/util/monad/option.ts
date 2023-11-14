@@ -1,8 +1,10 @@
 import { Panic } from "../error.ts";
+import { Err, Ok, Result } from "./index.ts";
 
 export interface Option<T> {
   kind: "some" | "none";
   map<U>(fn: (value: T) => U): Option<U>;
+  ok_or<E>(err: E): Result<T, E>;
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
   then(fn: (value: T) => void): void;
@@ -18,6 +20,10 @@ export function Some<T>(value: T | undefined): Option<T> {
 
     map<U>(fn: (value: T) => U): Option<U> {
       return Some(fn(value));
+    },
+
+    ok_or<E>(_err: E): Result<T, E> {
+      return Ok(value);
     },
 
     unwrap(): T {
@@ -40,6 +46,10 @@ export function None<T>(): Option<T> {
 
     map<U>(_fn: (value: T) => U): Option<U> {
       return None();
+    },
+
+    ok_or<E>(err: E): Result<T, E> {
+      return Err(err);
     },
 
     unwrap(): T {
