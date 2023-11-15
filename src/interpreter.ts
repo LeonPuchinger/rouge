@@ -9,19 +9,14 @@ import {
 // required for extension methods to be usable
 import { } from "./util/array.ts";
 import { AppError, InternalError } from "./util/error.ts";
-import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
+import { Err, None, Ok, Option, Result, Some } from "./util/monad/index.ts";
 
 const table = new SymbolTable();
 
 export function evaluateIdentifier(
   node: ast.IdentifierAstNode,
-): Result<SymbolValue<string>, AppError> {
-  return Ok(
-    new SymbolValue({
-      valueType: SymbolValueType.identifier,
-      value: node.value,
-    }),
-  );
+): Result<string, AppError> {
+  return Ok(node.value);
 }
 
 export function evaluateInteger(
@@ -37,13 +32,28 @@ export function evaluateInteger(
 
 export function evaluateExpression(
   node: ast.ExpressionAstNode,
-) {
-  return node.child.evaluate();
+): Result<SymbolValue<unknown>, AppError> {
+  const evaluationResult = node.child.evaluate();
+  if (evaluationResult.kind === "err") {
+    // repackage result for type safety
+    return Err(evaluationResult.unwrapError());
+  }
+  const evaluatedExpression = evaluationResult.unwrap();
+  if (typeof evaluatedExpression === "string") {
+    // expression is an identifier, needs to be resolved first
+    return table.findSymbol(evaluatedExpression)
+      .map((symbol) => symbol.value)
+      .ok_or(InternalError(
+        `Unable to resolve symbol ${evaluatedExpression}`,
+        "This should have been caught during static analysis",
+      ));
+  }
+  return Ok(evaluatedExpression);
 }
 
 export function interpretExpression(
   node: ast.ExpressionAstNode,
-) {
+): Option<AppError> {
   return node.child.evaluate().err();
 }
 
@@ -72,7 +82,7 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
     expression = existing.unwrap().value;
   }
   table.setSymbol(
-    ident.value,
+    ident,
     new Symbol({
       symbolType: SymbolType.variable,
       node: node.rhs,

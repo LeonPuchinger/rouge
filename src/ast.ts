@@ -43,9 +43,9 @@ export type IntegerAstNode =
   & EvaluableAstNode<SymbolValue<number>>;
 export type IdentifierAstNode =
   & ValueAstNode<string>
-  & EvaluableAstNode<SymbolValue<string>>;
+  & EvaluableAstNode<string>;
 export type ExpressionAstNode =
-  & WrapperAstNode<EvaluableAstNode<SymbolValue<unknown>>>
+  & WrapperAstNode<EvaluableAstNode<SymbolValue<unknown>> | IdentifierAstNode>
   & EvaluableAstNode<SymbolValue<unknown>>
   & InterpretableAstNode;
 export type AssignAstNode =
