@@ -74,7 +74,7 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
     if (existing.kind === "none") {
       return Some(
         InternalError(
-          "Could not resolve identifier that",
+          "Could not resolve identifier",
           "This should have been checked during static analysis.",
         ),
       );
