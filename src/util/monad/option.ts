@@ -8,6 +8,7 @@ export interface Option<T> {
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
   then(fn: (value: T) => void): void;
+  zip<U>(other: Option<U>): Option<[T, U]>;
 }
 
 export function Some<T>(value: T | undefined): Option<T> {
@@ -37,6 +38,13 @@ export function Some<T>(value: T | undefined): Option<T> {
     then(fn) {
       fn(value);
     },
+
+    zip<U>(other: Option<U>): Option<[T, U]> {
+      if (other.kind === "some") {
+        return Some([value, other.unwrap()]);
+      }
+      return None();
+    },
   };
 }
 
@@ -62,6 +70,10 @@ export function None<T>(): Option<T> {
 
     then(_fn) {
       // do nothing
+    },
+
+    zip<U>(_other: Option<U>): Option<[T, U]> {
+      return None();
     },
   };
 }
