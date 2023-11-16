@@ -12,6 +12,7 @@ export interface Result<T, E> {
   unwrapOr(defaultValue: T): T;
   then(fn: (value: T) => void): void;
   thenError(fn: (error: E) => void): void;
+  zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]>;
 }
 
 export function Ok<T, E>(value: T): Result<T, E> {
@@ -52,6 +53,13 @@ export function Ok<T, E>(value: T): Result<T, E> {
 
     thenError(_fn) {
       // do nothing
+    },
+
+    zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]> {
+      if (other.kind === "ok") {
+        return Ok([value, other.unwrap()]);
+      }
+      return Err([None(), other.err()]);
     },
   };
 }
@@ -94,6 +102,10 @@ export function Err<T, E>(value: E): Result<T, E> {
 
     thenError(fn) {
       fn(value);
+    },
+
+    zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]> {
+      return Err([this.err(), other.err()]);
     },
   };
 }
