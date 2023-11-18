@@ -13,7 +13,7 @@ interface NaryAstNode<T> {
   children: T[];
 }
 
-interface ValueAstNode<V> {
+export interface ValueAstNode<V> {
   token: Token<TokenType>;
   value: V;
 }
