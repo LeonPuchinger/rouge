@@ -83,7 +83,7 @@ export function InterpreterError(
   message: string,
   beginHighlight: UncheckedAstNode,
   endHighlight: Option<UncheckedAstNode>,
-  messageHighlight: Option<string>,
+  messageHighlight?: string,
 ): AppError {
   return {
     stacktrace: captureStackTrace(1),
@@ -95,7 +95,7 @@ export function InterpreterError(
           beginHighlight.token.unwrap().pos,
           endHighlight.map((node) => node.token.unwrap().pos),
           3,
-          messageHighlight,
+          Some(messageHighlight),
         ),
       );
     },
