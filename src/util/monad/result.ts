@@ -40,7 +40,7 @@ export function Ok<T, E>(value: T): Result<T, E> {
     },
 
     unwrapError(): E {
-      throw Panic("umwrapError called on Result");
+      throw Panic("unwrapError called on Result");
     },
 
     unwrapOr(_defaultValue: T): T {
