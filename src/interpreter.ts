@@ -9,7 +9,15 @@ import {
 // required for extension methods to be usable
 import { } from "./util/array.ts";
 import { AppError, InternalError } from "./util/error.ts";
-import { Err, None, Ok, Option, Result, Some } from "./util/monad/index.ts";
+import {
+  Err,
+  None,
+  Ok,
+  Option,
+  Result,
+  Some,
+  flattenResult,
+} from "./util/monad/index.ts";
 
 const table = new SymbolTable();
 
@@ -41,12 +49,20 @@ export function evaluateExpression(
   const evaluatedExpression = evaluationResult.unwrap();
   if (typeof evaluatedExpression === "string") {
     // expression is an identifier, needs to be resolved first
-    return table.findSymbol(evaluatedExpression)
-      .map((symbol) => symbol.value)
-      .ok_or(InternalError(
-        `Unable to resolve symbol ${evaluatedExpression}`,
-        "This should have been caught during static analysis",
-      ));
+    const symbol = table.findSymbol(evaluatedExpression).ok_or(
+      InternalError(
+        `Unable to resolve symbol ${evaluatedExpression}.`,
+        "This should have been caught during static analysis.",
+      ),
+    );
+    const symbolValue = symbol.map((symbol) =>
+      symbol.value.ok_or(
+        InternalError(
+          `The variable ${evaluateExpression}  didn't have a value in the symbol table when it should have.`,
+        ),
+      )
+    );
+    return flattenResult(symbolValue);
   }
   return Ok(evaluatedExpression);
 }
