@@ -1,43 +1,18 @@
 import * as ast from "./ast.ts";
 import {
-  Symbol,
-  SymbolTable,
+  InterpreterSymbolTable,
+  RuntimeSymbol,
   SymbolKind,
+  SymbolTable,
   SymbolValue,
   SymbolValueKind,
 } from "./symbol.ts";
 // required for extension methods to be usable
-import { } from "./util/array.ts";
+import {} from "./util/array.ts";
 import { AppError, InternalError } from "./util/error.ts";
-import {
-  Err,
-  flattenResult,
-  None,
-  Ok,
-  Option,
-  Result,
-  Some,
-} from "./util/monad/index.ts";
+import { Err, None, Ok, Option, Result, Some } from "./util/monad/index.ts";
 
-const table = new SymbolTable();
-
-/**
- * Utility function. Generates an error when the `SymbolValue` of a `Symbol` is `None`.
- *
- * @param symbol The symbol which is required to contain a value.
- * @param variableName The name of the variable in case the symbol belongs to one. Used to generate a more meaningful error message.
- */
-function requireSymbolValue(
-  symbol: Symbol,
-  variableName?: string,
-): Result<SymbolValue<unknown>, AppError> {
-  const value = symbol.value;
-  return value.ok_or(InternalError(
-    variableName
-      ? `The symbol for the variable ${variableName}  didn't contain a value in the symbol table when it should have.`
-      : "A symbol in the symbol table didn't contain a value in the symbol table when it should have",
-  ));
-}
+const table: InterpreterSymbolTable = new SymbolTable();
 
 export function evaluateIdentifier(
   node: ast.IdentifierAstNode,
@@ -67,20 +42,11 @@ export function evaluateExpression(
   const evaluatedExpression = evaluationResult.unwrap();
   if (typeof evaluatedExpression === "string") {
     // expression is an identifier, needs to be resolved first
-    const symbol = table.findSymbol(evaluatedExpression).ok_or(
-      InternalError(
+    return table.findSymbol(evaluatedExpression).map((symbol) => symbol.value)
+      .ok_or(InternalError(
         `Unable to resolve symbol ${evaluatedExpression}.`,
         "This should have been caught during static analysis.",
-      ),
-    );
-    const symbolValue = symbol.map((symbol) =>
-      symbol.value.ok_or(
-        InternalError(
-          `The variable ${evaluateExpression}  didn't have a value in the symbol table when it should have.`,
-        ),
-      )
-    );
-    return flattenResult(symbolValue);
+      ));
   }
   return Ok(evaluatedExpression);
 }
@@ -108,20 +74,16 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
     if (existing.kind === "none") {
       return Some(
         InternalError(
-          "Could not resolve identifier",
+          `Could not resolve identifier "${ident}"`,
           "This should have been checked during static analysis.",
         ),
       );
     }
-    const symbolValueResult = requireSymbolValue(existing.unwrap());
-    symbolValueResult.then((value) => expression = value);
-    if (symbolValueResult.kind === "err") {
-      return symbolValueResult.err();
-    }
+    expression = existing.unwrap().value;
   }
   table.setSymbol(
     ident,
-    new Symbol({
+    new RuntimeSymbol({
       symbolKind: SymbolKind.variable,
       node: node.rhs,
       value: new SymbolValue({
