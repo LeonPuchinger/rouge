@@ -11,15 +11,33 @@ import { } from "./util/array.ts";
 import { AppError, InternalError } from "./util/error.ts";
 import {
   Err,
+  flattenResult,
   None,
   Ok,
   Option,
   Result,
   Some,
-  flattenResult,
 } from "./util/monad/index.ts";
 
 const table = new SymbolTable();
+
+/**
+ * Utility function. Generates an error when the `SymbolValue` of a `Symbol` is `None`.
+ *
+ * @param symbol The symbol which is required to contain a value.
+ * @param variableName The name of the variable in case the symbol belongs to one. Used to generate a more meaningful error message.
+ */
+function requireSymbolValue(
+  symbol: Symbol,
+  variableName?: string,
+): Result<SymbolValue<unknown>, AppError> {
+  const value = symbol.value;
+  return value.ok_or(InternalError(
+    variableName
+      ? `The symbol for the variable ${variableName}  didn't contain a value in the symbol table when it should have.`
+      : "A symbol in the symbol table didn't contain a value in the symbol table when it should have",
+  ));
+}
 
 export function evaluateIdentifier(
   node: ast.IdentifierAstNode,
@@ -95,7 +113,11 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
         ),
       );
     }
-    expression = existing.unwrap().value;
+    const symbolValueResult = requireSymbolValue(existing.unwrap());
+    symbolValueResult.then((value) => expression = value);
+    if (symbolValueResult.kind === "err") {
+      return symbolValueResult.err();
+    }
   }
   table.setSymbol(
     ident,
