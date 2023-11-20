@@ -11,18 +11,18 @@ export enum SymbolType {
 interface SymbolParams {
   symbolType: SymbolType;
   node?: AstNode;
-  value: SymbolValue<unknown>;
+  value?: SymbolValue<unknown>;
 }
 
 export class Symbol {
   symbolType: SymbolType;
   node: Option<AstNode>;
-  value: SymbolValue<unknown>;
+  value: Option<SymbolValue<unknown>>;
 
   constructor(params: SymbolParams) {
-    this.node = params.node ? Some(params.node) : None();
+    this.node = Some(params.node);
     this.symbolType = params.symbolType;
-    this.value = params.value;
+    this.value = Some(params.value);
   }
 }
 
