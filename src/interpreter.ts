@@ -2,9 +2,9 @@ import * as ast from "./ast.ts";
 import {
   Symbol,
   SymbolTable,
-  SymbolType,
+  SymbolKind,
   SymbolValue,
-  SymbolValueType,
+  SymbolValueKind,
 } from "./symbol.ts";
 // required for extension methods to be usable
 import { } from "./util/array.ts";
@@ -50,7 +50,7 @@ export function evaluateInteger(
 ): Result<SymbolValue<number>, AppError> {
   return Ok(
     new SymbolValue({
-      valueType: SymbolValueType.number,
+      valueKind: SymbolValueKind.number,
       value: node.value,
     }),
   );
@@ -103,7 +103,7 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
   }
   let expression = expressionResult.unwrap();
   // identifiers need to be resolved in the symbol table
-  if (expression.valueType === SymbolValueType.identifier) {
+  if (expression.valueKind === SymbolValueKind.identifier) {
     const existing = table.findSymbol(expression.value as string);
     if (existing.kind === "none") {
       return Some(
@@ -122,13 +122,13 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
   table.setSymbol(
     ident,
     new Symbol({
-      symbolType: SymbolType.variable,
+      symbolKind: SymbolKind.variable,
       node: node.rhs,
       value: new SymbolValue({
         value: expression,
         // TODO: check whether the symbol that already exists (if it does)
         // has the correct type (Static Analysis)
-        valueType: SymbolValueType.number,
+        valueKind: SymbolValueKind.number,
       }),
     }),
   );

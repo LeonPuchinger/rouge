@@ -4,51 +4,51 @@ import { None, Option, Some } from "./util/monad/index.ts";
 
 // Symbol
 
-export enum SymbolType {
+export enum SymbolKind {
   variable,
 }
 
 interface SymbolParams {
-  symbolType: SymbolType;
+  symbolKind: SymbolKind;
   node?: AstNode;
   value?: SymbolValue<unknown>;
 }
 
 export class Symbol {
-  symbolType: SymbolType;
+  symbolKind: SymbolKind;
   node: Option<AstNode>;
   value: Option<SymbolValue<unknown>>;
 
   constructor(params: SymbolParams) {
     this.node = Some(params.node);
-    this.symbolType = params.symbolType;
+    this.symbolKind = params.symbolKind;
     this.value = Some(params.value);
   }
 }
 
 // Symbol Value
 
-export enum SymbolValueType {
+export enum SymbolValueKind {
   number,
   identifier,
 }
 
 interface SymbolValueParams<T> {
-  valueType: SymbolValueType;
+  valueKind: SymbolValueKind;
   value: T;
 }
 
 export class SymbolValue<T> {
-  valueType: SymbolValueType;
+  valueKind: SymbolValueKind;
   value: T;
 
   constructor(params: SymbolValueParams<T>) {
-    this.valueType = params.valueType;
+    this.valueKind = params.valueKind;
     this.value = params.value;
   }
 
   asNumber(): SymbolValue<number> {
-    if (this.valueType !== SymbolValueType.number) {
+    if (this.valueKind !== SymbolValueKind.number) {
       throw Panic(
         "tried to access the value of a non-numeric symbol as a number",
       );
@@ -78,10 +78,10 @@ export class SymbolTable {
   private findSymbolInScope(
     name: string,
     scope: Scope,
-    symbolType?: SymbolType,
+    symbolKind?: SymbolKind,
   ): Option<Symbol> {
     const symbol = scope.get(name);
-    if (symbolType && symbol?.symbolType) {
+    if (symbolKind && symbol?.symbolKind) {
       return Some(symbol);
     }
     return None();
@@ -89,18 +89,18 @@ export class SymbolTable {
 
   findSymbolInCurrentScope(
     name: string,
-    symbolType?: SymbolType,
+    symbolKind?: SymbolKind,
   ): Option<Symbol> {
     const current = this.scopes.toReversed().at(0);
     if (current !== undefined) {
-      return this.findSymbolInScope(name, current, symbolType);
+      return this.findSymbolInScope(name, current, symbolKind);
     }
     return None();
   }
 
-  findSymbol(name: string, symbolType?: SymbolType): Option<Symbol> {
+  findSymbol(name: string, symbolKind?: SymbolKind): Option<Symbol> {
     for (const current_scope of this.scopes.toReversed()) {
-      const symbol = this.findSymbolInScope(name, current_scope, symbolType);
+      const symbol = this.findSymbolInScope(name, current_scope, symbolKind);
       if (symbol.kind === "none") {
         continue;
       }
