@@ -88,8 +88,6 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
       node: node.rhs,
       value: new SymbolValue({
         value: expression,
-        // TODO: check whether the symbol that already exists (if it does)
-        // has the correct type (Static Analysis)
         valueKind: SymbolValueKind.number,
       }),
     }),
