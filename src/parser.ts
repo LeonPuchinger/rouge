@@ -7,6 +7,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
+import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
 import * as interpreter from "./interpreter.ts";
 import { TokenType } from "./lexer.ts";
@@ -67,6 +68,9 @@ const ASSIGNMENT = apply(
     interpret() {
       return interpreter.interpretAssign(this);
     },
+    check() {
+      return analysis.analyzeAssign(this);
+    }
   }),
 );
 

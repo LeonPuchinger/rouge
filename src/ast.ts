@@ -30,13 +30,23 @@ interface EvaluableAstNode<R> {
   evaluate(): Result<R, AppError>;
 }
 
+interface CheckableAstNode {
+  check(): Option<AppError>;
+}
+
+interface AnalyzableAstNode<A> {
+  analyze(): Result<A, AppError>;
+}
+
 export type AstNode =
   | BinaryAstNode<unknown, unknown>
   | NaryAstNode<unknown>
   | ValueAstNode<unknown>
   | WrapperAstNode<unknown>
   | InterpretableAstNode
-  | EvaluableAstNode<unknown>;
+  | EvaluableAstNode<unknown>
+  | CheckableAstNode
+  | AnalyzableAstNode<unknown>;
 
 export type IntegerAstNode =
   & ValueAstNode<number>
@@ -50,7 +60,8 @@ export type ExpressionAstNode =
   & InterpretableAstNode;
 export type AssignAstNode =
   & BinaryAstNode<IdentifierAstNode, ExpressionAstNode>
-  & InterpretableAstNode;
+  & InterpretableAstNode
+  & CheckableAstNode;
 export type StatementAstNode =
   | ExpressionAstNode
   | AssignAstNode;
