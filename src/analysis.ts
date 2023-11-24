@@ -4,12 +4,20 @@ import {
   StaticSymbol,
   SymbolKind,
   SymbolTable,
+  SymbolValueKind,
 } from "./symbol.ts";
 import { AppError, InterpreterError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
+import { Ok, Result } from "./util/monad/result.ts";
 import { concatLines } from "./util/string.ts";
 
 const table: AnalysisSymbolTable = new SymbolTable();
+
+export function analyzeInteger(
+  _node: ast.IntegerAstNode,
+): Result<SymbolValueKind, AppError> {
+  return Ok(SymbolValueKind.number);
+}
 
 export function analyzeAssign(
   node: ast.AssignAstNode,

@@ -37,6 +37,9 @@ const INT_LITERAL = apply(
     evaluate() {
       return interpreter.evaluateInteger(this);
     },
+    analyze() {
+      return analysis.analyzeInteger(this);
+    }
   }),
 );
 

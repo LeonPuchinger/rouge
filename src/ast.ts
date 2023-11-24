@@ -1,6 +1,6 @@
 import { Token } from "typescript-parsec";
 import { TokenType } from "./lexer.ts";
-import { SymbolValue } from "./symbol.ts";
+import { SymbolValue, SymbolValueKind } from "./symbol.ts";
 import { AppError } from "./util/error.ts";
 import { Option, Result } from "./util/monad/index.ts";
 
@@ -50,7 +50,8 @@ export type AstNode =
 
 export type IntegerAstNode =
   & ValueAstNode<number>
-  & EvaluableAstNode<SymbolValue<number>>;
+  & EvaluableAstNode<SymbolValue<number>>
+  & AnalyzableAstNode<SymbolValueKind>;
 export type IdentifierAstNode =
   & ValueAstNode<string>
   & EvaluableAstNode<string>;
