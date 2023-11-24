@@ -19,6 +19,20 @@ export function analyzeInteger(
   return Ok(SymbolValueKind.number);
 }
 
+export function analyzeIdenifier(
+  node: ast.IdentifierAstNode,
+): Result<SymbolValueKind, AppError> {
+  const identifierResult = table.findSymbol(node.value);
+  return identifierResult
+    .map((a) => a.valueKind)
+    .ok_or(InterpreterError(
+      "You tried to use a variable that has not been defined at this point in the program.",
+      node,
+      None(),
+      `Variable "${node.value}" is unknown at this point.`,
+    ));
+}
+
 export function analyzeAssign(
   node: ast.AssignAstNode,
 ): Option<AppError> {

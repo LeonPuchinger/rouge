@@ -54,7 +54,8 @@ export type IntegerAstNode =
   & AnalyzableAstNode<SymbolValueKind>;
 export type IdentifierAstNode =
   & ValueAstNode<string>
-  & EvaluableAstNode<string>;
+  & EvaluableAstNode<string>
+  & AnalyzableAstNode<SymbolValueKind>;
 export type ExpressionAstNode =
   & WrapperAstNode<EvaluableAstNode<SymbolValue<unknown>> | IdentifierAstNode>
   & EvaluableAstNode<SymbolValue<unknown>>

@@ -26,6 +26,9 @@ const IDENTIFIER = apply(
     evaluate() {
       return interpreter.evaluateIdentifier(this);
     },
+    analyze() {
+      return analysis.analyzeIdenifier(this);
+    },
   }),
 );
 
@@ -39,7 +42,7 @@ const INT_LITERAL = apply(
     },
     analyze() {
       return analysis.analyzeInteger(this);
-    }
+    },
   }),
 );
 
@@ -73,7 +76,7 @@ const ASSIGNMENT = apply(
     },
     check() {
       return analysis.analyzeAssign(this);
-    }
+    },
   }),
 );
 
