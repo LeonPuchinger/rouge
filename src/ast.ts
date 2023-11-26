@@ -31,11 +31,11 @@ interface EvaluableAstNode<R> {
 }
 
 interface CheckableAstNode {
-  check(): Option<AppError>;
+  check(): AppError[];
 }
 
 interface AnalyzableAstNode<A> {
-  analyze(): Result<A, AppError>;
+  analyze(): Result<A, AppError[]>;
 }
 
 export type AstNode =

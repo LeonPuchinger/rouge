@@ -7,45 +7,45 @@ import {
   SymbolValueKind,
 } from "./symbol.ts";
 import { AppError, InterpreterError } from "./util/error.ts";
-import { None, Option, Some } from "./util/monad/index.ts";
-import { Ok, Result } from "./util/monad/result.ts";
+import { None, Ok, Result } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
 const table: AnalysisSymbolTable = new SymbolTable();
 
 export function analyzeInteger(
   _node: ast.IntegerAstNode,
-): Result<SymbolValueKind, AppError> {
+): Result<SymbolValueKind, AppError[]> {
   return Ok(SymbolValueKind.number);
 }
 
 export function analyzeIdentifierExpression(
   node: ast.IdentifierExpressionAstNode,
-): Result<SymbolValueKind, AppError> {
+): Result<SymbolValueKind, AppError[]> {
   const ident = node.child.value;
   return table.findSymbol(ident)
     .map((symbol) => symbol.valueKind)
-    .ok_or(InterpreterError(
+    .ok_or([InterpreterError(
       "You tried to use a variable that has not been defined at this point in the program.",
       node.child,
       None(),
       `Variable "${ident}" is unknown at this point.`,
-    ));
+    )]);
 }
 
 export function analyzeAssign(
   node: ast.AssignAstNode,
-): Option<AppError> {
+): AppError[] {
+  const errors: AppError[] = [];
   const ident = node.lhs.value;
   const expressionResult = node.rhs.analyze();
   if (expressionResult.kind === "err") {
-    return expressionResult.err();
+    errors.push(...expressionResult.unwrapError());
   }
   const expressionKind = expressionResult.unwrap();
   const existing = table.findSymbol(ident);
   if (existing.kind === "some") {
     if (existing.unwrap().valueKind !== expressionKind) {
-      return Some(
+      return [
         InterpreterError(
           concatLines(
             `You tried setting the variable '${ident}' to a value that is incompatible with the variables type.`,
@@ -56,7 +56,7 @@ export function analyzeAssign(
           node.lhs,
           None(),
         ),
-      );
+      ];
     }
   } else {
     table.setSymbol(
@@ -67,11 +67,18 @@ export function analyzeAssign(
       }),
     );
   }
-  return None();
+  return errors;
 }
 
 export function checkExpression(
   node: ast.ExpressionAstNode,
+): AppError[] {
+  const a = node.analyze().err();
+  if (a.kind === "some") {
+    return a.unwrap();
+  } else return [];
+}
+
 ): Option<AppError> {
   return node.evaluate().err();
 }
