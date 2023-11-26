@@ -36,19 +36,15 @@ export function analyzeIdentifierExpression(
 export function analyzeAssign(
   node: ast.AssignAstNode,
 ): Option<AppError> {
-  const identResult = node.lhs.evaluate();
-  if (identResult.kind === "err") {
-    return identResult.err();
-  }
-  const ident = identResult.unwrap();
-  const expressionResult = node.rhs.evaluate();
+  const ident = node.lhs.value;
+  const expressionResult = node.rhs.analyze();
   if (expressionResult.kind === "err") {
     return expressionResult.err();
   }
-  const expression = expressionResult.unwrap();
+  const expressionKind = expressionResult.unwrap();
   const existing = table.findSymbol(ident);
   if (existing.kind === "some") {
-    if (existing.unwrap().valueKind !== expression.valueKind) {
+    if (existing.unwrap().valueKind !== expressionKind) {
       return Some(
         InterpreterError(
           concatLines(
@@ -67,7 +63,7 @@ export function analyzeAssign(
       ident,
       new StaticSymbol({
         symbolKind: SymbolKind.variable,
-        valueKind: expression.valueKind,
+        valueKind: expressionKind,
       }),
     );
   }
