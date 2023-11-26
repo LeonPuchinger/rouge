@@ -9,6 +9,7 @@ export interface Option<T> {
   unwrapOr(defaultValue: T): T;
   then(fn: (value: T) => void): void;
   zip<U>(other: Option<U>): Option<[T, U]>;
+  iter(): T[];
 }
 
 export function Some<T>(value: T | undefined): Option<T> {
@@ -45,6 +46,10 @@ export function Some<T>(value: T | undefined): Option<T> {
       }
       return None();
     },
+
+    iter(): T[] {
+      return [value];
+    },
   };
 }
 
@@ -74,6 +79,10 @@ export function None<T>(): Option<T> {
 
     zip<U>(_other: Option<U>): Option<[T, U]> {
       return None();
+    },
+
+    iter(): T[] {
+      return [];
     },
   };
 }
