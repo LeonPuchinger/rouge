@@ -69,3 +69,9 @@ export function analyzeAssign(
   }
   return None();
 }
+
+export function checkExpression(
+  node: ast.ExpressionAstNode,
+): Option<AppError> {
+  return node.evaluate().err();
+}

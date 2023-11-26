@@ -62,7 +62,8 @@ export type IdentifierExpressionAstNode =
 export type ExpressionAstNode =
   & EvaluableAstNode<SymbolValue<unknown>>
   & AnalyzableAstNode<SymbolValueKind>
-  & InterpretableAstNode;
+  & InterpretableAstNode
+  & CheckableAstNode;
 export type AssignAstNode =
   & BinaryAstNode<IdentifierAstNode, ExpressionAstNode>
   & InterpretableAstNode

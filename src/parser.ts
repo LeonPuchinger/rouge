@@ -66,6 +66,9 @@ const EXPRESSION = apply(
     interpret() {
       return interpreter.interpretExpression(this);
     },
+    check() {
+      return analysis.checkExpression(this);
+    }
   }),
 );
 
