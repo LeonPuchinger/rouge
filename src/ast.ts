@@ -54,10 +54,12 @@ export type IntegerAstNode =
   & AnalyzableAstNode<SymbolValueKind>;
 export type IdentifierAstNode =
   & ValueAstNode<string>
-  & EvaluableAstNode<string>
+  & EvaluableAstNode<string>;
+export type IdentifierExpressionAstNode =
+  & WrapperAstNode<IdentifierAstNode>
+  & EvaluableAstNode<SymbolValue<unknown>>
   & AnalyzableAstNode<SymbolValueKind>;
 export type ExpressionAstNode =
-  & WrapperAstNode<EvaluableAstNode<SymbolValue<unknown>> | IdentifierAstNode>
   & EvaluableAstNode<SymbolValue<unknown>>
   & InterpretableAstNode;
 export type AssignAstNode =

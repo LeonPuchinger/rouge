@@ -19,17 +19,17 @@ export function analyzeInteger(
   return Ok(SymbolValueKind.number);
 }
 
-export function analyzeIdenifier(
-  node: ast.IdentifierAstNode,
+export function analyzeIdentifierExpression(
+  node: ast.IdentifierExpressionAstNode,
 ): Result<SymbolValueKind, AppError> {
-  const identifierResult = table.findSymbol(node.value);
-  return identifierResult
-    .map((a) => a.valueKind)
+  const ident = node.child.value;
+  return table.findSymbol(ident)
+    .map((symbol) => symbol.valueKind)
     .ok_or(InterpreterError(
       "You tried to use a variable that has not been defined at this point in the program.",
-      node,
+      node.child,
       None(),
-      `Variable "${node.value}" is unknown at this point.`,
+      `Variable "${ident}" is unknown at this point.`,
     ));
 }
 

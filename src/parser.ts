@@ -26,9 +26,6 @@ const IDENTIFIER = apply(
     evaluate() {
       return interpreter.evaluateIdentifier(this);
     },
-    analyze() {
-      return analysis.analyzeIdenifier(this);
-    },
   }),
 );
 
@@ -46,16 +43,26 @@ const INT_LITERAL = apply(
   }),
 );
 
+const IDENTIFIER_EXPRESSION = apply(
+  IDENTIFIER,
+  (identifier): ast.IdentifierExpressionAstNode => ({
+    child: identifier,
+    evaluate() {
+      return interpreter.evaluateIdentifierExpression(this);
+    },
+    analyze() {
+      return analysis.analyzeIdentifierExpression(this);
+    },
+  }),
+);
+
 const EXPRESSION = apply(
   alt_sc(
     INT_LITERAL,
-    IDENTIFIER,
+    IDENTIFIER_EXPRESSION,
   ),
   (expression): ast.ExpressionAstNode => ({
-    child: expression,
-    evaluate() {
-      return interpreter.evaluateExpression(this);
-    },
+    ...expression,
     interpret() {
       return interpreter.interpretExpression(this);
     },
