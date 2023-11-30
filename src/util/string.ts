@@ -13,3 +13,11 @@ export function indentLines(lines: string[], width: number): string[] {
 export function prefixLines(lines: string[], prefix: string): string[] {
   return lines.map((line) => `${prefix}${line}`);
 }
+
+export function prefixIndentLines(
+  lines: string[],
+  prefix: string,
+  width: number,
+): string[] {
+  return prefixLines(indentLines(lines, width), prefix);
+}

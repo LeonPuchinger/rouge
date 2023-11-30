@@ -1,17 +1,21 @@
 import { TokenPosition } from "typescript-parsec";
 import { Option } from "./monad/index.ts";
-import { toMultiline } from "./string.ts";
+import { indentLines, prefixIndentLines, toMultiline } from "./string.ts";
 
 /**
  * Create a marker that highlights a section of code in a snippet.
  * The marker is points towards the specified section and includes a message.
  *
- * @param message
+ * @param message the message do display beneath the marker.
+ * @param firstPosition the token where the marker should start.
+ * @param nextPosition the token where the marker should end. if `None`, the marker ends at the end of `firstPosition`.
+ * @param offset amount of columns to move the marker to the right.
  */
 function createAnnotationMarker(
   message: Option<string>,
   firstPosition: TokenPosition,
   nextPosition: Option<TokenPosition>,
+  offset = 0,
 ): string {
   if (message.kind === "none") {
     return "";
@@ -20,7 +24,7 @@ function createAnnotationMarker(
   const markerEnd = nextPosition.unwrapOr(firstPosition).columnEnd - 1;
   const markerSize = markerEnd - indentSize;
   return toMultiline(
-    `${" ".repeat(indentSize)}${"~".repeat(markerSize)}`,
+    `${" ".repeat(indentSize + offset)}${"~".repeat(markerSize)}`,
     message.unwrap(),
   );
 }
@@ -55,9 +59,21 @@ export function createSnippet(
   if (snippetEnd > lines.length) {
     snippetEnd = lines.length;
   }
+  const indentSeparator = "|";
+  const indentWidth = 4;
   return toMultiline(
-    lines.slice(snippetBegin, coreEnd + 1).join("\n"),
-    createAnnotationMarker(message, firstPosition, nextPosition),
-    lines.slice(coreEnd + 1, snippetEnd + 1).join("\n"),
+    ...prefixIndentLines(
+      lines.slice(snippetBegin, coreEnd + 1),
+      indentSeparator,
+      indentWidth,
+    ),
+    ...indentLines([
+      createAnnotationMarker(message, firstPosition, nextPosition, 1),
+    ], indentWidth),
+    ...prefixIndentLines(
+      lines.slice(coreEnd + 1, snippetEnd + 1),
+      indentSeparator,
+      indentWidth,
+    ),
   );
 }
