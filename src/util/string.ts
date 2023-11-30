@@ -9,3 +9,7 @@ export function concatLines(...lines: string[]): string {
 export function indentLines(lines: string[], width: number): string[] {
   return lines.map((line) => `${" ".repeat(width)}${line}`);
 }
+
+export function prefixLines(lines: string[], prefix: string): string[] {
+  return lines.map((line) => `${prefix}${line}`);
+}
