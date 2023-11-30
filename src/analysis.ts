@@ -35,11 +35,10 @@ export function analyzeIdentifierExpression(
 export function analyzeAssign(
   node: ast.AssignAstNode,
 ): AppError[] {
-  const errors: AppError[] = [];
   const ident = node.lhs.value;
   const expressionResult = node.rhs.analyze();
   if (expressionResult.kind === "err") {
-    errors.push(...expressionResult.unwrapError());
+    return expressionResult.unwrapError();
   }
   const expressionKind = expressionResult.unwrap();
   const existing = table.findSymbol(ident);
@@ -67,7 +66,7 @@ export function analyzeAssign(
       }),
     );
   }
-  return errors;
+  return [];
 }
 
 export function checkExpression(
