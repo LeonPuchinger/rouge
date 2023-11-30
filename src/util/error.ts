@@ -92,8 +92,8 @@ export function InterpreterError(
         message,
         createSnippet(
           accessEnvironment("source"),
-          beginHighlight.token.unwrap().pos,
-          endHighlight.map((node) => node.token.unwrap().pos),
+          beginHighlight.token.pos,
+          endHighlight.map((node) => node.token.pos),
           3,
           Some(messageHighlight),
         ),
