@@ -68,7 +68,7 @@ const EXPRESSION = apply(
     },
     check() {
       return analysis.checkExpression(this);
-    }
+    },
   }),
 );
 
@@ -107,6 +107,9 @@ const STATEMENTS = apply(
     children: statements,
     interpret() {
       return interpreter.interpretStatements(this);
+    },
+    check() {
+      return analysis.checkStatements(this);
     },
   }),
 );

@@ -75,6 +75,10 @@ export function checkExpression(
   return node.analyze().unwrapErrorOr([]);
 }
 
-): Option<AppError> {
-  return node.evaluate().err();
+export function checkStatements(
+  node: ast.StatementAstNodes,
+): AppError[] {
+  return node.children.flatMap((statement) => statement.check());
 }
+
+export const analyze = (node: ast.AST) => node.check();

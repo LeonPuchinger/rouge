@@ -1,23 +1,25 @@
+import { analyze } from "./analysis.ts";
 import { interpret } from "./interpreter.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { updateEnvironment } from "./util/environment.ts";
 import { AppError } from "./util/error.ts";
-import { None, Option, Some } from "./util/monad/index.ts";
+import { Option, Some } from "./util/monad/index.ts";
 
-export function run(source: string): Option<AppError> {
+export function run(source: string): Option<AppError[]> {
   updateEnvironment({ source: source });
   const tokenStream = tokenize(source);
   if (tokenStream.kind === "err") {
-    return Some(tokenStream.unwrapError());
+    return tokenStream.err().map((error) => [error]);
   }
-  const ast = parse(tokenStream.unwrap());
-  if (ast.kind === "err") {
-    return Some(ast.unwrapError());
+  const parseResult = parse(tokenStream.unwrap());
+  if (parseResult.kind === "err") {
+    return parseResult.err().map((error) => [error]);
   }
-  const interpretationError = interpret(ast.unwrap());
-  if (interpretationError.kind === "some") {
-    return Some(interpretationError.unwrap());
+  const ast = parseResult.unwrap();
+  const analysisErrors = analyze(ast);
+  if (analysisErrors.length >= 1) {
+    return Some(analysisErrors);
   }
-  return None();
+  return interpret(ast).map((error) => [error]);
 }

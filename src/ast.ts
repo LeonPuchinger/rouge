@@ -73,6 +73,7 @@ export type StatementAstNode =
   | AssignAstNode;
 export type StatementAstNodes =
   & NaryAstNode<StatementAstNode>
-  & InterpretableAstNode;
+  & InterpretableAstNode
+  & CheckableAstNode;
 
 export type AST = StatementAstNodes;
