@@ -73,10 +73,7 @@ export function analyzeAssign(
 export function checkExpression(
   node: ast.ExpressionAstNode,
 ): AppError[] {
-  const a = node.analyze().err();
-  if (a.kind === "some") {
-    return a.unwrap();
-  } else return [];
+  return node.analyze().unwrapErrorOr([]);
 }
 
 ): Option<AppError> {
