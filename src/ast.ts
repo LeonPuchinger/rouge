@@ -1,4 +1,5 @@
 import { Token } from "typescript-parsec";
+import { AnalysisResult, CheckResult } from "./analysis.ts";
 import { TokenType } from "./lexer.ts";
 import { SymbolValue, SymbolValueKind } from "./symbol.ts";
 import { AppError } from "./util/error.ts";
@@ -31,11 +32,11 @@ interface EvaluableAstNode<R> {
 }
 
 interface CheckableAstNode {
-  check(): AppError[];
+  check(): CheckResult;
 }
 
 interface AnalyzableAstNode<A> {
-  analyze(): Result<A, AppError[]>;
+  analyze(): AnalysisResult<A>;
 }
 
 export type AstNode =

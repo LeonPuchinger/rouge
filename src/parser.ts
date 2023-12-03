@@ -85,7 +85,7 @@ const ASSIGNMENT = apply(
       return interpreter.interpretAssign(this);
     },
     check() {
-      return analysis.analyzeAssign(this);
+      return analysis.checkAssign(this);
     },
   }),
 );

@@ -1,4 +1,5 @@
 import * as ast from "./ast.ts";
+import { AnalysisError, AnalysisFinding } from "./finding.ts";
 import {
   AnalysisSymbolTable,
   StaticSymbol,
@@ -6,56 +7,94 @@ import {
   SymbolTable,
   SymbolValueKind,
 } from "./symbol.ts";
-import { AppError, InterpreterError } from "./util/error.ts";
-import { None, Ok, Result } from "./util/monad/index.ts";
+import { Err, None, Ok, Result } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
 const table: AnalysisSymbolTable = new SymbolTable();
 
+export type AnalysisResult<T> = Result<
+  {
+    value: T;
+    warnings: AnalysisFinding[];
+  },
+  {
+    warnings: AnalysisFinding[];
+    errors: AnalysisFinding[];
+  }
+>;
+
+export type CheckResult = Result<
+  {
+    warnings: AnalysisFinding[];
+  },
+  {
+    warnings: AnalysisFinding[];
+    errors: AnalysisFinding[];
+  }
+>;
+
+function emptyFindings(): {
+  warnings: AnalysisFinding[];
+  errors: AnalysisFinding[];
+} {
+  return {
+    warnings: [],
+    errors: [],
+  };
+}
+
 export function analyzeInteger(
   _node: ast.IntegerAstNode,
-): Result<SymbolValueKind, AppError[]> {
-  return Ok(SymbolValueKind.number);
+): AnalysisResult<SymbolValueKind> {
+  return Ok({ value: SymbolValueKind.number, warnings: [] });
 }
 
 export function analyzeIdentifierExpression(
   node: ast.IdentifierExpressionAstNode,
-): Result<SymbolValueKind, AppError[]> {
+): AnalysisResult<SymbolValueKind> {
   const ident = node.child.value;
   return table.findSymbol(ident)
-    .map((symbol) => symbol.valueKind)
-    .ok_or([InterpreterError(
-      "You tried to use a variable that has not been defined at this point in the program.",
-      node.child,
-      None(),
-      `Variable "${ident}" is unknown at this point.`,
-    )]);
+    .ok_or({
+      errors: [
+        AnalysisError({
+          message:
+            "You tried to use a variable that has not been defined at this point in the program.",
+          beginHighlight: node.child,
+          endHighlight: None(),
+          messageHighlight: `Variable "${ident}" is unknown at this point.`,
+        }),
+      ],
+      warnings: [],
+    })
+    .map((symbol) => ({ value: symbol.valueKind, warnings: [] }));
 }
 
-export function analyzeAssign(
+export function checkAssign(
   node: ast.AssignAstNode,
-): AppError[] {
+): CheckResult {
+  const findings = emptyFindings();
   const ident = node.lhs.value;
   const expressionResult = node.rhs.analyze();
   if (expressionResult.kind === "err") {
-    return expressionResult.unwrapError();
+    return expressionResult;
   }
-  const expressionKind = expressionResult.unwrap();
+  const expressionKind = expressionResult.unwrap().value;
   const existing = table.findSymbol(ident);
   if (existing.kind === "some") {
     if (existing.unwrap().valueKind !== expressionKind) {
-      return [
-        InterpreterError(
-          concatLines(
+      findings.errors.push(
+        AnalysisError({
+          message: concatLines(
             `You tried setting the variable '${ident}' to a value that is incompatible with the variables type.`,
             "When a variable is created its type is set in stone.",
             "This means, that afterwards the variable can only be set to values with the same type.",
             "A variable is created the first time a value is assigned to it.",
           ),
-          node.lhs,
-          None(),
-        ),
-      ];
+          beginHighlight: node.lhs,
+          endHighlight: None(),
+        }),
+      );
+      return Err(findings);
     }
   } else {
     table.setSymbol(
@@ -66,19 +105,35 @@ export function analyzeAssign(
       }),
     );
   }
-  return [];
+  return Ok(findings);
 }
 
 export function checkExpression(
   node: ast.ExpressionAstNode,
-): AppError[] {
-  return node.analyze().unwrapErrorOr([]);
+): CheckResult {
+  return node.analyze();
 }
 
 export function checkStatements(
   node: ast.StatementAstNodes,
-): AppError[] {
-  return node.children.flatMap((statement) => statement.check());
+): CheckResult {
+  // TODO: find better way to consolidate results (e.g. with more well suited monad operations)
+  const results = node.children.flatMap((statement) => statement.check());
+  const errors = results
+    .filter((statement) => statement.kind === "err")
+    .flatMap((statement) => statement.unwrapError().errors);
+  const warnings = results
+    .filter((statement) => statement.kind === "ok")
+    .flatMap((statement) => statement.unwrapError().warnings);
+  if (errors.length > 0) {
+    return Err({
+      warnings: warnings,
+      errors: errors,
+    });
+  }
+  return Ok({
+    warnings: warnings,
+  });
 }
 
 export const analyze = (node: ast.AST) => node.check();
