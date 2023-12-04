@@ -7,6 +7,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
+import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
 import * as interpreter from "./interpreter.ts";
 import { TokenType } from "./lexer.ts";
@@ -36,21 +37,37 @@ const INT_LITERAL = apply(
     evaluate() {
       return interpreter.evaluateInteger(this);
     },
+    analyze() {
+      return analysis.analyzeInteger(this);
+    },
+  }),
+);
+
+const IDENTIFIER_EXPRESSION = apply(
+  IDENTIFIER,
+  (identifier): ast.IdentifierExpressionAstNode => ({
+    child: identifier,
+    evaluate() {
+      return interpreter.evaluateIdentifierExpression(this);
+    },
+    analyze() {
+      return analysis.analyzeIdentifierExpression(this);
+    },
   }),
 );
 
 const EXPRESSION = apply(
   alt_sc(
     INT_LITERAL,
-    IDENTIFIER,
+    IDENTIFIER_EXPRESSION,
   ),
   (expression): ast.ExpressionAstNode => ({
-    child: expression,
-    evaluate() {
-      return interpreter.evaluateExpression(this);
-    },
+    ...expression,
     interpret() {
       return interpreter.interpretExpression(this);
+    },
+    check() {
+      return analysis.checkExpression(this);
     },
   }),
 );
@@ -66,6 +83,9 @@ const ASSIGNMENT = apply(
     rhs: values[2],
     interpret() {
       return interpreter.interpretAssign(this);
+    },
+    check() {
+      return analysis.checkAssign(this);
     },
   }),
 );
@@ -87,6 +107,9 @@ const STATEMENTS = apply(
     children: statements,
     interpret() {
       return interpreter.interpretStatements(this);
+    },
+    check() {
+      return analysis.checkStatements(this);
     },
   }),
 );

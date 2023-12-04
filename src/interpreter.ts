@@ -1,27 +1,23 @@
 import * as ast from "./ast.ts";
 import {
-  Symbol,
+  InterpreterSymbolTable,
+  RuntimeSymbol,
+  SymbolKind,
   SymbolTable,
-  SymbolType,
   SymbolValue,
-  SymbolValueType,
+  SymbolValueKind,
 } from "./symbol.ts";
 // required for extension methods to be usable
-import { } from "./util/array.ts";
+import {} from "./util/array.ts";
 import { AppError, InternalError } from "./util/error.ts";
 import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
 
-const table = new SymbolTable();
+const table: InterpreterSymbolTable = new SymbolTable();
 
 export function evaluateIdentifier(
   node: ast.IdentifierAstNode,
-): Result<SymbolValue<string>, AppError> {
-  return Ok(
-    new SymbolValue({
-      valueType: SymbolValueType.identifier,
-      value: node.value,
-    }),
-  );
+): Result<string, AppError> {
+  return Ok(node.value);
 }
 
 export function evaluateInteger(
@@ -29,22 +25,28 @@ export function evaluateInteger(
 ): Result<SymbolValue<number>, AppError> {
   return Ok(
     new SymbolValue({
-      valueType: SymbolValueType.number,
+      valueKind: SymbolValueKind.number,
       value: node.value,
     }),
   );
 }
 
-export function evaluateExpression(
-  node: ast.ExpressionAstNode,
-) {
-  return node.child.evaluate();
+export function evaluateIdentifierExpression(
+  node: ast.IdentifierExpressionAstNode,
+): Result<SymbolValue<unknown>, AppError> {
+  const ident = node.child.value;
+  return table.findSymbol(ident).ok_or(
+    InternalError(
+      `Unable to resolve symbol ${ident}.`,
+      "This should have been caught during static analysis.",
+    ),
+  ).map((symbol) => symbol.value);
 }
 
 export function interpretExpression(
   node: ast.ExpressionAstNode,
-) {
-  return node.child.evaluate().err();
+): Option<AppError> {
+  return node.evaluate().err();
 }
 
 export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
@@ -59,12 +61,12 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
   }
   let expression = expressionResult.unwrap();
   // identifiers need to be resolved in the symbol table
-  if (expression.valueType === SymbolValueType.identifier) {
+  if (expression.valueKind === SymbolValueKind.identifier) {
     const existing = table.findSymbol(expression.value as string);
     if (existing.kind === "none") {
       return Some(
         InternalError(
-          "Could not resolve identifier that",
+          `Could not resolve identifier "${ident}"`,
           "This should have been checked during static analysis.",
         ),
       );
@@ -72,15 +74,13 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
     expression = existing.unwrap().value;
   }
   table.setSymbol(
-    ident.value,
-    new Symbol({
-      symbolType: SymbolType.variable,
+    ident,
+    new RuntimeSymbol({
+      symbolKind: SymbolKind.variable,
       node: node.rhs,
       value: new SymbolValue({
         value: expression,
-        // TODO: check whether the symbol that already exists (if it does)
-        // has the correct type (Static Analysis)
-        valueType: SymbolValueType.number,
+        valueKind: SymbolValueKind.number,
       }),
     }),
   );

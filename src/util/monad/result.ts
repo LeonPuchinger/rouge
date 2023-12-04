@@ -10,8 +10,10 @@ export interface Result<T, E> {
   unwrap(): T;
   unwrapError(): E;
   unwrapOr(defaultValue: T): T;
+  unwrapErrorOr(defaultValue: E): E;
   then(fn: (value: T) => void): void;
   thenError(fn: (error: E) => void): void;
+  zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]>;
 }
 
 export function Ok<T, E>(value: T): Result<T, E> {
@@ -39,11 +41,15 @@ export function Ok<T, E>(value: T): Result<T, E> {
     },
 
     unwrapError(): E {
-      throw Panic("umwrapError called on Result");
+      throw Panic("unwrapError called on Result");
     },
 
     unwrapOr(_defaultValue: T): T {
       return value;
+    },
+
+    unwrapErrorOr(defaultValue: E): E {
+      return defaultValue;
     },
 
     then(fn) {
@@ -52,6 +58,13 @@ export function Ok<T, E>(value: T): Result<T, E> {
 
     thenError(_fn) {
       // do nothing
+    },
+
+    zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]> {
+      if (other.kind === "ok") {
+        return Ok([value, other.unwrap()]);
+      }
+      return Err([None(), other.err()]);
     },
   };
 }
@@ -88,12 +101,20 @@ export function Err<T, E>(value: E): Result<T, E> {
       return defaultValue;
     },
 
+    unwrapErrorOr(_defaultValue: E): E {
+      return value;
+    },
+
     then(_fn) {
       // do nothing
     },
 
     thenError(fn) {
       fn(value);
+    },
+
+    zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]> {
+      return Err([this.err(), other.err()]);
     },
   };
 }
