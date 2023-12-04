@@ -18,9 +18,9 @@ export type AnalysisResult<T> = {
   errors: AnalysisFinding[];
 };
 
-export type CheckResult = Omit<AnalysisResult<unknown>, "value">;
+export type AnalysisFindings = Omit<AnalysisResult<unknown>, "value">;
 
-function emptyFindings(): CheckResult {
+function emptyFindings(): AnalysisFindings {
   return {
     warnings: [],
     errors: [],
@@ -63,7 +63,7 @@ export function analyzeIdentifierExpression(
 
 export function checkAssign(
   node: ast.AssignAstNode,
-): CheckResult {
+): AnalysisFindings {
   const findings = emptyFindings();
   const ident = node.lhs.value;
   const expressionResult = node.rhs.analyze();
@@ -103,13 +103,13 @@ export function checkAssign(
 
 export function checkExpression(
   node: ast.ExpressionAstNode,
-): CheckResult {
+): AnalysisFindings {
   return node.analyze();
 }
 
 export function checkStatements(
   node: ast.StatementAstNodes,
-): CheckResult {
+): AnalysisFindings {
   return node.children
     .map((statement) => statement.check())
     .reduce((previous, current) => ({
