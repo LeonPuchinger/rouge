@@ -7,8 +7,8 @@ export interface Option<T> {
   ok_or<E>(err: E): Result<T, E>;
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
-  then(fn: (value: T) => void): void;
-  onNone(fn: () => void): void;
+  then(fn: (value: T) => void): Option<T>;
+  onNone(fn: () => void): Option<T>;
   zip<U>(other: Option<U>): Option<[T, U]>;
   iter(): T[];
 }
@@ -37,12 +37,13 @@ export function Some<T>(value: T | undefined): Option<T> {
       return value;
     },
 
-    then(fn) {
+    then(fn): Option<T> {
       fn(value);
+      return this;
     },
 
-    onNone(_fn: () => void): void {
-      // do nothing
+    onNone(_fn: () => void): Option<T> {
+      return this;
     },
 
     zip<U>(other: Option<U>): Option<[T, U]> {
@@ -78,12 +79,13 @@ export function None<T>(): Option<T> {
       return defaultValue;
     },
 
-    then(_fn) {
-      // do nothing
+    then(_fn): Option<T> {
+      return this;
     },
 
-    onNone(fn: () => void): void {
+    onNone(fn: () => void): Option<T> {
       fn();
+      return this;
     },
 
     zip<U>(_other: Option<U>): Option<[T, U]> {
