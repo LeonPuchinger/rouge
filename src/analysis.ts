@@ -7,36 +7,20 @@ import {
   SymbolTable,
   SymbolValueKind,
 } from "./symbol.ts";
-import { Err, None, Ok, Result } from "./util/monad/index.ts";
+import { None, Option, Some } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
 const table: AnalysisSymbolTable = new SymbolTable();
 
-export type AnalysisResult<T> = Result<
-  {
-    value: T;
-    warnings: AnalysisFinding[];
-  },
-  {
-    warnings: AnalysisFinding[];
-    errors: AnalysisFinding[];
-  }
->;
-
-export type CheckResult = Result<
-  {
-    warnings: AnalysisFinding[];
-  },
-  {
-    warnings: AnalysisFinding[];
-    errors: AnalysisFinding[];
-  }
->;
-
-function emptyFindings(): {
+export type AnalysisResult<T> = {
+  value: Option<T>;
   warnings: AnalysisFinding[];
   errors: AnalysisFinding[];
-} {
+};
+
+export type CheckResult = Omit<AnalysisResult<unknown>, "value">;
+
+function emptyFindings(): CheckResult {
   return {
     warnings: [],
     errors: [],
@@ -46,27 +30,35 @@ function emptyFindings(): {
 export function analyzeInteger(
   _node: ast.IntegerAstNode,
 ): AnalysisResult<SymbolValueKind> {
-  return Ok({ value: SymbolValueKind.number, warnings: [] });
+  return {
+    value: Some(SymbolValueKind.number),
+    warnings: [],
+    errors: [],
+  };
 }
 
 export function analyzeIdentifierExpression(
   node: ast.IdentifierExpressionAstNode,
 ): AnalysisResult<SymbolValueKind> {
   const ident = node.child.value;
-  return table.findSymbol(ident)
-    .ok_or({
-      errors: [
-        AnalysisError({
-          message:
-            "You tried to use a variable that has not been defined at this point in the program.",
-          beginHighlight: node.child,
-          endHighlight: None(),
-          messageHighlight: `Variable "${ident}" is unknown at this point.`,
-        }),
-      ],
-      warnings: [],
-    })
-    .map((symbol) => ({ value: symbol.valueKind, warnings: [] }));
+  const findings: AnalysisResult<SymbolValueKind> = {
+    value: table.findSymbol(ident)
+      .map((symbol) => symbol.valueKind),
+    warnings: [],
+    errors: [],
+  };
+  findings.value.onNone(() => {
+    findings.errors.push(
+      AnalysisError({
+        message:
+          "You tried to use a variable that has not been defined at this point in the program.",
+        beginHighlight: node.child,
+        endHighlight: None(),
+        messageHighlight: `Variable "${ident}" is unknown at this point.`,
+      }),
+    );
+  });
+  return findings;
 }
 
 export function checkAssign(
@@ -75,13 +67,15 @@ export function checkAssign(
   const findings = emptyFindings();
   const ident = node.lhs.value;
   const expressionResult = node.rhs.analyze();
-  if (expressionResult.kind === "err") {
+  if (expressionResult.value.kind === "some") {
     return expressionResult;
   }
-  const expressionKind = expressionResult.unwrap().value;
-  const existing = table.findSymbol(ident);
-  if (existing.kind === "some") {
-    if (existing.unwrap().valueKind !== expressionKind) {
+  const expressionKind = expressionResult.value.unwrap();
+  table.findSymbol(ident)
+    .then((existing) => {
+      if (existing.valueKind === expressionKind) {
+        return;
+      }
       findings.errors.push(
         AnalysisError({
           message: concatLines(
@@ -94,18 +88,17 @@ export function checkAssign(
           endHighlight: None(),
         }),
       );
-      return Err(findings);
-    }
-  } else {
-    table.setSymbol(
-      ident,
-      new StaticSymbol({
-        symbolKind: SymbolKind.variable,
-        valueKind: expressionKind,
-      }),
-    );
-  }
-  return Ok(findings);
+    })
+    .onNone(() => {
+      table.setSymbol(
+        ident,
+        new StaticSymbol({
+          symbolKind: SymbolKind.variable,
+          valueKind: expressionKind,
+        }),
+      );
+    });
+  return findings;
 }
 
 export function checkExpression(
@@ -117,23 +110,12 @@ export function checkExpression(
 export function checkStatements(
   node: ast.StatementAstNodes,
 ): CheckResult {
-  // TODO: find better way to consolidate results (e.g. with more well suited monad operations)
-  const results = node.children.flatMap((statement) => statement.check());
-  const errors = results
-    .filter((statement) => statement.kind === "err")
-    .flatMap((statement) => statement.unwrapError().errors);
-  const warnings = results
-    .filter((statement) => statement.kind === "ok")
-    .flatMap((statement) => statement.unwrapError().warnings);
-  if (errors.length > 0) {
-    return Err({
-      warnings: warnings,
-      errors: errors,
-    });
-  }
-  return Ok({
-    warnings: warnings,
-  });
+  return node.children
+    .map((statement) => statement.check())
+    .reduce((previous, current) => ({
+      warnings: [...previous.warnings, ...current.warnings],
+      errors: [...previous.errors, ...current.errors],
+    }));
 }
 
 export const analyze = (node: ast.AST) => node.check();
