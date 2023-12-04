@@ -1,6 +1,6 @@
-import { AppError } from "./error.ts";
+import { PrintableError } from "./error.ts";
 
-type Loggable = string | AppError;
+type Loggable = string | PrintableError;
 export enum Loglevel {
   debug,
   info,
