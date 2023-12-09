@@ -15,8 +15,8 @@ jobs:
       - name: Fetch dependencies
         run: npm install
 
-      - name: Build project
+      - name: Build module
         run: npm run build
 
-      - name: Test failure
-        run: bash -c "exit 1"
+      - name: Publish module
+        run: npm publish
