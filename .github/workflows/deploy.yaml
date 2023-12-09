@@ -18,14 +18,10 @@ jobs:
       - name: Build module
         run: npm run build
 
+      # Create a temporary `.npmrc` file with credentials from the CI before publishing.
       - name: Publish module
         run: |
-          # clear .npmrc
           : > .npmrc
-          # setup credentials
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
           echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
-          # TODO: remove, just for testing purposes
-          cat .npmrc
-          # deploy module
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
           npm publish
