@@ -26,11 +26,11 @@ jobs:
           fi
         shell: bash
 
-      - name: Set package version
-        run: echo ${{ github.ref }} | sed 's/^refs\/tags\///' | xargs npm version --no-git-tag-version
-
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set package version
+        run: echo ${{ github.ref }} | sed 's/^refs\/tags\///' | xargs npm version --no-git-tag-version
 
       - name: Fetch dependencies
         run: npm install
