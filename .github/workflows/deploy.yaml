@@ -1,6 +1,9 @@
 name: Deploy Module to GitHub Packages
 
-on: push
+on:
+  push:
+    tags:
+      - "*"
 
 permissions:
   contents: read
@@ -13,6 +16,15 @@ jobs:
       image: node:lts
 
     steps:
+      - name: Check whether commit is tagged with semantic versioning
+        run: |
+          if [[ ${{ github.ref }} =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "Commit is tagged with semantic versioning, proceeding with the workflow."
+          else
+            echo "Commit is not tagged with semantic versioning, skipping the workflow."
+            exit 78 # Skipping the workflow (neutral exit code)
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
