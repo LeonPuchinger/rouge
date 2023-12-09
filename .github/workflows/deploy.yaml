@@ -24,7 +24,7 @@ jobs:
           : > .npmrc
           # setup credentials
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
-          echo "@${{ GITHUB_REPOSITORY_OWNER }}:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
           # TODO: remove, just for testing purposes
           cat .npmrc
           # deploy module
