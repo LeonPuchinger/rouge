@@ -27,7 +27,7 @@ jobs:
         shell: bash
 
       - name: Set package version
-        run: git describe --tags | xargs npm version  --no-git-tag-version
+        run: echo ${{ github.ref }} | sed 's/^refs\/tags\///' | xargs npm version --no-git-tag-version
 
       - name: Checkout repository
         uses: actions/checkout@v4
