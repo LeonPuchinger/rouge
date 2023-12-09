@@ -1,5 +1,7 @@
 name: Deploy Module to GitHub Packages
 
+on: push
+
 permissions:
   packages: write
 
