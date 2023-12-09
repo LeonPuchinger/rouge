@@ -1,7 +1,14 @@
 {
-  "name": "rouge",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@leonpuchinger/rouge",
+  "module": "dist/rouge.es.js",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leonpuchinger/rouge.git"
+  },
+  "private": false,
   "type": "module",
   "scripts": {
     "dev": "vite",

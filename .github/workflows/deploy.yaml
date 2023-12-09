@@ -1,0 +1,49 @@
+name: Deploy Module to GitHub Packages
+
+on:
+  push:
+    branches:
+      - "main"
+    tags:
+      - "*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: node:lts
+
+    steps:
+      - name: Check whether commit is tagged with semantic versioning
+        run: |
+          if [[ ${{ github.ref }} =~ ^refs\/tags\/[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "Commit is tagged with semantic versioning, proceeding with the workflow."
+          else
+            echo "Commit is not tagged with semantic versioning, skipping the workflow."
+            exit 1
+          fi
+        shell: bash
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set package version
+        run: echo ${{ github.ref }} | sed 's/^refs\/tags\///' | xargs npm version --no-git-tag-version
+
+      - name: Fetch dependencies
+        run: npm install
+
+      - name: Build module
+        run: npm run build
+
+      # Create a temporary `.npmrc` file with credentials from the CI before publishing.
+      - name: Publish module
+        run: |
+          : > .npmrc
+          echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          npm publish
