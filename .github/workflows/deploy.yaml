@@ -12,5 +12,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Fetch dependencies
+        run: npm install
+
       - name: Build project
-        run: ls -la
+        run: npm run build
