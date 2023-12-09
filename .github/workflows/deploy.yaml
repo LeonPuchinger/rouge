@@ -19,4 +19,13 @@ jobs:
         run: npm run build
 
       - name: Publish module
-        run: npm publish
+        run: |
+          # clear .npmrc
+          : > .npmrc
+          # setup credentials
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          echo "@${{ GITHUB_REPOSITORY_OWNER }}:registry=https://npm.pkg.github.com" >> .npmrc
+          # TODO: remove, just for testing purposes
+          cat .npmrc
+          # deploy module
+          npm publish
