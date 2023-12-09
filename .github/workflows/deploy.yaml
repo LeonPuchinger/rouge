@@ -24,6 +24,7 @@ jobs:
             echo "Commit is not tagged with semantic versioning, skipping the workflow."
             exit 78 # Skipping the workflow (neutral exit code)
           fi
+        shell: bash
 
       - name: Checkout repository
         uses: actions/checkout@v4
