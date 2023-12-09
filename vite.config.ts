@@ -9,11 +9,5 @@ export default defineConfig({
             name: 'Rouge',
             fileName: format => `rouge.${format}.js`,
         },
-        rollupOptions: {
-            // Make sure to exclude any unwanted files or directories from the build output
-            output: {
-                
-            },
-        },
     }
 });
