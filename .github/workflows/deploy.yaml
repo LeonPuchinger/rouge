@@ -3,6 +3,7 @@ name: Deploy Module to GitHub Packages
 on: push
 
 permissions:
+  contents: read
   packages: write
 
 jobs:
