@@ -22,7 +22,7 @@ jobs:
             echo "Commit is tagged with semantic versioning, proceeding with the workflow."
           else
             echo "Commit is not tagged with semantic versioning, skipping the workflow."
-            exit 78 # Skipping the workflow (neutral exit code)
+            exit 1
           fi
         shell: bash
 
