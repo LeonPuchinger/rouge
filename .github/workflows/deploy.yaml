@@ -22,6 +22,7 @@ jobs:
       - name: Survey Environment
         run: |
           ls -la
+          git config --global --add safe.directory $(pwd)
           git describe --tags
 
       - name: Check whether commit is tagged with semantic versioning
