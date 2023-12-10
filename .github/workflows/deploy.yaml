@@ -38,8 +38,19 @@ jobs:
         shell: bash
 
       - name: Set package version
-        run: git describe --tags | xargs npm version --no-git-tag-version
-        continue-on-error: true
+        run: |
+          # allow command failure to be able to catch exit codes
+          set +e
+          # update package version
+          git describe --tags | xargs npm version --no-git-tag-version
+          exit_code = $?
+          # re-allow failure
+          set -e
+          # setting version to implicit default (0.0.0) is allowed (error code 123)
+          if [[ $exit_code -ne 123 ]]; then
+            exit $exit_code
+          fi
+        shell: bash
 
       - name: Fetch dependencies
         run: npm install
