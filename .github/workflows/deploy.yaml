@@ -1,11 +1,6 @@
 name: Deploy Module to GitHub Packages
 
-on:
-  push:
-    branches:
-      - "main"
-    tags:
-      - "*"
+on: push
 
 permissions:
   contents: read
