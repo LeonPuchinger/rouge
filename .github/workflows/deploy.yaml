@@ -15,9 +15,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Survey Environment
-        run: ls -la
+        run: |
+          ls -la
+          git describe --tags
 
       - name: Check whether commit is tagged with semantic versioning
         run: |
