@@ -18,9 +18,18 @@ jobs:
       image: node:lts
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Survey Environment
+        run: |
+          ls -la
+          git config --global --add safe.directory $(pwd)
+          git describe --tags
+
       - name: Check whether commit is tagged with semantic versioning
         run: |
-          if [[ ${{ github.ref }} =~ ^refs\/tags\/[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+          if [[ $(git describe --tags) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "Commit is tagged with semantic versioning, proceeding with the workflow."
           else
             echo "Commit is not tagged with semantic versioning, skipping the workflow."
@@ -28,11 +37,20 @@ jobs:
           fi
         shell: bash
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Set package version
-        run: echo ${{ github.ref }} | sed 's/^refs\/tags\///' | xargs npm version --no-git-tag-version
+        run: |
+          # allow command failure to be able to catch exit codes
+          set +e
+          # update package version
+          git describe --tags | xargs npm version --no-git-tag-version
+          exit_code = $?
+          # re-allow failure
+          set -e
+          # setting version to implicit default (0.0.0) is allowed (error code 123)
+          if [[ $exit_code -ne 123 ]]; then
+            exit $exit_code
+          fi
+        shell: bash
 
       - name: Fetch dependencies
         run: npm install
