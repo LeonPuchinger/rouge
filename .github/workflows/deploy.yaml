@@ -18,9 +18,14 @@ jobs:
       image: node:lts
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+
       - name: Check whether commit is tagged with semantic versioning
         run: |
-          if [[ ${{ github.ref }} =~ ^refs\/tags\/[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+          if [[ $(git describe --tags) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "Commit is tagged with semantic versioning, proceeding with the workflow."
           else
             echo "Commit is not tagged with semantic versioning, skipping the workflow."
@@ -28,12 +33,8 @@ jobs:
           fi
         shell: bash
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-tags: true
-
       - name: Set package version
+        run: git describe --tags | xargs npm version --no-git-tag-version
         continue-on-error: true
 
       - name: Fetch dependencies
