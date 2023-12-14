@@ -6,17 +6,22 @@ statement = assignment | expression;
 
 assignment = identifier, equal_sign, expression;
 
-expression = identifier | number_literal;
+expression = 
+    generic_expression
+    | numeric_expression
+    | boolean_expression;
+(* TODO: add function calls, etc... *)
+generic_expression = identifier;
 numeric_expression = 
     numeric_expression, ("+", "-", "*", "/", "%"), numeric_expression
     | "(", numeric_expression, ")"
     | numeric_literal
-    | identifier ;
+    | generic_expression;
 boolean_expression =
     boolean_expression, ("||", "&&", "!"), boolean_expression
     | "(", boolean_expression, ")"
     | boolean_literal
-    | identifier;
+    | generic_expression;
 
 (* tokens, not handeled by parser *)
 numeric_literal = { digit }, ".", { digit };
