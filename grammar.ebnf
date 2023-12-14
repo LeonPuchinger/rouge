@@ -1,7 +1,7 @@
 (* it is assumed that any non-breaking whitespace and comments have been removed from the input *)
 start = statements;
 
-statements = { statement };
+statements = [ statement, { breaking_whitespace, statement } ];
 statement = assignment | expression;
 
 assignment = identifier, equal_sign, expression;
