@@ -28,7 +28,7 @@ expression =
 (* generic expressions are expressions for which the type cannot be inferred during parsing *)
 generic_expression =
     identifier
-    | function_call;
+    | invocation;
 numeric_expression =
     numeric_expression, ("+", "-", "*", "/", "%"), numeric_expression
     | "(", numeric_expression, ")"
@@ -39,7 +39,8 @@ boolean_expression =
     | "(", boolean_expression, ")"
     | boolean_literal
     | generic_expression;
-function_call = identifier, "(", expressions, ")";
+(* multiple constructs (e.g. functions or structs) can be invocated/initialized with the same syntax *)
+invocation = identifier, "(", expressions, ")";
 
 (* tokens, not handeled by parser *)
 numeric_literal = { digit }, ".", { digit };
