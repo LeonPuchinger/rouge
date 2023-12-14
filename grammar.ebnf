@@ -7,6 +7,10 @@ statement = assignment | expression;
 assignment = identifier, equal_sign, expression;
 
 expression = identifier | number_literal;
+numeric_expression = 
+    numeric_expression, ("+", "-", "*", "/", "%"), numeric_expression
+    | "(", numeric_expression, ")"
+    | identifier | number_literal ;
 
 (* tokens, not handeled by parser *)
 number_literal = { digit }, ".", { digit };
