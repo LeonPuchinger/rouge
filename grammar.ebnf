@@ -10,10 +10,17 @@ expression = identifier | number_literal;
 numeric_expression = 
     numeric_expression, ("+", "-", "*", "/", "%"), numeric_expression
     | "(", numeric_expression, ")"
-    | identifier | number_literal ;
+    | numeric_literal
+    | identifier ;
+boolean_expression =
+    boolean_expression, ("||", "&&", "!"), boolean_expression
+    | "(", boolean_expression, ")"
+    | boolean_literal
+    | identifier;
 
 (* tokens, not handeled by parser *)
-number_literal = { digit }, ".", { digit };
+numeric_literal = { digit }, ".", { digit };
+boolean_literal = "true" | "false";
 identifier = letter, { letter | digit };
 equal_sign = "=";
 breaking_whitespace = "\n", { "\n" };
