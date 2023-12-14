@@ -4,7 +4,7 @@ start = statements;
 statements = [ statement, { breaking_whitespace, statement } ];
 statement = assignment | expression;
 
-assignment = identifier, equal_sign, expression;
+assignment = identifier, "=", expression;
 
 expression = 
     generic_expression
@@ -29,7 +29,6 @@ numeric_literal = { digit }, ".", { digit };
 boolean_literal = "true" | "false";
 string_literal = "\"", ( letter | digit ), "\"";
 identifier = letter, { letter | digit };
-equal_sign = "=";
 breaking_whitespace = "\n", { "\n" };
 
 (* utility rules *)
