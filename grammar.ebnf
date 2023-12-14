@@ -4,7 +4,9 @@ start = statements;
 statements = [ statement, { breaking_whitespace, statement } ];
 statement = assignment | expression;
 
-assignment = identifier, "=", expression;
+variable_name = identifier, [ ":", identifier ];
+parameter = identifier, ":", identifier;
+assignment = variable_name, "=", expression;
 
 expression = 
     generic_expression
