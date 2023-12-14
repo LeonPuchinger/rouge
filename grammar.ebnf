@@ -12,8 +12,9 @@ assignment = variable_name, "=", expression;
 
 parameter = identifier, ":", identifier;
 parameters = [ parameter, { ",", parameter } ];
+type_parameters = "<", { identifier }, ">";
 function_definition =
-    identifier, "(", parameters, ")", "{", statements, "}";
+    identifier, type_parameters, "(", parameters, ")", "{", statements, "}";
 
 expressions = [ expression, { ",",  expression } ];
 expression =
