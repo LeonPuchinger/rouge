@@ -5,6 +5,7 @@ statements = [ statement, { breaking_whitespace, statement } ];
 statement =
     assignment
     | function_definition
+    | structure
     | expression;
 
 variable_name = identifier, [ ":", identifier ];
@@ -15,6 +16,8 @@ parameters = [ parameter, { ",", parameter } ];
 type_parameters = "<", { identifier }, ">";
 function_definition =
     identifier, type_parameters, "(", parameters, ")", "{", statements, "}";
+
+structure = identifier, type_parameters, "{", parameters, "}";
 
 expressions = [ expression, { ",",  expression } ];
 expression =
