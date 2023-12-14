@@ -2,11 +2,18 @@
 start = statements;
 
 statements = [ statement, { breaking_whitespace, statement } ];
-statement = assignment | expression;
+statement =
+    assignment
+    | function_definition
+    | expression;
 
 variable_name = identifier, [ ":", identifier ];
-parameter = identifier, ":", identifier;
 assignment = variable_name, "=", expression;
+
+parameter = identifier, ":", identifier;
+parameters = [ parameter, { ",", parameter } ];
+function_definition =
+    identifier, "(", parameters, ")", "{", statements, "}";
 
 expressions = [ expression, { ",",  expression } ];
 expression =
