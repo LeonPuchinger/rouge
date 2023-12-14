@@ -8,13 +8,16 @@ variable_name = identifier, [ ":", identifier ];
 parameter = identifier, ":", identifier;
 assignment = variable_name, "=", expression;
 
-expression = 
+expressions = [ expression, { ",",  expression } ];
+expression =
     generic_expression
     | numeric_expression
     | boolean_expression
     | string_literal;
-(* TODO: add function calls, etc... *)
-generic_expression = identifier;
+(* generic expressions are expressions for which the type cannot be inferred during parsing *)
+generic_expression =
+    identifier
+    | function_call;
 numeric_expression = 
     numeric_expression, ("+", "-", "*", "/", "%"), numeric_expression
     | "(", numeric_expression, ")"
@@ -25,6 +28,7 @@ boolean_expression =
     | "(", boolean_expression, ")"
     | boolean_literal
     | generic_expression;
+function_call = identifier, "(", expressions, ")";
 
 (* tokens, not handeled by parser *)
 numeric_literal = { digit }, ".", { digit };
