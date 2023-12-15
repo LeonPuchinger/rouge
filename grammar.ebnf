@@ -43,7 +43,7 @@ boolean_expression =
     boolean_expression, ("||", "&&", "!"), boolean_expression
     | "(", boolean_expression, ")"
     | boolean_literal
-    | generic_expression;
+    | expression;
 (* multiple constructs (e.g. functions or structs) can be invocated/initialized with the same syntax *)
 invocation = identifier, "(", expressions, ")";
 
