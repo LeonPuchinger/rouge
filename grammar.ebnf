@@ -36,12 +36,12 @@ generic_expression =
     identifier
     | invocation;
 numeric_expression =
-    numeric_expression, ("+", "-", "*", "/", "%"), numeric_expression
+    numeric_expression, ( "+", "-", "*", "/", "%" ), numeric_expression
     | "(", numeric_expression, ")"
     | numeric_literal
     | generic_expression;
 boolean_expression =
-    boolean_expression, ("||", "&&", "!"), boolean_expression
+    boolean_expression, ( "||", "&&", "!" ), boolean_expression
     | "(", boolean_expression, ")"
     | boolean_literal
     | expression;
