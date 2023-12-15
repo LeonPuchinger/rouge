@@ -15,7 +15,9 @@ parameter = identifier, ":", identifier;
 parameters = [ parameter, { ",", parameter } ];
 type_parameters = "<", { identifier }, ">";
 function_definition =
-    identifier, type_parameters, "(", parameters, ")", "{", statements, "}";
+    "function", identifier, type_parameters, "(", parameters, ")", "{", statements, "}";
+
+structure = "structure", identifier, type_parameters, "{", parameters, "}";
 
 structure = identifier, type_parameters, "{", parameters, "}";
 
