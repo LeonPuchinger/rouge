@@ -6,6 +6,8 @@ statement =
     assignment
     | function_definition
     | structure
+    | condition
+    | loop
     | expression;
 
 variable_name = identifier, [ ":", identifier ];
@@ -19,7 +21,8 @@ function_definition =
 
 structure = "structure", identifier, type_parameters, "{", parameters, "}";
 
-structure = identifier, type_parameters, "{", parameters, "}";
+condition = "if", "(", boolean_expression, ")", "{", statements, "}";
+loop = "loop", "(", boolean_expression, ")", "{", statements, "}";
 
 expressions = [ expression, { ",",  expression } ];
 expression =
