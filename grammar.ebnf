@@ -52,7 +52,7 @@ property_access = ".", identifier;
 chain = expression, { ".", ( method_invocation, property_access ) };
 
 (* tokens, not handeled by parser *)
-numeric_literal = { digit }, ".", { digit };
+numeric_literal = { digit }, [ ".", { digit } ];
 boolean_literal = "true" | "false";
 string_literal = "\"", ( letter | digit ), "\"";
 identifier = letter, { letter | digit };
