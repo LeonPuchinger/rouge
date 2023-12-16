@@ -20,8 +20,8 @@ export function evaluateIdentifier(
   return Ok(node.value);
 }
 
-export function evaluateInteger(
-  node: ast.IntegerAstNode,
+export function evaluateNumber(
+  node: ast.NumberAstNode,
 ): Result<SymbolValue<number>, AppError> {
   return Ok(
     new SymbolValue({

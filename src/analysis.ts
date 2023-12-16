@@ -27,8 +27,8 @@ function emptyFindings(): AnalysisFindings {
   };
 }
 
-export function analyzeInteger(
-  _node: ast.IntegerAstNode,
+export function analyzeNumber(
+  _node: ast.NumberAstNode,
 ): AnalysisResult<SymbolValueKind> {
   return {
     value: Some(SymbolValueKind.number),

@@ -49,7 +49,7 @@ export type AstNode =
   | CheckableAstNode
   | AnalyzableAstNode<unknown>;
 
-export type IntegerAstNode =
+export type NumberAstNode =
   & ValueAstNode<number>
   & EvaluableAstNode<SymbolValue<number>>
   & AnalyzableAstNode<SymbolValueKind>;

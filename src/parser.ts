@@ -29,16 +29,16 @@ const IDENTIFIER = apply(
   }),
 );
 
-const INT_LITERAL = apply(
-  tok(TokenType.int_literal),
-  (token): ast.IntegerAstNode => ({
+const NUMERIC_LITERAL = apply(
+  tok(TokenType.numeric_literal),
+  (token): ast.NumberAstNode => ({
     token: token,
-    value: parseInt(token.text),
+    value: parseFloat(token.text),
     evaluate() {
-      return interpreter.evaluateInteger(this);
+      return interpreter.evaluateNumber(this);
     },
     analyze() {
-      return analysis.analyzeInteger(this);
+      return analysis.analyzeNumber(this);
     },
   }),
 );
@@ -58,7 +58,7 @@ const IDENTIFIER_EXPRESSION = apply(
 
 const EXPRESSION = apply(
   alt_sc(
-    INT_LITERAL,
+    NUMERIC_LITERAL,
     IDENTIFIER_EXPRESSION,
   ),
   (expression): ast.ExpressionAstNode => ({
