@@ -28,10 +28,10 @@ const literal = apply(
     token: literal,
     value: parseFloat(literal.text),
     evaluate() {
-      return interpreter.evaluateNumber(this);
+      return interpreter.evaluateNumericLiteral(this);
     },
     analyze() {
-      return analysis.analyzeNumber(this);
+      return analysis.analyzeNumericLiteral(this);
     },
   }),
 );

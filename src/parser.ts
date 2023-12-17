@@ -35,10 +35,10 @@ const NUMERIC_LITERAL = apply(
     token: token,
     value: parseFloat(token.text),
     evaluate() {
-      return interpreter.evaluateNumber(this);
+      return interpreter.evaluateNumericLiteral(this);
     },
     analyze() {
-      return analysis.analyzeNumber(this);
+      return analysis.analyzeNumericLiteral(this);
     },
   }),
 );

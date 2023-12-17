@@ -20,7 +20,7 @@ export function evaluateIdentifier(
   return Ok(node.value);
 }
 
-export function evaluateNumber(
+export function evaluateNumericLiteral(
   node: ast.NumberAstNode,
 ): Result<SymbolValue<number>, AppError> {
   return Ok(

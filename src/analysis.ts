@@ -27,7 +27,7 @@ function emptyFindings(): AnalysisFindings {
   };
 }
 
-export function analyzeNumber(
+export function analyzeNumericLiteral(
   _node: ast.NumberAstNode,
 ): AnalysisResult<SymbolValueKind> {
   return {
