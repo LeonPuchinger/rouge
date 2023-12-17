@@ -1,20 +1,10 @@
-import {
-  alt_sc,
-  apply,
-  kmid,
-  nil,
-  Parser,
-  str,
-  tok,
-} from "typescript-parsec";
+import { alt_sc, apply, kmid, Parser, rule, str, tok } from "typescript-parsec";
 import * as analysis from "../analysis.ts";
 import * as ast from "../ast.ts";
 import * as interpreter from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
-import { _ } from "../parser.ts";
 
-// TODO: find a better way to do forward declarations
-export let numericExpression: Parser<TokenType, ast.NumberAstNode> = nil();
+export const numericExpression = rule<TokenType, ast.NumberAstNode>();
 
 const parenthesized: Parser<TokenType, ast.NumberAstNode> = kmid(
   str("("),
@@ -36,7 +26,9 @@ const literal = apply(
   }),
 );
 
-numericExpression = alt_sc(
-  parenthesized,
-  literal,
+numericExpression.setPattern(
+  alt_sc(
+    parenthesized,
+    literal,
+  ),
 );
