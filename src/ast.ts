@@ -1,5 +1,5 @@
 import { Token } from "typescript-parsec";
-import { AnalysisResult, AnalysisFindings } from "./analysis.ts";
+import { AnalysisFindings, AnalysisResult } from "./analysis.ts";
 import { TokenType } from "./lexer.ts";
 import { SymbolValue, SymbolValueKind } from "./symbol.ts";
 import { AppError } from "./util/error.ts";
@@ -12,6 +12,10 @@ export interface BinaryAstNode<L, R> {
 
 export interface NaryAstNode<T> {
   children: T[];
+}
+
+export interface TokenAstNode<T = TokenType> {
+  token: Token<T>;
 }
 
 export interface ValueAstNode<V> {
