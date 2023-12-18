@@ -16,14 +16,18 @@ import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, Result, Some } from "../util/monad/index.ts";
 
+// Forward declaration of exported top-level rule
+export const numericExpression = rule<TokenType, EvaluatesToNumber>();
+
+// Utility type
 type EvaluatesToNumber = ast.EvaluableAstNode<SymbolValue<number>>;
+
+/* Binary operation */
 
 export type BinaryNumericExpressionAstNode =
   & ast.BinaryAstNode<EvaluatesToNumber, EvaluatesToNumber>
   & ast.TokenAstNode
   & EvaluatesToNumber;
-
-export const numericExpression = rule<TokenType, EvaluatesToNumber>();
 
 function evaluateBinaryOperation(
   node: BinaryNumericExpressionAstNode,
@@ -85,11 +89,15 @@ const binaryOperation = apply(
   }),
 );
 
+/* Parenthesised expression */
+
 const parenthesized: Parser<TokenType, EvaluatesToNumber> = kmid(
   str("("),
   numericExpression,
   str(")"),
 );
+
+/* Numeric literal */
 
 const literal = apply(
   tok(TokenType.numeric_literal),
