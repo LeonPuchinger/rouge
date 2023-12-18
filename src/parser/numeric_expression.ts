@@ -13,8 +13,8 @@ import * as ast from "../ast.ts";
 import * as interpreter from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
-import { InternalError } from "../util/error.ts";
-import { Err } from "../util/monad/index.ts";
+import { AppError, InternalError } from "../util/error.ts";
+import { Err, Result, Some } from "../util/monad/index.ts";
 
 type EvaluatesToNumber = ast.EvaluableAstNode<SymbolValue<number>>;
 
@@ -24,6 +24,47 @@ export type BinaryNumericExpressionAstNode =
   & EvaluatesToNumber;
 
 export const numericExpression = rule<TokenType, EvaluatesToNumber>();
+
+function evaluateBinaryOperation(
+  node: BinaryNumericExpressionAstNode,
+): Result<SymbolValue<number>, AppError> {
+  if (!["+", "-", "*", "/", "%"].includes(node.token.text)) {
+    return Err(InternalError(
+      `The interpreter recieved instructions to perform the following unknown operation on two numbers: ${node.token.text}`,
+      "This should have either been caught during static analysis or be prevented by the parser.",
+    ));
+  }
+  return node.lhs.evaluate()
+    .combine(node.rhs.evaluate())
+    .map(([left, right]) => {
+      switch (node.token.text) {
+        case "+":
+          return left.value + right.value;
+        case "-":
+          return left.value - right.value;
+        case "*":
+          return left.value * right.value;
+        case "/":
+          return left.value / right.value;
+        case "%":
+          return left.value % right.value;
+        default:
+          // this never happens, TS simply does not get that the symbol of operations has been checked previously.
+          return 0;
+      }
+    })
+    .map((result) =>
+      new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
+    );
+}
+
+function analyzeBinaryOperation() {
+  return {
+    value: Some(SymbolValueKind.number),
+    warnings: [],
+    errors: [],
+  };
+}
 
 const binaryOperation = apply(
   seq(
@@ -36,37 +77,10 @@ const binaryOperation = apply(
     rhs: components[2],
     token: components[1],
     evaluate() {
-      if (!["+", "-", "*", "/", "%"].includes(this.token.text)) {
-        return Err(InternalError(
-          `The interpreter recieved instructions to perform the following unknown operation on two numbers: ${this.token.text}`,
-          "This should have either been caught during static analysis or be prevented by the parser.",
-        ));
-      }
-      return this.lhs.evaluate()
-        .combine(this.rhs.evaluate())
-        .map(([left, right]) => {
-          switch (this.token.text) {
-            case "+":
-              return left.value + right.value;
-            case "-":
-              return left.value - right.value;
-            case "*":
-              return left.value * right.value;
-            case "/":
-              return left.value / right.value;
-            case "%":
-              return left.value % right.value;
-            default:
-              // this never happens, TS simply does not get that the symbol of operations has been checked previously.
-              return 0;
-          }
-        })
-        .map((result) =>
-          new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
-        );
+      return evaluateBinaryOperation(this);
     },
     analyze() {
-      // TODO: implement
+      return analyzeBinaryOperation();
     },
   }),
 );
