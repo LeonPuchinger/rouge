@@ -29,14 +29,12 @@ export interface WrapperAstNode<T> {
 
 export interface InterpretableAstNode {
   interpret(): Option<AppError>;
-}
-
-export interface EvaluableAstNode<R> {
-  evaluate(): Result<R, AppError>;
-}
-
-export interface CheckableAstNode {
   check(): AnalysisFindings;
+}
+
+export interface EvaluableAstNode<R, A = SymbolValueKind> {
+  evaluate(): Result<R, AppError>;
+  analyze(): AnalysisResult<A>;
 }
 
 export interface AnalyzableAstNode<A> {
@@ -49,36 +47,28 @@ export type AstNode =
   | ValueAstNode<unknown>
   | WrapperAstNode<unknown>
   | InterpretableAstNode
-  | EvaluableAstNode<unknown>
-  | CheckableAstNode
-  | AnalyzableAstNode<unknown>;
+  | EvaluableAstNode<unknown>;
 
 export type NumberAstNode =
   & ValueAstNode<number>
-  & EvaluableAstNode<SymbolValue<number>>
-  & AnalyzableAstNode<SymbolValueKind>;
+  & EvaluableAstNode<SymbolValue<number>>;
 export type IdentifierAstNode =
   & ValueAstNode<string>
   & EvaluableAstNode<string>;
 export type IdentifierExpressionAstNode =
   & WrapperAstNode<IdentifierAstNode>
   & EvaluableAstNode<SymbolValue<unknown>>
-  & AnalyzableAstNode<SymbolValueKind>;
 export type ExpressionAstNode =
   & EvaluableAstNode<SymbolValue<unknown>>
-  & AnalyzableAstNode<SymbolValueKind>
-  & InterpretableAstNode
-  & CheckableAstNode;
+  & InterpretableAstNode;
 export type AssignAstNode =
   & BinaryAstNode<IdentifierAstNode, ExpressionAstNode>
-  & InterpretableAstNode
-  & CheckableAstNode;
+  & InterpretableAstNode;
 export type StatementAstNode =
   | ExpressionAstNode
   | AssignAstNode;
 export type StatementAstNodes =
   & NaryAstNode<StatementAstNode>
-  & InterpretableAstNode
-  & CheckableAstNode;
+  & InterpretableAstNode;
 
 export type AST = StatementAstNodes;

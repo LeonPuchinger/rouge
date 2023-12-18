@@ -36,6 +36,9 @@ const binaryOperation = apply(
     evaluate() {
       // TODO: implement
     },
+    analyze() {
+      // TODO: implement
+    },
   }),
 );
 
