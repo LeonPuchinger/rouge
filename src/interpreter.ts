@@ -12,7 +12,7 @@ import {} from "./util/array.ts";
 import { AppError, InternalError } from "./util/error.ts";
 import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
 
-const table: InterpreterSymbolTable = new SymbolTable();
+export const runtimeTable: InterpreterSymbolTable = new SymbolTable();
 
 export function evaluateIdentifier(
   node: ast.IdentifierAstNode,
@@ -29,18 +29,6 @@ export function evaluateNumericLiteral(
       value: node.value,
     }),
   );
-}
-
-export function evaluateIdentifierExpression(
-  node: ast.IdentifierExpressionAstNode,
-): Result<SymbolValue<unknown>, AppError> {
-  const ident = node.child.value;
-  return table.findSymbol(ident).ok_or(
-    InternalError(
-      `Unable to resolve symbol ${ident}.`,
-      "This should have been caught during static analysis.",
-    ),
-  ).map((symbol) => symbol.value);
 }
 
 export function interpretExpression(
@@ -62,7 +50,7 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
   let expression = expressionResult.unwrap();
   // identifiers need to be resolved in the symbol table
   if (expression.valueKind === SymbolValueKind.identifier) {
-    const existing = table.findSymbol(expression.value as string);
+    const existing = runtimeTable.findSymbol(expression.value as string);
     if (existing.kind === "none") {
       return Some(
         InternalError(
@@ -73,7 +61,7 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
     }
     expression = existing.unwrap().value;
   }
-  table.setSymbol(
+  runtimeTable.setSymbol(
     ident,
     new RuntimeSymbol({
       symbolKind: SymbolKind.variable,
