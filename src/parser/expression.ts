@@ -62,3 +62,8 @@ export const identifierExpression = apply(
     },
   }),
 );
+
+/* Ambiguously typed expression */
+
+// TODO: add invocations as an alternative (see grammar)
+export const ambiguouslyTypedExpression = identifierExpression;

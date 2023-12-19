@@ -26,20 +26,20 @@ loop = "loop", "(", boolean_expression, ")", "{", statements, "}";
 
 expressions = [ expression, { ",",  expression } ];
 expression =
-    generic_expression
+    ambiguously_typed_expression
     | numeric_expression
     | boolean_expression
     | string_literal
     | chain;
-(* generic expressions are expressions for which the type cannot be inferred during parsing *)
-generic_expression =
+(* ambiguously typed expressions are expressions for which the type cannot be inferred during parsing *)
+ambiguously_typed_expression =
     identifier
     | invocation;
 numeric_expression =
     numeric_expression, ( "+", "-", "*", "/", "%" ), numeric_expression
     | "(", numeric_expression, ")"
     | numeric_literal
-    | generic_expression;
+    | ambiguously_typed_expression;
 boolean_expression =
     boolean_expression, ( "||", "&&", "!" ), boolean_expression
     | "(", boolean_expression, ")"
