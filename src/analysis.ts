@@ -10,7 +10,7 @@ import {
 import { None, Option, Some } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
-const table: AnalysisSymbolTable = new SymbolTable();
+export const analysisTable: AnalysisSymbolTable = new SymbolTable();
 
 export type AnalysisResult<T> = {
   value: Option<T>;
@@ -37,30 +37,6 @@ export function analyzeNumericLiteral(
   };
 }
 
-export function analyzeIdentifierExpression(
-  node: ast.IdentifierExpressionAstNode,
-): AnalysisResult<SymbolValueKind> {
-  const ident = node.child.value;
-  const findings: AnalysisResult<SymbolValueKind> = {
-    value: table.findSymbol(ident)
-      .map((symbol) => symbol.valueKind),
-    warnings: [],
-    errors: [],
-  };
-  findings.value.onNone(() => {
-    findings.errors.push(
-      AnalysisError({
-        message:
-          "You tried to use a variable that has not been defined at this point in the program.",
-        beginHighlight: node.child,
-        endHighlight: None(),
-        messageHighlight: `Variable "${ident}" is unknown at this point.`,
-      }),
-    );
-  });
-  return findings;
-}
-
 export function checkAssign(
   node: ast.AssignAstNode,
 ): AnalysisFindings {
@@ -71,7 +47,7 @@ export function checkAssign(
     return expressionResult;
   }
   const expressionKind = expressionResult.value.unwrap();
-  table.findSymbol(ident)
+  analysisTable.findSymbol(ident)
     .then((existing) => {
       if (existing.valueKind === expressionKind) {
         return;
@@ -90,7 +66,7 @@ export function checkAssign(
       );
     })
     .onNone(() => {
-      table.setSymbol(
+      analysisTable.setSymbol(
         ident,
         new StaticSymbol({
           symbolKind: SymbolKind.variable,
