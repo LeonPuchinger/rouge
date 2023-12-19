@@ -11,6 +11,7 @@ import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
 import * as interpreter from "./interpreter.ts";
 import { TokenType } from "./lexer.ts";
+import { identifierExpression } from "./parser/expression.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { Err, Ok, Result } from "./util/monad/index.ts";
@@ -43,23 +44,10 @@ const NUMERIC_LITERAL = apply(
   }),
 );
 
-const IDENTIFIER_EXPRESSION = apply(
-  IDENTIFIER,
-  (identifier): ast.IdentifierExpressionAstNode => ({
-    child: identifier,
-    evaluate() {
-      return interpreter.evaluateIdentifierExpression(this);
-    },
-    analyze() {
-      return analysis.analyzeIdentifierExpression(this);
-    },
-  }),
-);
-
 const EXPRESSION = apply(
   alt_sc(
     NUMERIC_LITERAL,
-    IDENTIFIER_EXPRESSION,
+    identifierExpression,
   ),
   (expression): ast.ExpressionAstNode => ({
     ...expression,

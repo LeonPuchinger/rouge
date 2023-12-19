@@ -55,9 +55,6 @@ export type NumberAstNode =
 export type IdentifierAstNode =
   & ValueAstNode<string>
   & EvaluableAstNode<string>;
-export type IdentifierExpressionAstNode =
-  & WrapperAstNode<IdentifierAstNode>
-  & EvaluableAstNode<SymbolValue<unknown>>
 export type ExpressionAstNode =
   & EvaluableAstNode<SymbolValue<unknown>>
   & InterpretableAstNode;
