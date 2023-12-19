@@ -52,14 +52,12 @@ export type AstNode =
 export type NumberAstNode =
   & ValueAstNode<number>
   & EvaluableAstNode<SymbolValue<number>>;
-export type IdentifierAstNode =
-  & ValueAstNode<string>
-  & EvaluableAstNode<string>;
 export type ExpressionAstNode =
   & EvaluableAstNode<SymbolValue<unknown>>
   & InterpretableAstNode;
 export type AssignAstNode =
-  & BinaryAstNode<IdentifierAstNode, ExpressionAstNode>
+  & TokenAstNode
+  & WrapperAstNode<ExpressionAstNode>
   & InterpretableAstNode;
 export type StatementAstNode =
   | ExpressionAstNode

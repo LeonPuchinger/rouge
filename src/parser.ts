@@ -19,17 +19,6 @@ import { toMultiline } from "./util/string.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
-const IDENTIFIER = apply(
-  tok(TokenType.ident),
-  (token): ast.IdentifierAstNode => ({
-    token: token,
-    value: token.text,
-    evaluate() {
-      return interpreter.evaluateIdentifier(this);
-    },
-  }),
-);
-
 const NUMERIC_LITERAL = apply(
   tok(TokenType.numeric_literal),
   (token): ast.NumberAstNode => ({
@@ -62,13 +51,13 @@ const EXPRESSION = apply(
 
 const ASSIGNMENT = apply(
   seq(
-    IDENTIFIER,
+    tok(TokenType.ident),
     tok(TokenType.eq_operator),
     EXPRESSION,
   ),
   (values): ast.AssignAstNode => ({
-    lhs: values[0],
-    rhs: values[2],
+    token: values[0],
+    child: values[2],
     interpret() {
       return interpreter.interpretAssign(this);
     },

@@ -14,12 +14,6 @@ import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
 
 export const runtimeTable: InterpreterSymbolTable = new SymbolTable();
 
-export function evaluateIdentifier(
-  node: ast.IdentifierAstNode,
-): Result<string, AppError> {
-  return Ok(node.value);
-}
-
 export function evaluateNumericLiteral(
   node: ast.NumberAstNode,
 ): Result<SymbolValue<number>, AppError> {
@@ -38,12 +32,8 @@ export function interpretExpression(
 }
 
 export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
-  const identResult = node.lhs.evaluate();
-  if (identResult.kind === "err") {
-    return identResult.err();
-  }
-  const ident = identResult.unwrap();
-  const expressionResult = node.rhs.evaluate();
+  const ident = node.token.text;
+  const expressionResult = node.child.evaluate();
   if (expressionResult.kind === "err") {
     return expressionResult.err();
   }
@@ -65,7 +55,7 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
     ident,
     new RuntimeSymbol({
       symbolKind: SymbolKind.variable,
-      node: node.rhs,
+      node: node.child,
       value: new SymbolValue({
         value: expression,
         valueKind: SymbolValueKind.number,
