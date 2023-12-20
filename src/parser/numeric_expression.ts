@@ -23,7 +23,7 @@ type EvaluatesToNumber = ast.EvaluableAstNode<SymbolValue<number>>;
 
 /* Binary operation */
 
-export type BinaryNumericExpressionAstNode =
+type BinaryNumericExpressionAstNode =
   & ast.BinaryAstNode<EvaluatesToNumber, EvaluatesToNumber>
   & ast.TokenAstNode
   & EvaluatesToNumber;
@@ -102,7 +102,7 @@ type NumericLiteralAstNode =
   & ast.ValueAstNode<number>
   & EvaluatesToNumber;
 
-export function evaluateNumericLiteral(
+function evaluateNumericLiteral(
   node: NumericLiteralAstNode,
 ): Result<SymbolValue<number>, AppError> {
   return Ok(
@@ -113,7 +113,7 @@ export function evaluateNumericLiteral(
   );
 }
 
-export function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
+function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
   return {
     value: Some(SymbolValueKind.number),
     warnings: [],
