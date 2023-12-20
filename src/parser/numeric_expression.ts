@@ -8,13 +8,12 @@ import {
   str,
   tok,
 } from "typescript-parsec";
-import * as analysis from "../analysis.ts";
+import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
-import * as interpreter from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
-import { Err, Result, Some } from "../util/monad/index.ts";
+import { Err, Ok, Result, Some } from "../util/monad/index.ts";
 
 // Forward declaration of exported top-level rule
 export const numericExpression = rule<TokenType, EvaluatesToNumber>();
@@ -99,19 +98,44 @@ const parenthesized: Parser<TokenType, EvaluatesToNumber> = kmid(
 
 /* Numeric literal */
 
+type NumericLiteralAstNode =
+  & ast.ValueAstNode<number>
+  & EvaluatesToNumber;
+
+export function evaluateNumericLiteral(
+  node: NumericLiteralAstNode,
+): Result<SymbolValue<number>, AppError> {
+  return Ok(
+    new SymbolValue({
+      valueKind: SymbolValueKind.number,
+      value: node.value,
+    }),
+  );
+}
+
+export function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
+  return {
+    value: Some(SymbolValueKind.number),
+    warnings: [],
+    errors: [],
+  };
+}
+
 const literal = apply(
   tok(TokenType.numeric_literal),
-  (literal): ast.NumberAstNode => ({
+  (literal): NumericLiteralAstNode => ({
     token: literal,
     value: parseFloat(literal.text),
     evaluate() {
-      return interpreter.evaluateNumericLiteral(this);
+      return evaluateNumericLiteral(this);
     },
     analyze() {
-      return analysis.analyzeNumericLiteral(this);
+      return analyzeNumericLiteral();
     },
   }),
 );
+
+/* Numeric expression */
 
 numericExpression.setPattern(
   alt_sc(

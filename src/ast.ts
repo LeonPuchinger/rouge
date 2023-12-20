@@ -49,9 +49,6 @@ export type AstNode =
   | InterpretableAstNode
   | EvaluableAstNode<unknown>;
 
-export type NumberAstNode =
-  & ValueAstNode<number>
-  & EvaluableAstNode<SymbolValue<number>>;
 export type ExpressionAstNode =
   & EvaluableAstNode<SymbolValue<unknown>>
   & InterpretableAstNode;

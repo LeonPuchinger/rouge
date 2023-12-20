@@ -10,20 +10,9 @@ import {
 // required for extension methods to be usable
 import {} from "./util/array.ts";
 import { AppError, InternalError } from "./util/error.ts";
-import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
+import { None, Option, Some } from "./util/monad/index.ts";
 
 export const runtimeTable: InterpreterSymbolTable = new SymbolTable();
-
-export function evaluateNumericLiteral(
-  node: ast.NumberAstNode,
-): Result<SymbolValue<number>, AppError> {
-  return Ok(
-    new SymbolValue({
-      valueKind: SymbolValueKind.number,
-      value: node.value,
-    }),
-  );
-}
 
 export function interpretExpression(
   node: ast.ExpressionAstNode,

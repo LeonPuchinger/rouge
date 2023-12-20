@@ -5,7 +5,6 @@ import {
   StaticSymbol,
   SymbolKind,
   SymbolTable,
-  SymbolValueKind,
 } from "./symbol.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
@@ -22,16 +21,6 @@ export type AnalysisFindings = Omit<AnalysisResult<unknown>, "value">;
 
 function emptyFindings(): AnalysisFindings {
   return {
-    warnings: [],
-    errors: [],
-  };
-}
-
-export function analyzeNumericLiteral(
-  _node: ast.NumberAstNode,
-): AnalysisResult<SymbolValueKind> {
-  return {
-    value: Some(SymbolValueKind.number),
     warnings: [],
     errors: [],
   };
