@@ -12,6 +12,7 @@ import * as ast from "./ast.ts";
 import * as interpreter from "./interpreter.ts";
 import { TokenType } from "./lexer.ts";
 import { identifierExpression } from "./parser/expression.ts";
+import { numericExpression } from "./parser/numeric_expression.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { Err, Ok, Result } from "./util/monad/index.ts";
@@ -19,24 +20,10 @@ import { toMultiline } from "./util/string.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
-const NUMERIC_LITERAL = apply(
-  tok(TokenType.numeric_literal),
-  (token): ast.NumberAstNode => ({
-    token: token,
-    value: parseFloat(token.text),
-    evaluate() {
-      return interpreter.evaluateNumericLiteral(this);
-    },
-    analyze() {
-      return analysis.analyzeNumericLiteral(this);
-    },
-  }),
-);
-
 const EXPRESSION = apply(
   alt_sc(
-    NUMERIC_LITERAL,
     identifierExpression,
+    numericExpression,
   ),
   (expression): ast.ExpressionAstNode => ({
     ...expression,
