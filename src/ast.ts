@@ -18,8 +18,7 @@ export interface TokenAstNode<T = TokenType> {
   token: Token<T>;
 }
 
-export interface ValueAstNode<V> {
-  token: Token<TokenType>;
+export interface ValueAstNode<V> extends TokenAstNode {
   value: V;
 }
 

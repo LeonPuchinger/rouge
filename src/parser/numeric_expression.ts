@@ -10,16 +10,20 @@ import {
 } from "typescript-parsec";
 import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
+import { AnalysisError } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, Ok, Result, Some } from "../util/monad/index.ts";
+import { None } from "../util/monad/option.ts";
+import { ambiguouslyTypedExpression } from "./expression.ts";
 
 // Forward declaration of exported top-level rule
 export const numericExpression = rule<TokenType, EvaluatesToNumber>();
 
-// Utility type
+// Utility types
 type EvaluatesToNumber = ast.EvaluableAstNode<SymbolValue<number>>;
+type EvaluatesToSomething = ast.EvaluableAstNode<SymbolValue<unknown>>;
 
 /* Binary operation */
 
@@ -137,10 +141,53 @@ const literal = apply(
 
 /* Numeric expression */
 
+type NumericExpressionAstNode =
+  & ast.WrapperAstNode<EvaluatesToSomething>
+  & EvaluatesToNumber;
+
+function evaluateNumericExpression(
+  node: NumericExpressionAstNode,
+): Result<SymbolValue<number>, AppError> {
+  return node.evaluate();
+}
+
+function analyzeNumericExpression(
+  node: NumericExpressionAstNode,
+): AnalysisResult<SymbolValueKind> {
+  const analysisResult = node.child.analyze();
+  if (
+    analysisResult.value.kind === "some" &&
+    analysisResult.value.unwrap() !== SymbolValueKind.number
+  ) {
+    return {
+      ...analysisResult,
+      value: None(),
+      errors: [AnalysisError({
+        message: "You tried to use a numeric operation on something that is not a number.",
+        beginHighlight: /* TODO: locate AST node responsible for error */,
+        endHighlight: None(),
+      })],
+    };
+  }
+  return analysisResult;
+}
+
 numericExpression.setPattern(
-  alt_sc(
-    binaryOperation,
-    parenthesized,
-    literal,
+  apply(
+    alt_sc(
+      binaryOperation,
+      parenthesized,
+      literal,
+      ambiguouslyTypedExpression,
+    ),
+    (node): NumericExpressionAstNode => ({
+      child: node,
+      analyze() {
+        return analyzeNumericExpression(this);
+      },
+      evaluate() {
+        return evaluateNumericExpression(this);
+      },
+    }),
   ),
 );
