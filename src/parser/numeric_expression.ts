@@ -16,21 +16,17 @@ import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, Ok, Result, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
-import { ambiguouslyTypedExpression } from "./expression.ts";
+import { identifierExpression } from "./expression.ts";
 
 // Forward declaration of exported top-level rule
-export const numericExpression = rule<TokenType, EvaluatesToNumber>();
-
-// Utility types
-type EvaluatesToNumber = ast.EvaluableAstNode<SymbolValue<number>>;
-type EvaluatesToSomething = ast.EvaluableAstNode<SymbolValue<unknown>>;
+export const numericExpression = rule<TokenType, NumericExpressionAstNode>();
 
 /* Binary operation */
 
 type BinaryNumericExpressionAstNode =
-  & ast.BinaryAstNode<EvaluatesToNumber, EvaluatesToNumber>
+  & ast.BinaryAstNode<NumericExpressionAstNode, NumericExpressionAstNode>
   & ast.TokenAstNode
-  & EvaluatesToNumber;
+  & NumericExpressionAstNode;
 
 function evaluateBinaryOperation(
   node: BinaryNumericExpressionAstNode,
@@ -94,7 +90,7 @@ const binaryOperation = apply(
 
 /* Parenthesised expression */
 
-const parenthesized: Parser<TokenType, EvaluatesToNumber> = kmid(
+const parenthesized: Parser<TokenType, NumericExpressionAstNode> = kmid(
   str("("),
   numericExpression,
   str(")"),
@@ -104,7 +100,7 @@ const parenthesized: Parser<TokenType, EvaluatesToNumber> = kmid(
 
 type NumericLiteralAstNode =
   & ast.ValueAstNode<number>
-  & EvaluatesToNumber;
+  & NumericExpressionAstNode;
 
 function evaluateNumericLiteral(
   node: NumericLiteralAstNode,
@@ -139,20 +135,22 @@ const literal = apply(
   }),
 );
 
-/* Numeric expression */
+/* Ambiguously typed expression */
 
-type NumericExpressionAstNode =
-  & ast.WrapperAstNode<EvaluatesToSomething>
-  & EvaluatesToNumber;
+type AmbiguouslyTypedExpression =
+  & ast.WrapperAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>>
+  & ast.TokenAstNode
+  & NumericExpressionAstNode;
 
-function evaluateNumericExpression(
-  node: NumericExpressionAstNode,
+function evaluateAmbiguouslyTypedExpression(
+  node: AmbiguouslyTypedExpression,
 ): Result<SymbolValue<number>, AppError> {
-  return node.evaluate();
+  // Type safety has been assured by static analysis
+  return node.child.evaluate() as Result<SymbolValue<number>, AppError>;
 }
 
-function analyzeNumericExpression(
-  node: NumericExpressionAstNode,
+function analyzeAmbiguouslyTypedExpression(
+  node: AmbiguouslyTypedExpression,
 ): AnalysisResult<SymbolValueKind> {
   const analysisResult = node.child.analyze();
   if (
@@ -163,31 +161,41 @@ function analyzeNumericExpression(
       ...analysisResult,
       value: None(),
       errors: [AnalysisError({
-        message: "You tried to use a numeric operation on something that is not a number.",
-        beginHighlight: /* TODO: locate AST node responsible for error */,
+        message:
+          "You tried to use a numeric operation on something that is not a number.",
+        beginHighlight: node,
         endHighlight: None(),
+        messageHighlight: `"${node.token.text}" can not be used as a number.`,
       })],
     };
   }
   return analysisResult;
 }
 
+const ambiguouslyTypedExpression = apply(
+  // TODO: add `invocation` as an alternative
+  identifierExpression,
+  (node): AmbiguouslyTypedExpression => ({
+    child: node,
+    token: node.token,
+    analyze() {
+      return analyzeAmbiguouslyTypedExpression(this);
+    },
+    evaluate() {
+      return evaluateAmbiguouslyTypedExpression(this);
+    },
+  }),
+);
+
+/* Numeric expression */
+
+type NumericExpressionAstNode = ast.EvaluableAstNode<SymbolValue<number>>;
+
 numericExpression.setPattern(
-  apply(
-    alt_sc(
-      binaryOperation,
-      parenthesized,
-      literal,
-      ambiguouslyTypedExpression,
-    ),
-    (node): NumericExpressionAstNode => ({
-      child: node,
-      analyze() {
-        return analyzeNumericExpression(this);
-      },
-      evaluate() {
-        return evaluateNumericExpression(this);
-      },
-    }),
+  alt_sc(
+    binaryOperation,
+    parenthesized,
+    literal,
+    ambiguouslyTypedExpression,
   ),
 );
