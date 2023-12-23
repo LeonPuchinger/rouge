@@ -137,20 +137,20 @@ const literal = apply(
 
 /* Ambiguously typed expression */
 
-type AmbiguouslyTypedExpression =
+type AmbiguouslyTypedExpressionAstNode =
   & ast.WrapperAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>>
   & ast.TokenAstNode
   & NumericExpressionAstNode;
 
 function evaluateAmbiguouslyTypedExpression(
-  node: AmbiguouslyTypedExpression,
+  node: AmbiguouslyTypedExpressionAstNode,
 ): Result<SymbolValue<number>, AppError> {
   // Type safety has been assured by static analysis
   return node.child.evaluate() as Result<SymbolValue<number>, AppError>;
 }
 
 function analyzeAmbiguouslyTypedExpression(
-  node: AmbiguouslyTypedExpression,
+  node: AmbiguouslyTypedExpressionAstNode,
 ): AnalysisResult<SymbolValueKind> {
   const analysisResult = node.child.analyze();
   if (
@@ -175,7 +175,7 @@ function analyzeAmbiguouslyTypedExpression(
 const ambiguouslyTypedExpression = apply(
   // TODO: add `invocation` as an alternative
   symbolExpression,
-  (node): AmbiguouslyTypedExpression => ({
+  (node): AmbiguouslyTypedExpressionAstNode => ({
     child: node,
     token: node.token,
     analyze() {
