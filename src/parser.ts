@@ -11,7 +11,7 @@ import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
 import * as interpreter from "./interpreter.ts";
 import { TokenType } from "./lexer.ts";
-import { identifierExpression } from "./parser/expression.ts";
+import { symbolExpression } from "./parser/expression.ts";
 import { numericExpression } from "./parser/numeric_expression.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
@@ -22,7 +22,7 @@ const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
 const EXPRESSION = apply(
   alt_sc(
-    identifierExpression,
+    symbolExpression,
     numericExpression,
   ),
   (expression): ast.ExpressionAstNode => ({

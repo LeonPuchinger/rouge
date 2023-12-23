@@ -10,12 +10,12 @@ import { None, Result } from "../util/monad/index.ts";
 
 /* Identifier expression */
 
-export type IdentifierExpressionAstNode =
+export type SymbolExpressionAstNode =
   & TokenAstNode
   & EvaluableAstNode<SymbolValue<unknown>>;
 
-export function evaluateIdentifierExpression(
-  node: IdentifierExpressionAstNode,
+export function evaluateSymbolExpression(
+  node: SymbolExpressionAstNode,
 ): Result<SymbolValue<unknown>, AppError> {
   const ident = node.token.text;
   return runtimeTable.findSymbol(ident).ok_or(
@@ -26,8 +26,8 @@ export function evaluateIdentifierExpression(
   ).map((symbol) => symbol.value);
 }
 
-export function analyzeIdentifierExpression(
-  node: IdentifierExpressionAstNode,
+export function analyzeSymbolExpression(
+  node: SymbolExpressionAstNode,
 ): AnalysisResult<SymbolValueKind> {
   const ident = node.token.text;
   const findings: AnalysisResult<SymbolValueKind> = {
@@ -50,15 +50,15 @@ export function analyzeIdentifierExpression(
   return findings;
 }
 
-export const identifierExpression = apply(
+export const symbolExpression = apply(
   tok(TokenType.ident),
-  (identifier): IdentifierExpressionAstNode => ({
+  (identifier): SymbolExpressionAstNode => ({
     token: identifier,
     evaluate() {
-      return evaluateIdentifierExpression(this);
+      return evaluateSymbolExpression(this);
     },
     analyze() {
-      return analyzeIdentifierExpression(this);
+      return analyzeSymbolExpression(this);
     },
   }),
 );

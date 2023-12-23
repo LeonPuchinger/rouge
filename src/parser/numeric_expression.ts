@@ -16,7 +16,7 @@ import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, Ok, Result, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
-import { identifierExpression } from "./expression.ts";
+import { symbolExpression } from "./expression.ts";
 
 // Forward declaration of exported top-level rule
 export const numericExpression = rule<TokenType, NumericExpressionAstNode>();
@@ -174,7 +174,7 @@ function analyzeAmbiguouslyTypedExpression(
 
 const ambiguouslyTypedExpression = apply(
   // TODO: add `invocation` as an alternative
-  identifierExpression,
+  symbolExpression,
   (node): AmbiguouslyTypedExpression => ({
     child: node,
     token: node.token,
