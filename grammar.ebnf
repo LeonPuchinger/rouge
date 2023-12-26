@@ -37,6 +37,7 @@ ambiguously_typed_expression =
     | invocation;
 numeric_expression =
     numeric_expression, ( "+", "-", "*", "/", "%" ), numeric_expression
+    | ( "+", "-"), numeric_expression
     | "(", numeric_expression, ")"
     | numeric_literal
     | ambiguously_typed_expression;
