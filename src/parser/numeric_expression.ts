@@ -7,6 +7,7 @@ import {
   seq,
   str,
   tok,
+  Token,
 } from "typescript-parsec";
 import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
@@ -84,6 +85,59 @@ const binaryOperation = apply(
     },
     analyze() {
       return analyzeBinaryOperation();
+    },
+  }),
+);
+
+/* Unary Operation */
+
+type UnaryNumericExpressionAstNode =
+  & ast.WrapperAstNode<NumericExpressionAstNode>
+  & ast.TokenAstNode
+  & NumericExpressionAstNode;
+
+function evaluateUnaryOperation(
+  node: UnaryNumericExpressionAstNode,
+): Result<SymbolValue<number>, AppError> {
+  if (!["+", "-"].includes(node.token.text)) {
+    return Err(InternalError(
+      `The interpreter recieved instructions to perform the following unknown operation on a number: ${node.token.text}`,
+      "This should have either been caught during static analysis or be prevented by the parser.",
+    ));
+  }
+  return node.child.evaluate()
+    .map((eee) => {
+      if (node.token.text === "-") {
+        return -eee.value;
+      }
+      return eee.value;
+    })
+    .map((result) =>
+      new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
+    );
+}
+
+function analyzeUnaryOperation() {
+  return {
+    value: Some(SymbolValueKind.number),
+    warnings: [],
+    errors: [],
+  };
+}
+
+const unaryOperation = apply(
+  seq<TokenType, Token<TokenType>, NumericExpressionAstNode>(
+    alt_sc(str("+"), str("-"), str("*"), str("/"), str("%")),
+    numericExpression,
+  ),
+  (components): UnaryNumericExpressionAstNode => ({
+    token: components[0],
+    child: components[1],
+    evaluate() {
+      return evaluateUnaryOperation(this);
+    },
+    analyze() {
+      return analyzeUnaryOperation();
     },
   }),
 );
@@ -194,6 +248,7 @@ type NumericExpressionAstNode = ast.EvaluableAstNode<SymbolValue<number>>;
 numericExpression.setPattern(
   alt_sc(
     binaryOperation,
+    unaryOperation,
     parenthesized,
     literal,
     ambiguouslyTypedExpression,
