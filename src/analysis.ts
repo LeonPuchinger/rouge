@@ -6,7 +6,7 @@ import {
   SymbolKind,
   SymbolTable,
 } from "./symbol.ts";
-import { None, Option, Some } from "./util/monad/index.ts";
+import { None, Option } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
 export const analysisTable: AnalysisSymbolTable = new SymbolTable();
@@ -30,8 +30,8 @@ export function checkAssign(
   node: ast.AssignAstNode,
 ): AnalysisFindings {
   const findings = emptyFindings();
-  const ident = node.lhs.value;
-  const expressionResult = node.rhs.analyze();
+  const ident = node.token.text;
+  const expressionResult = node.child.analyze();
   if (expressionResult.value.kind === "none") {
     return expressionResult;
   }
@@ -49,7 +49,7 @@ export function checkAssign(
             "This means, that afterwards the variable can only be set to values with the same type.",
             "A variable is created the first time a value is assigned to it.",
           ),
-          beginHighlight: node.lhs,
+          beginHighlight: node,
           endHighlight: None(),
         }),
       );
