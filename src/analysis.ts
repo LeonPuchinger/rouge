@@ -32,7 +32,7 @@ export function checkAssign(
   const findings = emptyFindings();
   const ident = node.lhs.value;
   const expressionResult = node.rhs.analyze();
-  if (expressionResult.value.kind === "some") {
+  if (expressionResult.value.kind === "none") {
     return expressionResult;
   }
   const expressionKind = expressionResult.value.unwrap();
