@@ -22,7 +22,7 @@ export const lexer = buildLexer([
 
 /**
  * Split an input string into a sequence of Tokens.
- * 
+ *
  * @param source The input souce code
  * @returns A linked list of Tokens
  */
