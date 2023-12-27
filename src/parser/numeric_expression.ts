@@ -106,11 +106,11 @@ function evaluateUnaryOperation(
     ));
   }
   return node.child.evaluate()
-    .map((eee) => {
+    .map((result) => {
       if (node.token.text === "-") {
-        return -eee.value;
+        return -result.value;
       }
-      return eee.value;
+      return result.value;
     })
     .map((result) =>
       new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
