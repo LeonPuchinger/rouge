@@ -1,0 +1,33 @@
+(* it is assumed that any non-breaking whitespace and comments have been removed from the input *)
+
+(* IMPORT expression.ebnf *)
+(* IMPORT token.ebnf *)
+
+(* EXPORT*)
+(* ENTRY-POINT *)
+start = statements;
+
+statements = [ statement, { breaking_whitespace, statement } ];
+statement =
+    assignment
+    | function_definition
+    | structure
+    | condition
+    | loop
+    | expression;
+
+variable_name = identifier, [ ":", identifier ];
+assignment = variable_name, "=", expression;
+
+symbol = identifier;
+
+parameter = identifier, ":", identifier;
+parameters = [ parameter, { ",", parameter } ];
+type_parameters = "<", { identifier }, ">";
+function_definition =
+    "function", identifier, type_parameters, "(", parameters, ")", "{", statements, "}";
+
+structure = "structure", identifier, type_parameters, "{", parameters, "}";
+
+condition = "if", "(", boolean_expression, ")", "{", statements, "}";
+loop = "loop", "(", boolean_expression, ")", "{", statements, "}";
