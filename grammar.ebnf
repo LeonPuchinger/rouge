@@ -13,6 +13,8 @@ statement =
 variable_name = identifier, [ ":", identifier ];
 assignment = variable_name, "=", expression;
 
+symbol = identifier;
+
 parameter = identifier, ":", identifier;
 parameters = [ parameter, { ",", parameter } ];
 type_parameters = "<", { identifier }, ">";
@@ -30,17 +32,9 @@ expression =
     | numeric_expression
     | boolean_expression
     | string_literal
+    | invocation
+    | identifier
     | chain;
-(* ambiguously typed expressions are expressions for which the type cannot be inferred during parsing *)
-ambiguously_typed_expression =
-    identifier
-    | invocation;
-numeric_expression =
-    numeric_expression, ( "+", "-", "*", "/", "%" ), numeric_expression
-    | ( "+", "-"), numeric_expression
-    | "(", numeric_expression, ")"
-    | numeric_literal
-    | ambiguously_typed_expression;
 boolean_expression =
     boolean_expression, ( "||", "&&", "!" ), boolean_expression
     | "(", boolean_expression, ")"
@@ -53,14 +47,12 @@ property_access = ".", identifier;
 chain = expression, { ".", ( method_invocation, property_access ) };
 
 (* tokens, not handeled by parser *)
-numeric_literal = { digit }, [ ".", { digit } ];
 boolean_literal = "true" | "false";
 string_literal = "\"", ( letter | digit ), "\"";
 identifier = letter, { letter | digit };
 breaking_whitespace = "\n", { "\n" };
 
 (* utility rules *)
-digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 letter = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j"
     | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u"
     | "v" | "w" | "x" | "y" | "z" | "A" | "B" | "C" | "D" | "E" | "F"
