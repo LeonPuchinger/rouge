@@ -127,7 +127,7 @@ function analyzeUnaryOperation() {
 
 const unaryOperation = apply(
   seq<TokenType, Token<TokenType>, NumericExpressionAstNode>(
-    alt_sc(str("+"), str("-"), str("*"), str("/"), str("%")),
+    alt_sc(str("+"), str("-")),
     numericExpression,
   ),
   (components): UnaryNumericExpressionAstNode => ({
