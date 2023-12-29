@@ -2,6 +2,7 @@ import {
   alt_sc,
   apply,
   kmid,
+  lrec_sc,
   Parser,
   rule,
   seq,
@@ -28,6 +29,24 @@ type BinaryNumericExpressionAstNode =
   & ast.BinaryAstNode<NumericExpressionAstNode, NumericExpressionAstNode>
   & ast.TokenAstNode
   & NumericExpressionAstNode;
+
+function createBinaryNumericExpressionAstNode(params: {
+  lhs: NumericExpressionAstNode;
+  rhs: NumericExpressionAstNode;
+  token: Token<TokenType>;
+}): BinaryNumericExpressionAstNode {
+  return {
+    lhs: params.lhs,
+    rhs: params.rhs,
+    token: params.token,
+    analyze() {
+      return analyzeBinaryOperation();
+    },
+    evaluate() {
+      return evaluateBinaryOperation(this);
+    },
+  };
+}
 
 function evaluateBinaryOperation(
   node: BinaryNumericExpressionAstNode,
@@ -69,25 +88,6 @@ function analyzeBinaryOperation() {
     errors: [],
   };
 }
-
-const binaryOperation = apply(
-  seq(
-    numericExpression,
-    alt_sc(str("+"), str("-"), str("*"), str("/"), str("%")),
-    numericExpression,
-  ),
-  (components): BinaryNumericExpressionAstNode => ({
-    lhs: components[0],
-    rhs: components[2],
-    token: components[1],
-    evaluate() {
-      return evaluateBinaryOperation(this);
-    },
-    analyze() {
-      return analyzeBinaryOperation();
-    },
-  }),
-);
 
 /* Unary Operation */
 
@@ -241,16 +241,61 @@ const ambiguouslyTypedExpression = apply(
   }),
 );
 
+/* Factor */
+
+const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
+  unaryOperation,
+  parenthesized,
+  ambiguouslyTypedExpression,
+  literal,
+);
+
+/* Product */
+
+const product = alt_sc(
+  lrec_sc(
+    factor,
+    seq(
+      alt_sc(str("*"), str("/")),
+      factor,
+    ),
+    (
+      a: NumericExpressionAstNode,
+      b: [Token<TokenType>, NumericExpressionAstNode],
+    ): NumericExpressionAstNode =>
+      createBinaryNumericExpressionAstNode({
+        lhs: a,
+        token: b[0],
+        rhs: b[1],
+      }),
+  ),
+  factor,
+);
+
+/* Sum */
+
+const sum = alt_sc(
+  lrec_sc(
+    product,
+    seq(
+      alt_sc(str("+"), str("-")),
+      product,
+    ),
+    (
+      a: NumericExpressionAstNode,
+      b: [Token<TokenType>, NumericExpressionAstNode],
+    ): NumericExpressionAstNode =>
+      createBinaryNumericExpressionAstNode({
+        lhs: a,
+        token: b[0],
+        rhs: b[1],
+      }),
+  ),
+  factor,
+);
+
 /* Numeric expression */
 
 type NumericExpressionAstNode = ast.EvaluableAstNode<SymbolValue<number>>;
 
-numericExpression.setPattern(
-  alt_sc(
-    binaryOperation,
-    unaryOperation,
-    parenthesized,
-    literal,
-    ambiguouslyTypedExpression,
-  ),
-);
+numericExpression.setPattern(sum);
