@@ -10,8 +10,9 @@ product = factor { ( "*" | "/" ), factor };
 factor =
     unary
     | parenthesized
-    | invocation
-    | symbol
+    | ambiguously_typed_expression
     | literal;
-unary = ( "+" | "-" ), numeric_expression;
+ambiguously_typed_expression = invocation | symbol;
 parenthesized = "(", numeric_expression, ")";
+literal = numeric_literal;
+unary = ( "+" | "-" ), numeric_expression;
