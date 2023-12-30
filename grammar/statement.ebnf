@@ -3,19 +3,6 @@
 (* IMPORT expression.ebnf *)
 (* IMPORT token.ebnf *)
 
-(* EXPORT*)
-(* ENTRY-POINT *)
-start = statements;
-
-statements = [ statement, { breaking_whitespace, statement } ];
-statement =
-    assignment
-    | function_definition
-    | structure
-    | condition
-    | loop
-    | expression;
-
 variable_name = identifier, [ ":", identifier ];
 assignment = variable_name, "=", expression;
 
@@ -31,3 +18,16 @@ structure = "structure", identifier, type_parameters, "{", parameters, "}";
 
 condition = "if", "(", boolean_expression, ")", "{", statements, "}";
 loop = "loop", "(", boolean_expression, ")", "{", statements, "}";
+
+statement =
+    assignment
+    | function_definition
+    | structure
+    | condition
+    | loop
+    | expression;
+statements = [ statement, { breaking_whitespace, statement } ];
+
+(* EXPORT*)
+(* ENTRY-POINT *)
+start = statements;

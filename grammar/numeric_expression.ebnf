@@ -2,17 +2,17 @@
 (* IMPORT token.ebnf *)
 (* IMPORT util.ebnf *)
 
-(* EXPORT *)
-numeric_expression = sum;
-
-sum = product { ( "+" | "-" ), product };
-product = factor { ( "*" | "/" ), factor };
+literal = numeric_literal;
+unary = ( "+" | "-" ), numeric_expression;
+parenthesized = "(", numeric_expression, ")";
+ambiguously_typed_expression = invocation | symbol;
 factor =
     unary
     | parenthesized
     | ambiguously_typed_expression
     | literal;
-ambiguously_typed_expression = invocation | symbol;
-parenthesized = "(", numeric_expression, ")";
-literal = numeric_literal;
-unary = ( "+" | "-" ), numeric_expression;
+product = factor { ( "*" | "/" ), factor };
+sum = product { ( "+" | "-" ), product };
+
+(* EXPORT *)
+numeric_expression = sum;

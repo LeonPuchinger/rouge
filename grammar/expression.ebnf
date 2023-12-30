@@ -2,8 +2,19 @@
 (* IMPORT token.ebnf *)
 (* IMPORT util.ebnf *)
 
-(* EXPORT *)
-expressions = [ expression, { ",",  expression } ];
+(* multiple constructs (e.g. functions or structs) can be invocated/initialized with the same syntax *)
+invocation = identifier, "(", expressions, ")";
+method_invocation = ".", invocation;
+property_access = ".", identifier;
+chain = expression, { ".", ( method_invocation, property_access ) };
+
+(* TODO: put into own file *)
+boolean_expression =
+    boolean_expression, ( "||", "&&", "!" ), boolean_expression
+    | "(", boolean_expression, ")"
+    | boolean_literal
+    | expression;
+
 (* EXPORT *)
 expression =
     ambiguously_typed_expression
@@ -14,15 +25,5 @@ expression =
     | identifier
     | chain;
 
-(* TODO: put into own file *)
-boolean_expression =
-    boolean_expression, ( "||", "&&", "!" ), boolean_expression
-    | "(", boolean_expression, ")"
-    | boolean_literal
-    | expression;
-
-(* multiple constructs (e.g. functions or structs) can be invocated/initialized with the same syntax *)
-invocation = identifier, "(", expressions, ")";
-method_invocation = ".", invocation;
-property_access = ".", identifier;
-chain = expression, { ".", ( method_invocation, property_access ) };
+(* EXPORT *)
+expressions = [ expression, { ",",  expression } ];
