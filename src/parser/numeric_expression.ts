@@ -319,7 +319,7 @@ const sum = alt_sc(
         rhs: b[1],
       }),
   ),
-  factor,
+  product,
 );
 
 numericExpression.setPattern(sum);
