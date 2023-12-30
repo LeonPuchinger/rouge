@@ -23,7 +23,9 @@ import { symbolExpression } from "./expression.ts";
 // Forward declaration of exported top-level rule
 export const numericExpression = rule<TokenType, NumericExpressionAstNode>();
 
-/* Binary operation */
+/* AST NODES */
+
+/* Binary expression */
 
 type BinaryNumericExpressionAstNode =
   & ast.BinaryAstNode<NumericExpressionAstNode, NumericExpressionAstNode>
@@ -36,19 +38,25 @@ function createBinaryNumericExpressionAstNode(params: {
   token: Token<TokenType>;
 }): BinaryNumericExpressionAstNode {
   return {
-    lhs: params.lhs,
-    rhs: params.rhs,
-    token: params.token,
+    ...params,
     analyze() {
-      return analyzeBinaryOperation();
+      return analyzeBinaryExpression();
     },
     evaluate() {
-      return evaluateBinaryOperation(this);
+      return evaluateBinaryExpression(this);
     },
   };
 }
 
-function evaluateBinaryOperation(
+function analyzeBinaryExpression() {
+  return {
+    value: Some(SymbolValueKind.number),
+    warnings: [],
+    errors: [],
+  };
+}
+
+function evaluateBinaryExpression(
   node: BinaryNumericExpressionAstNode,
 ): Result<SymbolValue<number>, AppError> {
   if (!["+", "-", "*", "/", "%"].includes(node.token.text)) {
@@ -81,7 +89,29 @@ function evaluateBinaryOperation(
     );
 }
 
-function analyzeBinaryOperation() {
+/* Unary Expression */
+
+type UnaryNumericExpressionAstNode =
+  & ast.WrapperAstNode<NumericExpressionAstNode>
+  & ast.TokenAstNode
+  & NumericExpressionAstNode;
+
+function createUnaryNumericExpressionAstNode(params: {
+  child: NumericExpressionAstNode;
+  token: Token<TokenType>;
+}): UnaryNumericExpressionAstNode {
+  return {
+    ...params,
+    analyze() {
+      return analyzeUnaryExpression();
+    },
+    evaluate() {
+      return evaluateUnaryExpression(this);
+    },
+  };
+}
+
+function analyzeUnaryExpression() {
   return {
     value: Some(SymbolValueKind.number),
     warnings: [],
@@ -89,14 +119,7 @@ function analyzeBinaryOperation() {
   };
 }
 
-/* Unary Operation */
-
-type UnaryNumericExpressionAstNode =
-  & ast.WrapperAstNode<NumericExpressionAstNode>
-  & ast.TokenAstNode
-  & NumericExpressionAstNode;
-
-function evaluateUnaryOperation(
+function evaluateUnaryExpression(
   node: UnaryNumericExpressionAstNode,
 ): Result<SymbolValue<number>, AppError> {
   if (!["+", "-"].includes(node.token.text)) {
@@ -117,44 +140,34 @@ function evaluateUnaryOperation(
     );
 }
 
-function analyzeUnaryOperation() {
+/* Numeric literal */
+
+type NumericLiteralAstNode =
+  & ast.ValueAstNode<number>
+  & NumericExpressionAstNode;
+
+function createNumericLiteralAstNode(params: {
+  value: number;
+  token: Token<TokenType>;
+}): NumericLiteralAstNode {
+  return {
+    ...params,
+    analyze() {
+      return analyzeNumericLiteral();
+    },
+    evaluate() {
+      return evaluateNumericLiteral(this);
+    },
+  };
+}
+
+function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
   return {
     value: Some(SymbolValueKind.number),
     warnings: [],
     errors: [],
   };
 }
-
-const unaryOperation = apply(
-  seq<TokenType, Token<TokenType>, NumericExpressionAstNode>(
-    alt_sc(str("+"), str("-")),
-    numericExpression,
-  ),
-  (components): UnaryNumericExpressionAstNode => ({
-    token: components[0],
-    child: components[1],
-    evaluate() {
-      return evaluateUnaryOperation(this);
-    },
-    analyze() {
-      return analyzeUnaryOperation();
-    },
-  }),
-);
-
-/* Parenthesised expression */
-
-const parenthesized: Parser<TokenType, NumericExpressionAstNode> = kmid(
-  str("("),
-  numericExpression,
-  str(")"),
-);
-
-/* Numeric literal */
-
-type NumericLiteralAstNode =
-  & ast.ValueAstNode<number>
-  & NumericExpressionAstNode;
 
 function evaluateNumericLiteral(
   node: NumericLiteralAstNode,
@@ -167,28 +180,6 @@ function evaluateNumericLiteral(
   );
 }
 
-function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
-  return {
-    value: Some(SymbolValueKind.number),
-    warnings: [],
-    errors: [],
-  };
-}
-
-const literal = apply(
-  tok(TokenType.numeric_literal),
-  (literal): NumericLiteralAstNode => ({
-    token: literal,
-    value: parseFloat(literal.text),
-    evaluate() {
-      return evaluateNumericLiteral(this);
-    },
-    analyze() {
-      return analyzeNumericLiteral();
-    },
-  }),
-);
-
 /* Ambiguously typed expression */
 
 type AmbiguouslyTypedExpressionAstNode =
@@ -196,11 +187,19 @@ type AmbiguouslyTypedExpressionAstNode =
   & ast.TokenAstNode
   & NumericExpressionAstNode;
 
-function evaluateAmbiguouslyTypedExpression(
-  node: AmbiguouslyTypedExpressionAstNode,
-): Result<SymbolValue<number>, AppError> {
-  // Type safety has been assured by static analysis
-  return node.child.evaluate() as Result<SymbolValue<number>, AppError>;
+function createAmbiguouslyTypedExpressionAstNode(params: {
+  child: ast.EvaluableAstNode<SymbolValue<unknown>>;
+  token: Token<TokenType>;
+}): AmbiguouslyTypedExpressionAstNode {
+  return {
+    ...params,
+    analyze() {
+      return analyzeAmbiguouslyTypedExpression(this);
+    },
+    evaluate() {
+      return evaluateAmbiguouslyTypedExpression(this);
+    },
+  };
 }
 
 function analyzeAmbiguouslyTypedExpression(
@@ -226,22 +225,55 @@ function analyzeAmbiguouslyTypedExpression(
   return analysisResult;
 }
 
+function evaluateAmbiguouslyTypedExpression(
+  node: AmbiguouslyTypedExpressionAstNode,
+): Result<SymbolValue<number>, AppError> {
+  // Type safety has been assured by static analysis
+  return node.child.evaluate() as Result<SymbolValue<number>, AppError>;
+}
+
+/* Numeric expression */
+
+type NumericExpressionAstNode = ast.EvaluableAstNode<SymbolValue<number>>;
+
+/* PARSER */
+
+const unaryOperation = apply(
+  seq<TokenType, Token<TokenType>, NumericExpressionAstNode>(
+    alt_sc(str("+"), str("-")),
+    numericExpression,
+  ),
+  (components): UnaryNumericExpressionAstNode =>
+    createUnaryNumericExpressionAstNode({
+      token: components[0],
+      child: components[1],
+    }),
+);
+
+const parenthesized: Parser<TokenType, NumericExpressionAstNode> = kmid(
+  str("("),
+  numericExpression,
+  str(")"),
+);
+
+const literal = apply(
+  tok(TokenType.numeric_literal),
+  (literal): NumericLiteralAstNode =>
+    createNumericLiteralAstNode({
+      token: literal,
+      value: parseFloat(literal.text),
+    }),
+);
+
 const ambiguouslyTypedExpression = apply(
   // TODO: add `invocation` as an alternative
   symbolExpression,
-  (node): AmbiguouslyTypedExpressionAstNode => ({
-    child: node,
-    token: node.token,
-    analyze() {
-      return analyzeAmbiguouslyTypedExpression(this);
-    },
-    evaluate() {
-      return evaluateAmbiguouslyTypedExpression(this);
-    },
-  }),
+  (node): AmbiguouslyTypedExpressionAstNode =>
+    createAmbiguouslyTypedExpressionAstNode({
+      child: node,
+      token: node.token,
+    }),
 );
-
-/* Factor */
 
 const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
   unaryOperation,
@@ -249,8 +281,6 @@ const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
   ambiguouslyTypedExpression,
   literal,
 );
-
-/* Product */
 
 const product = alt_sc(
   lrec_sc(
@@ -272,8 +302,6 @@ const product = alt_sc(
   factor,
 );
 
-/* Sum */
-
 const sum = alt_sc(
   lrec_sc(
     product,
@@ -293,9 +321,5 @@ const sum = alt_sc(
   ),
   factor,
 );
-
-/* Numeric expression */
-
-type NumericExpressionAstNode = ast.EvaluableAstNode<SymbolValue<number>>;
 
 numericExpression.setPattern(sum);
