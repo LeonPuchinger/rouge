@@ -22,8 +22,8 @@ const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
 const EXPRESSION = apply(
   alt_sc(
-    symbolExpression,
     numericExpression,
+    symbolExpression,
   ),
   (expression): ast.ExpressionAstNode => ({
     ...expression,
