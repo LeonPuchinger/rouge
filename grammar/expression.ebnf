@@ -2,6 +2,8 @@
 (* IMPORT token.ebnf *)
 (* IMPORT util.ebnf *)
 
+symbol = identifier;
+
 (* multiple constructs (e.g. functions or structs) can be invocated/initialized with the same syntax *)
 invocation = identifier, "(", expressions, ")";
 method_invocation = ".", invocation;
@@ -22,8 +24,8 @@ expression =
     | boolean_expression
     | string_literal
     | invocation
-    | identifier
-    | chain;
+    | chain
+    | symbol;
 
 (* EXPORT *)
 expressions = [ expression, { ",",  expression } ];
