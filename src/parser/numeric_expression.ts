@@ -22,6 +22,97 @@ import { symbolExpression } from "./expression.ts";
 
 /* AST NODES */
 
+/* Numeric literal */
+
+type NumericLiteralAstNode =
+  & ast.ValueAstNode<number>
+  & NumericExpressionAstNode;
+
+function createNumericLiteralAstNode(params: {
+  value: number;
+  token: Token<TokenType>;
+}): NumericLiteralAstNode {
+  return {
+    ...params,
+    analyze() {
+      return analyzeNumericLiteral();
+    },
+    evaluate() {
+      return evaluateNumericLiteral(this);
+    },
+  };
+}
+
+function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
+  return {
+    value: Some(SymbolValueKind.number),
+    warnings: [],
+    errors: [],
+  };
+}
+
+function evaluateNumericLiteral(
+  node: NumericLiteralAstNode,
+): Result<SymbolValue<number>, AppError> {
+  return Ok(
+    new SymbolValue({
+      valueKind: SymbolValueKind.number,
+      value: node.value,
+    }),
+  );
+}
+
+/* Unary Expression */
+
+type UnaryNumericExpressionAstNode =
+  & ast.WrapperAstNode<NumericExpressionAstNode>
+  & ast.TokenAstNode
+  & NumericExpressionAstNode;
+
+function createUnaryNumericExpressionAstNode(params: {
+  child: NumericExpressionAstNode;
+  token: Token<TokenType>;
+}): UnaryNumericExpressionAstNode {
+  return {
+    ...params,
+    analyze() {
+      return analyzeUnaryExpression();
+    },
+    evaluate() {
+      return evaluateUnaryExpression(this);
+    },
+  };
+}
+
+function analyzeUnaryExpression() {
+  return {
+    value: Some(SymbolValueKind.number),
+    warnings: [],
+    errors: [],
+  };
+}
+
+function evaluateUnaryExpression(
+  node: UnaryNumericExpressionAstNode,
+): Result<SymbolValue<number>, AppError> {
+  if (!["+", "-"].includes(node.token.text)) {
+    return Err(InternalError(
+      `The interpreter recieved instructions to perform the following unknown operation on a number: ${node.token.text}`,
+      "This should have either been caught during static analysis or be prevented by the parser.",
+    ));
+  }
+  return node.child.evaluate()
+    .map((result) => {
+      if (node.token.text === "-") {
+        return -result.value;
+      }
+      return result.value;
+    })
+    .map((result) =>
+      new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
+    );
+}
+
 /* Binary expression */
 
 type BinaryNumericExpressionAstNode =
@@ -84,97 +175,6 @@ function evaluateBinaryExpression(
     .map((result) =>
       new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
     );
-}
-
-/* Unary Expression */
-
-type UnaryNumericExpressionAstNode =
-  & ast.WrapperAstNode<NumericExpressionAstNode>
-  & ast.TokenAstNode
-  & NumericExpressionAstNode;
-
-function createUnaryNumericExpressionAstNode(params: {
-  child: NumericExpressionAstNode;
-  token: Token<TokenType>;
-}): UnaryNumericExpressionAstNode {
-  return {
-    ...params,
-    analyze() {
-      return analyzeUnaryExpression();
-    },
-    evaluate() {
-      return evaluateUnaryExpression(this);
-    },
-  };
-}
-
-function analyzeUnaryExpression() {
-  return {
-    value: Some(SymbolValueKind.number),
-    warnings: [],
-    errors: [],
-  };
-}
-
-function evaluateUnaryExpression(
-  node: UnaryNumericExpressionAstNode,
-): Result<SymbolValue<number>, AppError> {
-  if (!["+", "-"].includes(node.token.text)) {
-    return Err(InternalError(
-      `The interpreter recieved instructions to perform the following unknown operation on a number: ${node.token.text}`,
-      "This should have either been caught during static analysis or be prevented by the parser.",
-    ));
-  }
-  return node.child.evaluate()
-    .map((result) => {
-      if (node.token.text === "-") {
-        return -result.value;
-      }
-      return result.value;
-    })
-    .map((result) =>
-      new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
-    );
-}
-
-/* Numeric literal */
-
-type NumericLiteralAstNode =
-  & ast.ValueAstNode<number>
-  & NumericExpressionAstNode;
-
-function createNumericLiteralAstNode(params: {
-  value: number;
-  token: Token<TokenType>;
-}): NumericLiteralAstNode {
-  return {
-    ...params,
-    analyze() {
-      return analyzeNumericLiteral();
-    },
-    evaluate() {
-      return evaluateNumericLiteral(this);
-    },
-  };
-}
-
-function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
-  return {
-    value: Some(SymbolValueKind.number),
-    warnings: [],
-    errors: [],
-  };
-}
-
-function evaluateNumericLiteral(
-  node: NumericLiteralAstNode,
-): Result<SymbolValue<number>, AppError> {
-  return Ok(
-    new SymbolValue({
-      valueKind: SymbolValueKind.number,
-      value: node.value,
-    }),
-  );
 }
 
 /* Ambiguously typed expression */
@@ -263,15 +263,6 @@ const parenthesized: Parser<TokenType, NumericExpressionAstNode> = kmid(
   str("("),
   numericExpression,
   str(")"),
-);
-
-const literal = apply(
-  tok(TokenType.numeric_literal),
-  (literal): NumericLiteralAstNode =>
-    createNumericLiteralAstNode({
-      token: literal,
-      value: parseFloat(literal.text),
-    }),
 );
 
 const ambiguouslyTypedExpression = apply(
