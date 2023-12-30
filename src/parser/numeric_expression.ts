@@ -20,9 +20,6 @@ import { Err, Ok, Result, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import { symbolExpression } from "./expression.ts";
 
-// Forward declaration of exported top-level rule
-export const numericExpression = rule<TokenType, NumericExpressionAstNode>();
-
 /* AST NODES */
 
 /* Binary expression */
@@ -237,6 +234,18 @@ function evaluateAmbiguouslyTypedExpression(
 type NumericExpressionAstNode = ast.EvaluableAstNode<SymbolValue<number>>;
 
 /* PARSER */
+
+// Forward declaration of exported top-level rule
+export const numericExpression = rule<TokenType, NumericExpressionAstNode>();
+
+const literal = apply(
+  tok(TokenType.numeric_literal),
+  (literal): NumericLiteralAstNode =>
+    createNumericLiteralAstNode({
+      token: literal,
+      value: parseFloat(literal.text),
+    }),
+);
 
 const unaryOperation = apply(
   seq<TokenType, Token<TokenType>, NumericExpressionAstNode>(
