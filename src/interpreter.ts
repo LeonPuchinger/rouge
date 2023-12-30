@@ -9,8 +9,8 @@ import {
 } from "./symbol.ts";
 // required for extension methods to be usable
 import {} from "./util/array.ts";
-import { AppError, InternalError } from "./util/error.ts";
-import { None, Option, Some } from "./util/monad/index.ts";
+import { AppError } from "./util/error.ts";
+import { None, Option } from "./util/monad/index.ts";
 
 export const runtimeTable: InterpreterSymbolTable = new SymbolTable();
 
@@ -26,27 +26,13 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
   if (expressionResult.kind === "err") {
     return expressionResult.err();
   }
-  let expression = expressionResult.unwrap();
-  // identifiers need to be resolved in the symbol table
-  if (expression.valueKind === SymbolValueKind.identifier) {
-    const existing = runtimeTable.findSymbol(expression.value as string);
-    if (existing.kind === "none") {
-      return Some(
-        InternalError(
-          `Could not resolve identifier "${ident}"`,
-          "This should have been checked during static analysis.",
-        ),
-      );
-    }
-    expression = existing.unwrap().value;
-  }
   runtimeTable.setSymbol(
     ident,
     new RuntimeSymbol({
       symbolKind: SymbolKind.variable,
       node: node.child,
       value: new SymbolValue({
-        value: expression,
+        value: expressionResult.unwrap(),
         valueKind: SymbolValueKind.number,
       }),
     }),
