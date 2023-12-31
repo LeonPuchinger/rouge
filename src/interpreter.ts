@@ -31,10 +31,7 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
     new RuntimeSymbol({
       symbolKind: SymbolKind.variable,
       node: node.child,
-      value: new SymbolValue({
-        value: expressionResult.unwrap(),
-        valueKind: SymbolValueKind.number,
-      }),
+      value: expressionResult.unwrap(),
     }),
   );
   return None();
