@@ -100,7 +100,10 @@ export class SymbolTable<SymbolType extends Symbol> {
     symbolKind?: SymbolKind,
   ): Option<SymbolType> {
     const symbol = scope.get(name);
-    if (symbolKind && symbol?.symbolKind) {
+    if (symbolKind === undefined) {
+      return Some(symbol);
+    }
+    if (symbol?.symbolKind === symbolKind) {
       return Some(symbol);
     }
     return None();
