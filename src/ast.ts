@@ -1,41 +1,42 @@
 import { Token } from "typescript-parsec";
-import { AnalysisResult, AnalysisFindings } from "./analysis.ts";
+import { AnalysisFindings, AnalysisResult } from "./analysis.ts";
 import { TokenType } from "./lexer.ts";
 import { SymbolValue, SymbolValueKind } from "./symbol.ts";
 import { AppError } from "./util/error.ts";
 import { Option, Result } from "./util/monad/index.ts";
 
-interface BinaryAstNode<L, R> {
+export interface BinaryAstNode<L, R> {
   lhs: L;
   rhs: R;
 }
 
-interface NaryAstNode<T> {
+export interface NaryAstNode<T> {
   children: T[];
 }
 
-export interface ValueAstNode<V> {
-  token: Token<TokenType>;
+export interface TokenAstNode<T = TokenType> {
+  token: Token<T>;
+}
+
+export interface ValueAstNode<V> extends TokenAstNode {
   value: V;
 }
 
-interface WrapperAstNode<T> {
+export interface WrapperAstNode<T> {
   child: T;
 }
 
-interface InterpretableAstNode {
+export interface InterpretableAstNode {
   interpret(): Option<AppError>;
-}
-
-interface EvaluableAstNode<R> {
-  evaluate(): Result<R, AppError>;
-}
-
-interface CheckableAstNode {
   check(): AnalysisFindings;
 }
 
-interface AnalyzableAstNode<A> {
+export interface EvaluableAstNode<R, A = SymbolValueKind> {
+  evaluate(): Result<R, AppError>;
+  analyze(): AnalysisResult<A>;
+}
+
+export interface AnalyzableAstNode<A> {
   analyze(): AnalysisResult<A>;
 }
 
@@ -45,36 +46,20 @@ export type AstNode =
   | ValueAstNode<unknown>
   | WrapperAstNode<unknown>
   | InterpretableAstNode
-  | EvaluableAstNode<unknown>
-  | CheckableAstNode
-  | AnalyzableAstNode<unknown>;
+  | EvaluableAstNode<unknown>;
 
-export type IntegerAstNode =
-  & ValueAstNode<number>
-  & EvaluableAstNode<SymbolValue<number>>
-  & AnalyzableAstNode<SymbolValueKind>;
-export type IdentifierAstNode =
-  & ValueAstNode<string>
-  & EvaluableAstNode<string>;
-export type IdentifierExpressionAstNode =
-  & WrapperAstNode<IdentifierAstNode>
-  & EvaluableAstNode<SymbolValue<unknown>>
-  & AnalyzableAstNode<SymbolValueKind>;
 export type ExpressionAstNode =
   & EvaluableAstNode<SymbolValue<unknown>>
-  & AnalyzableAstNode<SymbolValueKind>
-  & InterpretableAstNode
-  & CheckableAstNode;
+  & InterpretableAstNode;
 export type AssignAstNode =
-  & BinaryAstNode<IdentifierAstNode, ExpressionAstNode>
-  & InterpretableAstNode
-  & CheckableAstNode;
+  & TokenAstNode
+  & WrapperAstNode<ExpressionAstNode>
+  & InterpretableAstNode;
 export type StatementAstNode =
   | ExpressionAstNode
   | AssignAstNode;
 export type StatementAstNodes =
   & NaryAstNode<StatementAstNode>
-  & InterpretableAstNode
-  & CheckableAstNode;
+  & InterpretableAstNode;
 
 export type AST = StatementAstNodes;

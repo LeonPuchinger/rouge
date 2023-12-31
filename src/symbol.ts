@@ -36,7 +36,9 @@ export class StaticSymbol implements Symbol {
   node: Option<AstNode>;
   valueKind: SymbolValueKind;
 
-  constructor(params: Omit<SymbolParams, "value"> & {valueKind: SymbolValueKind}) {
+  constructor(
+    params: Omit<SymbolParams, "value"> & { valueKind: SymbolValueKind },
+  ) {
     this.symbolKind = params.symbolKind;
     this.node = Some(params.node);
     this.valueKind = params.valueKind;
@@ -47,7 +49,6 @@ export class StaticSymbol implements Symbol {
 
 export enum SymbolValueKind {
   number,
-  identifier,
 }
 
 interface SymbolValueParams<T> {
@@ -101,7 +102,10 @@ export class SymbolTable<SymbolType extends Symbol> {
     symbolKind?: SymbolKind,
   ): Option<SymbolType> {
     const symbol = scope.get(name);
-    if (symbolKind && symbol?.symbolKind) {
+    if (symbolKind === undefined) {
+      return Some(symbol);
+    }
+    if (symbol?.symbolKind === symbolKind) {
       return Some(symbol);
     }
     return None();

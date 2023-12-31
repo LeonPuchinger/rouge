@@ -11,6 +11,8 @@ import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
 import * as interpreter from "./interpreter.ts";
 import { TokenType } from "./lexer.ts";
+import { symbolExpression } from "./features/expression.ts";
+import { numericExpression } from "./features/numeric_expression.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { Err, Ok, Result } from "./util/monad/index.ts";
@@ -18,48 +20,10 @@ import { toMultiline } from "./util/string.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
-const IDENTIFIER = apply(
-  tok(TokenType.ident),
-  (token): ast.IdentifierAstNode => ({
-    token: token,
-    value: token.text,
-    evaluate() {
-      return interpreter.evaluateIdentifier(this);
-    },
-  }),
-);
-
-const INT_LITERAL = apply(
-  tok(TokenType.int_literal),
-  (token): ast.IntegerAstNode => ({
-    token: token,
-    value: parseInt(token.text),
-    evaluate() {
-      return interpreter.evaluateInteger(this);
-    },
-    analyze() {
-      return analysis.analyzeInteger(this);
-    },
-  }),
-);
-
-const IDENTIFIER_EXPRESSION = apply(
-  IDENTIFIER,
-  (identifier): ast.IdentifierExpressionAstNode => ({
-    child: identifier,
-    evaluate() {
-      return interpreter.evaluateIdentifierExpression(this);
-    },
-    analyze() {
-      return analysis.analyzeIdentifierExpression(this);
-    },
-  }),
-);
-
 const EXPRESSION = apply(
   alt_sc(
-    INT_LITERAL,
-    IDENTIFIER_EXPRESSION,
+    numericExpression,
+    symbolExpression,
   ),
   (expression): ast.ExpressionAstNode => ({
     ...expression,
@@ -74,13 +38,13 @@ const EXPRESSION = apply(
 
 const ASSIGNMENT = apply(
   seq(
-    IDENTIFIER,
+    tok(TokenType.ident),
     tok(TokenType.eq_operator),
     EXPRESSION,
   ),
   (values): ast.AssignAstNode => ({
-    lhs: values[0],
-    rhs: values[2],
+    token: values[0],
+    child: values[2],
     interpret() {
       return interpreter.interpretAssign(this);
     },

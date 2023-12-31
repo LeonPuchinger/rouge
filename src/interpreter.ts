@@ -4,44 +4,13 @@ import {
   RuntimeSymbol,
   SymbolKind,
   SymbolTable,
-  SymbolValue,
-  SymbolValueKind,
 } from "./symbol.ts";
 // required for extension methods to be usable
 import {} from "./util/array.ts";
-import { AppError, InternalError } from "./util/error.ts";
-import { None, Ok, Option, Result, Some } from "./util/monad/index.ts";
+import { AppError } from "./util/error.ts";
+import { None, Option } from "./util/monad/index.ts";
 
-const table: InterpreterSymbolTable = new SymbolTable();
-
-export function evaluateIdentifier(
-  node: ast.IdentifierAstNode,
-): Result<string, AppError> {
-  return Ok(node.value);
-}
-
-export function evaluateInteger(
-  node: ast.IntegerAstNode,
-): Result<SymbolValue<number>, AppError> {
-  return Ok(
-    new SymbolValue({
-      valueKind: SymbolValueKind.number,
-      value: node.value,
-    }),
-  );
-}
-
-export function evaluateIdentifierExpression(
-  node: ast.IdentifierExpressionAstNode,
-): Result<SymbolValue<unknown>, AppError> {
-  const ident = node.child.value;
-  return table.findSymbol(ident).ok_or(
-    InternalError(
-      `Unable to resolve symbol ${ident}.`,
-      "This should have been caught during static analysis.",
-    ),
-  ).map((symbol) => symbol.value);
-}
+export const runtimeTable: InterpreterSymbolTable = new SymbolTable();
 
 export function interpretExpression(
   node: ast.ExpressionAstNode,
@@ -50,38 +19,17 @@ export function interpretExpression(
 }
 
 export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
-  const identResult = node.lhs.evaluate();
-  if (identResult.kind === "err") {
-    return identResult.err();
-  }
-  const ident = identResult.unwrap();
-  const expressionResult = node.rhs.evaluate();
+  const ident = node.token.text;
+  const expressionResult = node.child.evaluate();
   if (expressionResult.kind === "err") {
     return expressionResult.err();
   }
-  let expression = expressionResult.unwrap();
-  // identifiers need to be resolved in the symbol table
-  if (expression.valueKind === SymbolValueKind.identifier) {
-    const existing = table.findSymbol(expression.value as string);
-    if (existing.kind === "none") {
-      return Some(
-        InternalError(
-          `Could not resolve identifier "${ident}"`,
-          "This should have been checked during static analysis.",
-        ),
-      );
-    }
-    expression = existing.unwrap().value;
-  }
-  table.setSymbol(
+  runtimeTable.setSymbol(
     ident,
     new RuntimeSymbol({
       symbolKind: SymbolKind.variable,
-      node: node.rhs,
-      value: new SymbolValue({
-        value: expression,
-        valueKind: SymbolValueKind.number,
-      }),
+      node: node.child,
+      value: expressionResult.unwrap(),
     }),
   );
   return None();

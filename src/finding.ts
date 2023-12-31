@@ -1,4 +1,4 @@
-import { ValueAstNode } from "./ast.ts";
+import { TokenAstNode, ValueAstNode } from "./ast.ts";
 import { accessEnvironment } from "./util/environment.ts";
 import { Option, Some } from "./util/monad/index.ts";
 import { createSnippet } from "./util/snippet.ts";
@@ -40,7 +40,7 @@ interface AnalysisFindingParams {
   /**
    * The AST node where the snippet begins.
    */
-  beginHighlight: ValueAstNode<unknown>;
+  beginHighlight: ValueAstNode<unknown> | TokenAstNode;
 
   /**
    * The AST node where the snippet should end. The end of the line if None.

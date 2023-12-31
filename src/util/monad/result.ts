@@ -13,6 +13,8 @@ export interface Result<T, E> {
   unwrapErrorOr(defaultValue: E): E;
   then(fn: (value: T) => void): void;
   thenError(fn: (error: E) => void): void;
+  combine<U>(other: Result<U, E>): Result<[T, U], E>;
+  combineError(other: Result<unknown, E>): Option<E>;
   zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]>;
 }
 
@@ -58,6 +60,17 @@ export function Ok<T, E>(value: T): Result<T, E> {
 
     thenError(_fn) {
       // do nothing
+    },
+
+    combine<U>(other: Result<U, E>): Result<[T, U], E> {
+      if (other.kind === "err") {
+        return Err(other.unwrapError());
+      }
+      return Ok([this.unwrap(), other.unwrap()]);
+    },
+
+    combineError(other: Result<unknown, E>): Option<E> {
+      return other.err();
     },
 
     zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]> {
@@ -111,6 +124,14 @@ export function Err<T, E>(value: E): Result<T, E> {
 
     thenError(fn) {
       fn(value);
+    },
+
+    combine<U>(_other: Result<U, E>): Result<[T, U], E> {
+      return Err(this.unwrapError());
+    },
+
+    combineError(_other: Result<unknown, E>): Option<E> {
+      return this.err();
     },
 
     zip<U, UE>(other: Result<U, UE>): Result<[T, U], [Option<E>, Option<UE>]> {
