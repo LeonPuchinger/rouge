@@ -4,8 +4,6 @@ import {
   RuntimeSymbol,
   SymbolKind,
   SymbolTable,
-  SymbolValue,
-  SymbolValueKind,
 } from "./symbol.ts";
 // required for extension methods to be usable
 import {} from "./util/array.ts";
