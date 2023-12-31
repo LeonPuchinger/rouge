@@ -36,7 +36,9 @@ export class StaticSymbol implements Symbol {
   node: Option<AstNode>;
   valueKind: SymbolValueKind;
 
-  constructor(params: Omit<SymbolParams, "value"> & {valueKind: SymbolValueKind}) {
+  constructor(
+    params: Omit<SymbolParams, "value"> & { valueKind: SymbolValueKind },
+  ) {
     this.symbolKind = params.symbolKind;
     this.node = Some(params.node);
     this.valueKind = params.valueKind;
