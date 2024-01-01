@@ -7,6 +7,7 @@ export enum TokenType {
   whitespace,
   eq_operator,
   numeric_literal,
+  boolean_literal,
   ident,
   unspecified,
 }
@@ -16,6 +17,7 @@ export const lexer = buildLexer([
   [false, /^\s+/g, TokenType.whitespace],
   [true, /^=/g, TokenType.eq_operator],
   [true, /^[0-9]+(\.[0-9]+)?/g, TokenType.numeric_literal],
+  [true, /^true|false/g, TokenType.boolean_literal],
   [true, /^[_A-Za-z]+[\-_0-9A-Za-z]*/g, TokenType.ident],
   [true, /^./g, TokenType.unspecified],
 ]);
