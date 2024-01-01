@@ -116,7 +116,7 @@ const literal = apply(
     }),
 );
 
-const negation = apply(
+const negation: Parser<TokenType, BooleanExpressionAstNode> = apply(
   kright(
     str("!"),
     booleanExpression,
