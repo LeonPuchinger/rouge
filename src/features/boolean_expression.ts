@@ -1,4 +1,5 @@
 import {
+  alt_sc,
   apply,
   kmid,
   kright,
@@ -65,7 +66,7 @@ type BooleanNegationAstNode =
 
 function createBooleanNegationAstNode(params: {
   child: BooleanExpressionAstNode;
-}) {
+}): BooleanNegationAstNode {
   return {
     ...params,
     analyze() {
@@ -130,4 +131,10 @@ const parenthesized: Parser<TokenType, BooleanExpressionAstNode> = kmid(
   str("("),
   booleanExpression,
   str(")"),
+);
+
+const booleanOperand: Parser<TokenType, BooleanExpressionAstNode> = alt_sc(
+  negation,
+  parenthesized,
+  literal,
 );
