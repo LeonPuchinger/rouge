@@ -46,6 +46,48 @@ function evaluateBooleanLiteralAstNode(
   );
 }
 
+/* Negation */
+
+type BooleanNegationAstNode =
+  & ast.WrapperAstNode<BooleanExpressionAstNode>
+  & BooleanExpressionAstNode;
+
+function createBooleanNegationAstNode(params: {
+  child: BooleanExpressionAstNode;
+}) {
+  return {
+    ...params,
+    analyze() {
+      return analyzeBooleanNegationAstNode();
+    },
+    evaluate() {
+      return evaluateBooleanNegationAstNode(this);
+    },
+  };
+}
+
+function analyzeBooleanNegationAstNode(): AnalysisResult<SymbolValueKind> {
+  return {
+    warnings: [],
+    errors: [],
+    value: Some(SymbolValueKind.boolean),
+  };
+}
+
+function evaluateBooleanNegationAstNode(
+  node: BooleanNegationAstNode,
+): Result<SymbolValue<boolean>, AppError> {
+  return node.child.evaluate()
+    .map((value) =>
+      new SymbolValue({
+        valueKind: SymbolValueKind.boolean,
+        value: !value,
+      })
+    );
+}
+
+/* Boolean Expression */
+
 type BooleanExpressionAstNode = ast.EvaluableAstNode<SymbolValue<boolean>>;
 
 /* PARSER */
