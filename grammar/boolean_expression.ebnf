@@ -8,6 +8,7 @@ boolean_operand =
     negation
     | parenthesized
     | literal;
-(* EXPORT *)
-boolean_expression =
+binary_boolean_operation =
     boolean_operand, { ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ), boolean_operand };
+(* EXPORT *)
+binary_expression = binary_boolean_operation;
