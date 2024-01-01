@@ -4,15 +4,16 @@ import {
   expectEOF,
   list_sc,
   seq,
+  str,
   tok,
   Token,
 } from "typescript-parsec";
 import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
-import * as interpreter from "./interpreter.ts";
-import { TokenType } from "./lexer.ts";
 import { symbolExpression } from "./features/expression.ts";
 import { numericExpression } from "./features/numeric_expression.ts";
+import * as interpreter from "./interpreter.ts";
+import { TokenType } from "./lexer.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { Err, Ok, Result } from "./util/monad/index.ts";
@@ -39,7 +40,7 @@ const EXPRESSION = apply(
 const ASSIGNMENT = apply(
   seq(
     tok(TokenType.ident),
-    tok(TokenType.eq_operator),
+    str("="),
     EXPRESSION,
   ),
   (values): ast.AssignAstNode => ({
