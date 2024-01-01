@@ -1,4 +1,4 @@
-import { apply, tok, Token } from "typescript-parsec";
+import { apply, kright, rule, str, tok, Token } from "typescript-parsec";
 import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
 import { TokenType } from "../lexer.ts";
@@ -7,6 +7,8 @@ import { AppError } from "../util/error.ts";
 import { Ok, Result, Some } from "../util/monad/index.ts";
 
 /* AST NODES */
+
+/* Boolean literal */
 
 type BooleanLiteralAstNode =
   & ast.ValueAstNode<boolean>
@@ -92,11 +94,25 @@ type BooleanExpressionAstNode = ast.EvaluableAstNode<SymbolValue<boolean>>;
 
 /* PARSER */
 
+// Forward declaration of exported top-level rule
+export const booleanExpression = rule<TokenType, BooleanExpressionAstNode>();
+
 const literal = apply(
   tok(TokenType.boolean_literal),
   (token) =>
     createBooleanLiteralAstNode({
       token: token,
       value: token.text === "true",
+    }),
+);
+
+const negation = apply(
+  kright(
+    str("!"),
+    booleanExpression,
+  ),
+  (expression) =>
+    createBooleanNegationAstNode({
+      child: expression,
     }),
 );
