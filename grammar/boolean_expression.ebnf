@@ -1,0 +1,13 @@
+(* IMPORT expression.ebnf *)
+(* IMPORT token.ebnf *)
+
+literal = boolean_literal;
+negation = "!", boolean_expression;
+parenthesized = "(", boolean_expression, ")";
+boolean_operand =
+    negation
+    | parenthesized
+    | literal;
+(* EXPORT *)
+boolean_expression =
+    boolean_operand, { ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ), boolean_operand };
