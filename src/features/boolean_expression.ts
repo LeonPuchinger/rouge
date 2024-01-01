@@ -235,3 +235,5 @@ const binaryBooleanExpression = alt_sc(
   ),
   booleanOperand,
 );
+
+booleanExpression.setPattern(binaryBooleanExpression);
