@@ -1,4 +1,13 @@
-import { apply, kright, rule, str, tok, Token } from "typescript-parsec";
+import {
+  apply,
+  kmid,
+  kright,
+  Parser,
+  rule,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
 import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
 import { TokenType } from "../lexer.ts";
@@ -115,4 +124,10 @@ const negation = apply(
     createBooleanNegationAstNode({
       child: expression,
     }),
+);
+
+const parenthesized: Parser<TokenType, BooleanExpressionAstNode> = kmid(
+  str("("),
+  booleanExpression,
+  str(")"),
 );
