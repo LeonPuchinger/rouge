@@ -220,7 +220,17 @@ const binaryBooleanExpression = alt_sc(
   lrec_sc(
     booleanOperand,
     seq(
-      alt_sc(str("+"), str("-")),
+      alt_sc(
+        str("=="),
+        str("!="),
+        str(">"),
+        str(">="),
+        str("<"),
+        str("<="),
+        str("&&"),
+        str("||"),
+        str("^"),
+      ),
       booleanOperand,
     ),
     (
