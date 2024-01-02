@@ -12,7 +12,7 @@ export enum TokenType {
   unspecified,
 }
 
-export const lexer = buildLexer([
+const lexer = buildLexer([
   [true, /^\s*\n\s*/g, TokenType.breaking_whitespace],
   [false, /^\s+/g, TokenType.whitespace],
   [true, /^[0-9]+(\.[0-9]+)?/g, TokenType.numeric_literal],
