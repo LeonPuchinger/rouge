@@ -22,7 +22,7 @@ import { toMultiline } from "./util/string.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
-const EXPRESSION = apply(
+export const expression = apply(
   alt_sc(
     numericExpression,
     booleanExpression,
@@ -43,7 +43,7 @@ const ASSIGNMENT = apply(
   seq(
     tok(TokenType.ident),
     str("="),
-    EXPRESSION,
+    expression,
   ),
   (values): ast.AssignAstNode => ({
     token: values[0],
@@ -60,7 +60,7 @@ const ASSIGNMENT = apply(
 const STATEMENT = apply(
   alt_sc(
     ASSIGNMENT,
-    EXPRESSION,
+    expression,
   ),
   (statement): ast.StatementAstNode => statement,
 );
