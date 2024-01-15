@@ -246,4 +246,7 @@ const binaryBooleanExpression = alt_sc(
   booleanOperand,
 );
 
-booleanExpression.setPattern(binaryBooleanExpression);
+booleanExpression.setPattern(alt_sc(
+  binaryBooleanExpression,
+  booleanOperand,
+));

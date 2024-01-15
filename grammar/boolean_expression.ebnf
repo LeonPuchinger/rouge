@@ -11,4 +11,4 @@ boolean_operand =
 binary_boolean_operation =
     boolean_operand, { ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ), boolean_operand };
 (* EXPORT *)
-binary_expression = binary_boolean_operation;
+binary_expression = binary_boolean_operation | boolean_operand;
