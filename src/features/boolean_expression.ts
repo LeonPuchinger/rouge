@@ -13,10 +13,12 @@ import {
 } from "typescript-parsec";
 import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
+import { AnalysisError, AnalysisFinding } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
+import { expression } from "../parser.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
-import { Err, Ok, Result, Some } from "../util/monad/index.ts";
+import { Err, None, Ok, Result, Some } from "../util/monad/index.ts";
 
 /* AST NODES */
 
@@ -175,6 +177,56 @@ function evaluateBinaryExpression(
     );
 }
 
+/* Type asserted expression */
+
+type TypeAssertedExpressionAstNode =
+  & ast.WrapperAstNode<ast.ExpressionAstNode>
+  & BooleanExpressionAstNode;
+
+function createTypeAssertedExpression(params: {
+  child: ast.ExpressionAstNode;
+}): TypeAssertedExpressionAstNode {
+  return {
+    child: params.child,
+    analyze() {
+      return analyzeTypeAssertedExpression(this);
+    },
+    evaluate() {
+      return evaluateTypeAssertedExpression(this);
+    },
+  };
+}
+
+function analyzeTypeAssertedExpression(
+  node: TypeAssertedExpressionAstNode,
+): AnalysisResult<SymbolValueKind> {
+  const analysisResult = node.child.analyze();
+  if (
+    analysisResult.value.kind === "some" &&
+    analysisResult.value.unwrap() !== SymbolValueKind.boolean
+  ) {
+    return {
+      ...analysisResult,
+      value: None(),
+      errors: [AnalysisError({
+        message:
+          "You tried to use a boolean operation on something that is not a boolean.",
+        beginHighlight: node, /* TODO: find way to "peel" AST nodes to underlying tokens */
+        endHighlight: None(),
+        messageHighlight: `This expression can not be used as a boolean.`,
+      })],
+    };
+  }
+  return analysisResult;
+}
+
+function evaluateTypeAssertedExpression(
+  node: TypeAssertedExpressionAstNode,
+): Result<SymbolValue<boolean>, AppError> {
+  // Type safety has been assured by static analysis
+  return node.child.evaluate() as Result<SymbolValue<boolean>, AppError>;
+}
+
 /* Boolean Expression */
 
 type BooleanExpressionAstNode = ast.EvaluableAstNode<SymbolValue<boolean>>;
@@ -216,6 +268,19 @@ const booleanOperand: Parser<TokenType, BooleanExpressionAstNode> = alt_sc(
   literal,
 );
 
+const typeAssertedExpression = apply(
+  expression,
+  (expression) =>
+    createTypeAssertedExpression({
+      child: expression,
+    }),
+);
+
+const typeAssertedBooleanOperand = alt_sc(
+  booleanOperand,
+  typeAssertedExpression,
+);
+
 const binaryBooleanExpression = alt_sc(
   lrec_sc(
     booleanOperand,
@@ -248,5 +313,5 @@ const binaryBooleanExpression = alt_sc(
 
 booleanExpression.setPattern(alt_sc(
   binaryBooleanExpression,
-  booleanOperand,
+  typeAssertedBooleanOperand,
 ));
