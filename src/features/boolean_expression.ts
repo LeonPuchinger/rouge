@@ -117,7 +117,7 @@ function createBinaryBooleanExpressionAstNode(params: {
   return {
     ...params,
     analyze() {
-      return analyzeBinaryExpression();
+      return analyzeBinaryExpression(this);
     },
     evaluate() {
       return evaluateBinaryExpression(this);
@@ -125,11 +125,54 @@ function createBinaryBooleanExpressionAstNode(params: {
   };
 }
 
-function analyzeBinaryExpression() {
+function analyzeBinaryExpression(
+  node: BinaryBooleanExpressionAstNode,
+): AnalysisResult<SymbolValueKind> {
+  const errors: AnalysisFinding[] = [];
+  const operator = node.token.text;
+  node.lhs.analyze().value
+    .zip(node.rhs.analyze().value)
+    .then(([leftType, rightType]) => {
+      if (
+        ["==", "!="].includes(operator) &&
+        leftType !== rightType
+      ) {
+        errors.push(AnalysisError({
+          message: "You tried to compare two values that don't have the same type. That is not possible.",
+          beginHighlight: node,
+          endHighlight: None(),
+        }));
+      }
+      if (
+        [">", ">=", "<", "<="].includes(operator) &&
+        (leftType !== SymbolValueKind.number ||
+          rightType !== SymbolValueKind.number)
+      ) {
+        errors.push(AnalysisError({
+          message: "The \"greater/smaller than\" operator can only be used on numbers.",
+          beginHighlight: node,
+          endHighlight: None(),
+        }));
+      }
+      if (
+        ["&&", "||", "^"].includes(operator) &&
+        (leftType !== SymbolValueKind.boolean ||
+          rightType !== SymbolValueKind.boolean)
+      ) {
+        errors.push(AnalysisError({
+          message: "You tried to use a boolean combination operators on something that is not a boolean.",
+          beginHighlight: node,
+          endHighlight: None(),
+        }));
+      }
+      if (leftType !== rightType) {
+        errors.push();
+      }
+    });
   return {
     value: Some(SymbolValueKind.boolean),
     warnings: [],
-    errors: [],
+    errors: errors,
   };
 }
 
