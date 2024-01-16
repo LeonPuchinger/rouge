@@ -313,9 +313,9 @@ const booleanOperand: Parser<TokenType, BooleanExpressionAstNode> = alt_sc(
 
 const typeAssertedExpression = apply(
   expression,
-  (expression) =>
+  (child) =>
     createTypeAssertedExpression({
-      child: expression,
+      child: child,
     }),
 );
 
