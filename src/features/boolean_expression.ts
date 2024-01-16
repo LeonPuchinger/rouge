@@ -19,6 +19,7 @@ import { expression } from "../parser.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, None, Ok, Result, Some } from "../util/monad/index.ts";
+import { peelToLeftmostTokenNode } from "../util/snippet.ts";
 
 /* AST NODES */
 
@@ -254,7 +255,7 @@ function analyzeTypeAssertedExpression(
       errors: [AnalysisError({
         message:
           "You tried to use a boolean operation on something that is not a boolean.",
-        beginHighlight: node, /* TODO: find way to "peel" AST nodes to underlying tokens */
+        beginHighlight: peelToLeftmostTokenNode(node),
         endHighlight: None(),
         messageHighlight: `This expression can not be used as a boolean.`,
       })],

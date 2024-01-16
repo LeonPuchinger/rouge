@@ -5,12 +5,12 @@ import { SymbolValue, SymbolValueKind } from "./symbol.ts";
 import { AppError } from "./util/error.ts";
 import { Option, Result } from "./util/monad/index.ts";
 
-export interface BinaryAstNode<L, R> {
+export interface BinaryAstNode<L extends AstNode, R extends AstNode> {
   lhs: L;
   rhs: R;
 }
 
-export interface NaryAstNode<T> {
+export interface NaryAstNode<T extends AstNode> {
   children: T[];
 }
 
@@ -22,7 +22,7 @@ export interface ValueAstNode<V> extends TokenAstNode {
   value: V;
 }
 
-export interface WrapperAstNode<T> {
+export interface WrapperAstNode<T extends AstNode> {
   child: T;
 }
 
@@ -41,10 +41,11 @@ export interface AnalyzableAstNode<A> {
 }
 
 export type AstNode =
-  | BinaryAstNode<unknown, unknown>
-  | NaryAstNode<unknown>
+  | BinaryAstNode<AstNode, AstNode>
+  | NaryAstNode<AstNode>
+  | TokenAstNode
   | ValueAstNode<unknown>
-  | WrapperAstNode<unknown>
+  | WrapperAstNode<AstNode>
   | InterpretableAstNode
   | EvaluableAstNode<unknown>;
 
