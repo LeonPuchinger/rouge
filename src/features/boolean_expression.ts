@@ -13,9 +13,9 @@ import {
 } from "typescript-parsec";
 import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
+import { expression } from "../features/declarations.ts";
 import { AnalysisError, AnalysisFinding } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
-import { expression } from "../parser.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, None, Ok, Result, Some } from "../util/monad/index.ts";
@@ -139,7 +139,8 @@ function analyzeBinaryExpression(
         leftType !== rightType
       ) {
         errors.push(AnalysisError({
-          message: "You tried to compare two values that don't have the same type. That is not possible.",
+          message:
+            "You tried to compare two values that don't have the same type. That is not possible.",
           beginHighlight: node,
           endHighlight: None(),
         }));
@@ -150,7 +151,8 @@ function analyzeBinaryExpression(
           rightType !== SymbolValueKind.number)
       ) {
         errors.push(AnalysisError({
-          message: "The \"greater/smaller than\" operator can only be used on numbers.",
+          message:
+            'The "greater/smaller than" operator can only be used on numbers.',
           beginHighlight: node,
           endHighlight: None(),
         }));
@@ -161,7 +163,8 @@ function analyzeBinaryExpression(
           rightType !== SymbolValueKind.boolean)
       ) {
         errors.push(AnalysisError({
-          message: "You tried to use a boolean combination operators on something that is not a boolean.",
+          message:
+            "You tried to use a boolean combination operators on something that is not a boolean.",
           beginHighlight: node,
           endHighlight: None(),
         }));
