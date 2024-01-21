@@ -11,7 +11,7 @@ import {
 import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
 import { booleanExpression } from "./features/boolean_expression.ts";
-import { expression } from "./features/declarations.ts";
+import { booleanlessExpression } from "./features/declarations.ts";
 import { symbolExpression } from "./features/expression.ts";
 import { numericExpression } from "./features/numeric_expression.ts";
 import * as interpreter from "./interpreter.ts";
@@ -20,7 +20,6 @@ import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { Err, Ok, Result } from "./util/monad/index.ts";
 import { toMultiline } from "./util/string.ts";
-import { booleanlessExpression } from "./features/declarations.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
@@ -40,25 +39,23 @@ booleanlessExpression.setPattern(
       },
     }),
   ),
-)
+);
 
-expression.setPattern(
-  apply(
-    alt_sc(
-      booleanExpression,
-      numericExpression,
-      symbolExpression,
-    ),
-    (expression): ast.ExpressionAstNode => ({
-      ...expression,
-      interpret() {
-        return interpreter.interpretExpression(this);
-      },
-      check() {
-        return analysis.checkExpression(this);
-      },
-    }),
+const expression = apply(
+  alt_sc(
+    booleanExpression,
+    numericExpression,
+    symbolExpression,
   ),
+  (expression): ast.ExpressionAstNode => ({
+    ...expression,
+    interpret() {
+      return interpreter.interpretExpression(this);
+    },
+    check() {
+      return analysis.checkExpression(this);
+    },
+  }),
 );
 
 const ASSIGNMENT = apply(
