@@ -348,34 +348,31 @@ const typeAssertedBooleanOperand = apply(
     }),
 );
 
-const binaryBooleanExpression = alt_sc(
-  lrec_sc(
-    booleanOperand,
-    seq(
-      alt_sc(
-        str("=="),
-        str("!="),
-        str(">"),
-        str(">="),
-        str("<"),
-        str("<="),
-        str("&&"),
-        str("||"),
-        str("^"),
-      ),
-      booleanOperand,
-    ),
-    (
-      a: ast.EvaluableAstNode<SymbolValue<unknown>>,
-      b: [Token<TokenType>, ast.EvaluableAstNode<SymbolValue<unknown>>],
-    ): BooleanExpressionAstNode =>
-      createBinaryBooleanExpressionAstNode({
-        lhs: a,
-        token: b[0],
-        rhs: b[1],
-      }),
-  ),
+const binaryBooleanExpression = lrec_sc(
   booleanOperand,
+  seq(
+    alt_sc(
+      str("=="),
+      str("!="),
+      str(">"),
+      str(">="),
+      str("<"),
+      str("<="),
+      str("&&"),
+      str("||"),
+      str("^"),
+    ),
+    booleanOperand,
+  ),
+  (
+    a: ast.EvaluableAstNode<SymbolValue<unknown>>,
+    b: [Token<TokenType>, ast.EvaluableAstNode<SymbolValue<unknown>>],
+  ): BinaryBooleanExpressionAstNode =>
+    createBinaryBooleanExpressionAstNode({
+      lhs: a,
+      token: b[0],
+      rhs: b[1],
+    }),
 );
 
 booleanExpression.setPattern(alt_sc(
