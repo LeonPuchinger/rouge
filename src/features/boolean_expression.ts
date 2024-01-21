@@ -220,7 +220,7 @@ function evaluateBinaryExpression(
       }
     })
     .map((result) =>
-      new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
+      new SymbolValue({ value: result, valueKind: SymbolValueKind.boolean })
     );
 }
 
