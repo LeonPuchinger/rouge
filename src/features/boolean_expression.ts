@@ -13,13 +13,13 @@ import {
 } from "typescript-parsec";
 import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
-import { expression } from "../features/declarations.ts";
 import { AnalysisError, AnalysisFinding } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, None, Ok, Result, Some } from "../util/monad/index.ts";
 import { peelToLeftmostTokenNode } from "../util/snippet.ts";
+import { booleanlessExpression } from "./declarations.ts";
 
 /* AST NODES */
 
@@ -106,13 +106,13 @@ function evaluateBooleanNegationAstNode(
 /* Binary Boolean Expression */
 
 type BinaryBooleanExpressionAstNode =
-  & ast.BinaryAstNode<BooleanExpressionAstNode, BooleanExpressionAstNode>
+  & ast.BinaryAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>, ast.EvaluableAstNode<SymbolValue<unknown>>>
   & ast.TokenAstNode
   & BooleanExpressionAstNode;
 
 function createBinaryBooleanExpressionAstNode(params: {
-  lhs: BooleanExpressionAstNode;
-  rhs: BooleanExpressionAstNode;
+  lhs: ast.EvaluableAstNode<SymbolValue<unknown>>;
+  rhs: ast.EvaluableAstNode<SymbolValue<unknown>>;
   token: Token<TokenType>;
 }): BinaryBooleanExpressionAstNode {
   return {
@@ -195,6 +195,9 @@ function evaluateBinaryExpression(
   return node.lhs.evaluate()
     .combine(node.rhs.evaluate())
     .map(([left, right]) => {
+      if (left.valueKind === right.valueKind) {
+        
+      }
       switch (node.token.text) {
         case "==":
           return left.value == right.value;
@@ -309,14 +312,15 @@ const parenthesized: Parser<TokenType, BooleanExpressionAstNode> = kmid(
   str(")"),
 );
 
-const booleanOperand: Parser<TokenType, BooleanExpressionAstNode> = alt_sc(
+const booleanOperand: Parser<TokenType, ast.EvaluableAstNode<SymbolValue<unknown>>> = alt_sc(
   negation,
   parenthesized,
   literal,
+  booleanlessExpression,
 );
 
 const typeAssertedExpression = apply(
-  expression,
+  booleanlessExpression,
   (child) =>
     createTypeAssertedExpression({
       child: child,
@@ -346,8 +350,8 @@ const binaryBooleanExpression = alt_sc(
       booleanOperand,
     ),
     (
-      a: BooleanExpressionAstNode,
-      b: [Token<TokenType>, BooleanExpressionAstNode],
+      a: ast.EvaluableAstNode<SymbolValue<unknown>>,
+      b: [Token<TokenType>, ast.EvaluableAstNode<SymbolValue<unknown>>],
     ): BooleanExpressionAstNode =>
       createBinaryBooleanExpressionAstNode({
         lhs: a,

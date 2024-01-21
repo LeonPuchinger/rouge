@@ -4,11 +4,27 @@
 literal = boolean_literal;
 negation = "!", boolean_expression;
 parenthesized = "(", boolean_expression, ")";
+booleanless_expression =
+    ambiguously_typed_expression
+    | numeric_expression
+    | string_literal
+    | invocation
+    | chain
+    | symbol;
 boolean_operand =
     negation
     | parenthesized
-    | literal;
-binary_boolean_operation =
-    boolean_operand, { ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ), boolean_operand };
+    | literal
+    | booleanless_expression;
+(* adds an assertion that the expression resolves to a boolean value at runtime *)
+type_asserted_expression = booleanless_expression;
+type_asserted_boolean_operand =
+    boolean_operand
+    | type_asserted_expression;
+binary_boolean_expression =
+    boolean_operand, {
+        ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ),
+        boolean_operand,
+    };
 (* EXPORT *)
-binary_expression = binary_boolean_operation | boolean_operand;
+boolean_expression = binary_boolean_expression | type_asserted_boolean_operand;

@@ -20,14 +20,33 @@ import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { Err, Ok, Result } from "./util/monad/index.ts";
 import { toMultiline } from "./util/string.ts";
+import { booleanlessExpression } from "./features/declarations.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
+
+booleanlessExpression.setPattern(
+  apply(
+    alt_sc(
+      numericExpression,
+      symbolExpression,
+    ),
+    (expression): ast.ExpressionAstNode => ({
+      ...expression,
+      interpret() {
+        return interpreter.interpretExpression(this);
+      },
+      check() {
+        return analysis.checkExpression(this);
+      },
+    }),
+  ),
+)
 
 expression.setPattern(
   apply(
     alt_sc(
-      numericExpression,
       booleanExpression,
+      numericExpression,
       symbolExpression,
     ),
     (expression): ast.ExpressionAstNode => ({

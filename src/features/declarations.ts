@@ -16,3 +16,4 @@ To mitigate this issue, the parsers can be declared in this (separate) file.
 */
 
 export const expression = rule<TokenType, ast.ExpressionAstNode>();
+export const booleanlessExpression = rule<TokenType, ast.ExpressionAstNode>();
