@@ -17,10 +17,7 @@ boolean_operand =
     | literal
     | booleanless_expression;
 (* adds an assertion that the expression resolves to a boolean value at runtime *)
-type_asserted_expression = booleanless_expression;
-type_asserted_boolean_operand =
-    boolean_operand
-    | type_asserted_expression;
+type_asserted_boolean_operand = boolean_operand;
 binary_boolean_expression =
     boolean_operand, {
         ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ),

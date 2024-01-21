@@ -231,26 +231,26 @@ function evaluateBinaryExpression(
 
 /* Type asserted expression */
 
-type TypeAssertedExpressionAstNode =
-  & ast.WrapperAstNode<ast.ExpressionAstNode>
+type TypeAssertedExpressionBooleanOperand =
+  & ast.WrapperAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>>
   & BooleanExpressionAstNode;
 
-function createTypeAssertedExpression(params: {
-  child: ast.ExpressionAstNode;
-}): TypeAssertedExpressionAstNode {
+function createTypeAssertedBooleanOperand(params: {
+  child: ast.EvaluableAstNode<SymbolValue<unknown>>;
+}): TypeAssertedExpressionBooleanOperand {
   return {
     child: params.child,
     analyze() {
-      return analyzeTypeAssertedExpression(this);
+      return analyzeTypeAssertedBooleanOperand(this);
     },
     evaluate() {
-      return evaluateTypeAssertedExpression(this);
+      return evaluateTypeAssertedBooleanOperand(this);
     },
   };
 }
 
-function analyzeTypeAssertedExpression(
-  node: TypeAssertedExpressionAstNode,
+function analyzeTypeAssertedBooleanOperand(
+  node: TypeAssertedExpressionBooleanOperand,
 ): AnalysisResult<SymbolValueKind> {
   const analysisResult = node.child.analyze();
   if (
@@ -272,8 +272,8 @@ function analyzeTypeAssertedExpression(
   return analysisResult;
 }
 
-function evaluateTypeAssertedExpression(
-  node: TypeAssertedExpressionAstNode,
+function evaluateTypeAssertedBooleanOperand(
+  node: TypeAssertedExpressionBooleanOperand,
 ): Result<SymbolValue<boolean>, AppError> {
   // Type safety has been assured by static analysis
   return node.child.evaluate() as Result<SymbolValue<boolean>, AppError>;
@@ -340,17 +340,12 @@ const booleanOperand: Parser<
   booleanlessExpression,
 );
 
-const typeAssertedExpression = apply(
-  booleanlessExpression,
+const typeAssertedBooleanOperand = apply(
+  booleanOperand,
   (child) =>
-    createTypeAssertedExpression({
+    createTypeAssertedBooleanOperand({
       child: child,
     }),
-);
-
-const typeAssertedBooleanOperand = alt_sc(
-  booleanOperand,
-  typeAssertedExpression,
 );
 
 const binaryBooleanExpression = alt_sc(
