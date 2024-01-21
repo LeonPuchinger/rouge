@@ -11,15 +11,18 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
+import * as analysis from "../analysis.ts";
 import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
 import { AnalysisError, AnalysisFinding } from "../finding.ts";
+import * as interpreter from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, None, Ok, Result, Some } from "../util/monad/index.ts";
 import { peelToLeftmostTokenNode } from "../util/snippet.ts";
-import { booleanlessExpression } from "./declarations.ts";
+import { symbolExpression } from "./expression.ts";
+import { numericExpression } from "./numeric_expression.ts";
 
 /* AST NODES */
 
@@ -312,7 +315,26 @@ const parenthesized: Parser<TokenType, BooleanExpressionAstNode> = kmid(
   str(")"),
 );
 
-const booleanOperand: Parser<TokenType, ast.EvaluableAstNode<SymbolValue<unknown>>> = alt_sc(
+const booleanlessExpression = apply(
+  alt_sc(
+    numericExpression,
+    symbolExpression,
+  ),
+  (expression): ast.ExpressionAstNode => ({
+    ...expression,
+    interpret() {
+      return interpreter.interpretExpression(this);
+    },
+    check() {
+      return analysis.checkExpression(this);
+    },
+  }),
+);
+
+const booleanOperand: Parser<
+  TokenType,
+  ast.EvaluableAstNode<SymbolValue<unknown>>
+> = alt_sc(
   negation,
   parenthesized,
   literal,

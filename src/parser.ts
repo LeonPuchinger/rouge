@@ -11,7 +11,6 @@ import {
 import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
 import { booleanExpression } from "./features/boolean_expression.ts";
-import { booleanlessExpression } from "./features/declarations.ts";
 import { symbolExpression } from "./features/expression.ts";
 import { numericExpression } from "./features/numeric_expression.ts";
 import * as interpreter from "./interpreter.ts";
@@ -22,24 +21,6 @@ import { Err, Ok, Result } from "./util/monad/index.ts";
 import { toMultiline } from "./util/string.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
-
-booleanlessExpression.setPattern(
-  apply(
-    alt_sc(
-      numericExpression,
-      symbolExpression,
-    ),
-    (expression): ast.ExpressionAstNode => ({
-      ...expression,
-      interpret() {
-        return interpreter.interpretExpression(this);
-      },
-      check() {
-        return analysis.checkExpression(this);
-      },
-    }),
-  ),
-);
 
 const expression = apply(
   alt_sc(
