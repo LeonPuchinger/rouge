@@ -198,28 +198,27 @@ function evaluateBinaryExpression(
   return node.lhs.evaluate()
     .combine(node.rhs.evaluate())
     .map(([left, right]) => {
-      if (left.valueKind === right.valueKind) {
-        
-      }
+      // values can safely be type-casted because their type has been checked during analysis
       switch (node.token.text) {
         case "==":
           return left.value == right.value;
         case "!=":
           return left.value != right.value;
         case ">":
-          return left.value > right.value;
+          return (left.value as number) > (right.value as number);
         case ">=":
-          return left.value >= right.value;
+          return (left.value as number) >= (right.value as number);
         case "<":
-          return left.value < right.value;
+          return (left.value as number) < (right.value as number);
         case "<=":
-          return left.value <= right.value;
+          return (left.value as number) <= (right.value as number);
         case "&&":
-          return left.value && right.value;
+          return (left.value as boolean) && (right.value as boolean);
         case "||":
-          return left.value || right.value;
+          return (left.value as boolean) || (right.value as boolean);
         case "^":
-          return (left.value || right.value) && !(left.value && right.value);
+          return ((left.value as boolean) || (right.value as boolean)) &&
+            !((left.value as boolean) && (right.value as boolean));
         default:
           // this never happens, TS simply does not get that the symbol of operations has been checked previously.
           return false;
