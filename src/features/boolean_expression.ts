@@ -109,7 +109,10 @@ function evaluateBooleanNegationAstNode(
 /* Binary Boolean Expression */
 
 type BinaryBooleanExpressionAstNode =
-  & ast.BinaryAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>, ast.EvaluableAstNode<SymbolValue<unknown>>>
+  & ast.BinaryAstNode<
+    ast.EvaluableAstNode<SymbolValue<unknown>>,
+    ast.EvaluableAstNode<SymbolValue<unknown>>
+  >
   & ast.TokenAstNode
   & BooleanExpressionAstNode;
 
