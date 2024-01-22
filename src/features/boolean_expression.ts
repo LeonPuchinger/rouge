@@ -3,8 +3,8 @@ import {
   apply,
   kmid,
   kright,
-  lrec_sc,
   Parser,
+  rep_sc,
   rule,
   seq,
   str,
@@ -348,31 +348,79 @@ const typeAssertedBooleanOperand = apply(
     }),
 );
 
-const binaryBooleanExpression = lrec_sc(
-  booleanOperand,
+const binaryBooleanExpression = apply(
   seq(
-    alt_sc(
-      str("=="),
-      str("!="),
-      str(">"),
-      str(">="),
-      str("<"),
-      str("<="),
-      str("&&"),
-      str("||"),
-      str("^"),
-    ),
     booleanOperand,
+    rep_sc(
+      seq(
+        alt_sc(
+          str("=="),
+          str("!="),
+          str(">"),
+          str(">="),
+          str("<"),
+          str("<="),
+          str("&&"),
+          str("||"),
+          str("^"),
+        ),
+        booleanOperand,
+      ),
+    ),
   ),
-  (
-    a: ast.EvaluableAstNode<SymbolValue<unknown>>,
-    b: [Token<TokenType>, ast.EvaluableAstNode<SymbolValue<unknown>>],
-  ): BinaryBooleanExpressionAstNode =>
-    createBinaryBooleanExpressionAstNode({
-      lhs: a,
-      token: b[0],
-      rhs: b[1],
-    }),
+  ([initial, operations]) => {
+    function buildTree(
+      remainder: [
+        Token<TokenType>,
+        ast.EvaluableAstNode<SymbolValue<unknown>>,
+      ][],
+    ): [Token<TokenType>, BooleanExpressionAstNode] {
+      if (remainder.length === 2) {
+        // The recursion ends at 2 so we can always return a boolean expression.
+        // If the recursion were to end at 1, the last step could return a generic expression
+        // (not boolean) which would break type safety (see return type of this function).
+        // This is also the reason why `lrec` cannot be used for this parser.
+        const [first, second] = remainder;
+        const [firstOperator, firstExpression] = first;
+        const [secondOperator, secondExpression] = second;
+        return [
+          firstOperator,
+          createBinaryBooleanExpressionAstNode({
+            lhs: firstExpression,
+            rhs: secondExpression,
+            token: secondOperator,
+          }),
+        ];
+      }
+      const current = remainder[0];
+      const [currentOperator, currentExpression] = current;
+      const [nextOperator, nextExpression] = buildTree(remainder.slice(1));
+      return [
+        currentOperator,
+        createBinaryBooleanExpressionAstNode({
+          lhs: currentExpression,
+          rhs: nextExpression,
+          token: nextOperator,
+        }),
+      ];
+    }
+    // if the expression only consists of a single operation, don't initiate a recursion.
+    if (operations.length === 1) {
+      const [operator, expression] = operations[0];
+      return createBinaryBooleanExpressionAstNode({
+        lhs: initial,
+        rhs: expression,
+        token: operator,
+      });
+    }
+    // start recursion
+    const [operator, right] = buildTree(operations);
+    return createBinaryBooleanExpressionAstNode({
+      lhs: initial,
+      rhs: right,
+      token: operator,
+    });
+  },
 );
 
 booleanExpression.setPattern(alt_sc(
