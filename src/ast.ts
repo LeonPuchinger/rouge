@@ -31,7 +31,7 @@ export interface InterpretableAstNode {
   check(): AnalysisFindings;
 }
 
-export interface EvaluableAstNode<R, A = SymbolValueKind> {
+export interface EvaluableAstNode<R = SymbolValue<unknown>, A = SymbolValueKind> {
   evaluate(): Result<R, AppError>;
   analyze(): AnalysisResult<A>;
 }

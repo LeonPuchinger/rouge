@@ -109,16 +109,13 @@ function evaluateBooleanNegationAstNode(
 /* Binary Boolean Expression */
 
 type BinaryBooleanExpressionAstNode =
-  & ast.BinaryAstNode<
-    ast.EvaluableAstNode<SymbolValue<unknown>>,
-    ast.EvaluableAstNode<SymbolValue<unknown>>
-  >
+  & ast.BinaryAstNode<ast.EvaluableAstNode, ast.EvaluableAstNode>
   & ast.TokenAstNode
   & BooleanExpressionAstNode;
 
 function createBinaryBooleanExpressionAstNode(params: {
-  lhs: ast.EvaluableAstNode<SymbolValue<unknown>>;
-  rhs: ast.EvaluableAstNode<SymbolValue<unknown>>;
+  lhs: ast.EvaluableAstNode;
+  rhs: ast.EvaluableAstNode;
   token: Token<TokenType>;
 }): BinaryBooleanExpressionAstNode {
   return {
@@ -235,11 +232,11 @@ function evaluateBinaryExpression(
 /* Type asserted expression */
 
 type TypeAssertedExpressionBooleanOperand =
-  & ast.WrapperAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>>
+  & ast.WrapperAstNode<ast.EvaluableAstNode>
   & BooleanExpressionAstNode;
 
 function createTypeAssertedBooleanOperand(params: {
-  child: ast.EvaluableAstNode<SymbolValue<unknown>>;
+  child: ast.EvaluableAstNode;
 }): TypeAssertedExpressionBooleanOperand {
   return {
     child: params.child,
@@ -333,10 +330,7 @@ const booleanlessExpression = apply(
   }),
 );
 
-const booleanOperand: Parser<
-  TokenType,
-  ast.EvaluableAstNode<SymbolValue<unknown>>
-> = alt_sc(
+const booleanOperand: Parser<TokenType, ast.EvaluableAstNode> = alt_sc(
   negation,
   parenthesized,
   literal,
@@ -373,10 +367,7 @@ const binaryBooleanExpression = apply(
   ),
   ([initial, operations]) => {
     function buildTree(
-      remainder: [
-        Token<TokenType>,
-        ast.EvaluableAstNode<SymbolValue<unknown>>,
-      ][],
+      remainder: [Token<TokenType>, ast.EvaluableAstNode][],
     ): [Token<TokenType>, BooleanExpressionAstNode] {
       if (remainder.length === 2) {
         // The recursion ends at 2 so we can always return a boolean expression.
