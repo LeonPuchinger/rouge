@@ -4,7 +4,6 @@ import {
   kmid,
   kright,
   Parser,
-  rep_sc,
   rule,
   seq,
   str,
@@ -20,6 +19,7 @@ import { TokenType } from "../lexer.ts";
 import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, None, Ok, Result, Some } from "../util/monad/index.ts";
+import { rep_at_least_once_sc } from "../util/parser.ts";
 import { peelToLeftmostTokenNode } from "../util/snippet.ts";
 import { symbolExpression } from "./expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
@@ -351,7 +351,7 @@ const typeAssertedBooleanOperand = apply(
 const binaryBooleanExpression = apply(
   seq(
     booleanOperand,
-    rep_sc(
+    rep_at_least_once_sc(
       seq(
         alt_sc(
           str("=="),
