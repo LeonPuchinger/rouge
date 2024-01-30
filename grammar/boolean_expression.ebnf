@@ -11,17 +11,17 @@ booleanless_expression =
     | invocation
     | chain
     | symbol;
-boolean_operand =
+unary_boolean_expression =
     negation
     | parenthesized
-    | literal
+    | literal;
+boolean_operand =
+    unary_boolean_expression
     | booleanless_expression;
-(* adds an assertion that the expression resolves to a boolean value at runtime *)
-type_asserted_boolean_operand = boolean_operand;
 binary_boolean_expression =
     boolean_operand, {
         ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ),
         boolean_operand,
     };
 (* EXPORT *)
-boolean_expression = binary_boolean_expression | type_asserted_boolean_operand;
+boolean_expression = binary_boolean_expression | unary_boolean_expression;
