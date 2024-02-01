@@ -19,6 +19,8 @@ boolean_operand =
     unary_boolean_expression
     | booleanless_expression;
 binary_boolean_expression =
+    boolean_operand,
+    ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ),
     boolean_operand, {
         ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ),
         boolean_operand,
