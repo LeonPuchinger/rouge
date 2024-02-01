@@ -6,13 +6,15 @@ literal = numeric_literal;
 unary = ( "+" | "-" ), numeric_expression;
 parenthesized = "(", numeric_expression, ")";
 ambiguously_typed_expression = invocation | symbol;
-factor =
+simple_expression =
     unary
     | parenthesized
-    | ambiguously_typed_expression
     | literal;
+factor =
+    simple_expression
+    | ambiguously_typed_expression;
 product = factor { ( "*" | "/" ), factor };
-sum = product { ( "+" | "-" ), product };
+sum = product, ( "+" | "-" ), product, { ( "+" | "-" ), product };
 
 (* EXPORT *)
-numeric_expression = sum;
+numeric_expression = sum | simple_expression;

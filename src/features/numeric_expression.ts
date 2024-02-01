@@ -18,6 +18,7 @@ import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, Ok, Result, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
+import { operation_chain_sc } from "../util/parser.ts";
 import { symbolExpression } from "./expression.ts";
 
 /* AST NODES */
@@ -275,11 +276,15 @@ const ambiguouslyTypedExpression = apply(
     }),
 );
 
-const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
+const simpleNumericExpression = alt_sc(
   unaryOperation,
   parenthesized,
-  ambiguouslyTypedExpression,
   literal,
+);
+
+const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
+  simpleNumericExpression,
+  ambiguouslyTypedExpression,
 );
 
 const product = alt_sc(
@@ -302,24 +307,18 @@ const product = alt_sc(
   factor,
 );
 
-const sum = alt_sc(
-  lrec_sc(
-    product,
-    seq(
-      alt_sc(str("+"), str("-")),
-      product,
-    ),
-    (
-      a: NumericExpressionAstNode,
-      b: [Token<TokenType>, NumericExpressionAstNode],
-    ): NumericExpressionAstNode =>
-      createBinaryNumericExpressionAstNode({
-        lhs: a,
-        token: b[0],
-        rhs: b[1],
-      }),
-  ),
+const sum = operation_chain_sc(
   product,
+  alt_sc(str("+"), str("-")),
+  (first, op, second: NumericExpressionAstNode) =>
+    createBinaryNumericExpressionAstNode({
+      lhs: first,
+      rhs: second,
+      token: op,
+    }),
 );
 
-numericExpression.setPattern(sum);
+numericExpression.setPattern(alt_sc(
+  sum,
+  simpleNumericExpression,
+));
