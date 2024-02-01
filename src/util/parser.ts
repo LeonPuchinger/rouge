@@ -41,25 +41,11 @@ export function operation_chain_sc<TKind, Operand, Operator, Result>(
     ([initial, operations]) => {
       function buildTree(
         remainder: typeof operations,
-      ): [Operator, Result] {
-        if (remainder.length === 2) {
-          // The recursion ends at 2 so we can always return a `Result`.
-          // If the recursion were to end at 1, the last step would return a `Operand`
-          // which would break type safety (see return type of this function).
-          const [first, second] = remainder;
-          const [firstOperator, firstExpression] = first;
-          const [secondOperator, secondExpression] = second;
-          return [
-            firstOperator,
-            callback(
-              firstExpression,
-              secondOperator,
-              secondExpression,
-            ),
-          ];
+      ): [Operator, Operand | Result] {
+        if (remainder.length === 1) {
+          return remainder[0];
         }
-        const current = remainder[0];
-        const [currentOperator, currentExpression] = current;
+        const [currentOperator, currentExpression] = remainder[0];
         const [nextOperator, nextExpression] = buildTree(remainder.slice(1));
         return [
           currentOperator,
@@ -69,15 +55,6 @@ export function operation_chain_sc<TKind, Operand, Operator, Result>(
             nextExpression,
           ),
         ];
-      }
-      // if the expression only consists of a single operation, don't initiate the recursion.
-      if (operations.length === 1) {
-        const [operator, expression] = operations[0];
-        return callback(
-          initial,
-          operator,
-          expression,
-        );
       }
       // start recursion
       const [operator, right] = buildTree(operations);
