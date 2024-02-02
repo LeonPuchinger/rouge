@@ -2,7 +2,6 @@ import {
   alt_sc,
   apply,
   kmid,
-  lrec_sc,
   Parser,
   rule,
   seq,
@@ -18,6 +17,7 @@ import { SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, Ok, Result, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
+import { operation_chain_sc } from "../util/parser.ts";
 import { symbolExpression } from "./expression.ts";
 
 /* AST NODES */
@@ -275,51 +275,43 @@ const ambiguouslyTypedExpression = apply(
     }),
 );
 
-const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
+const simpleNumericExpression = alt_sc(
   unaryOperation,
   parenthesized,
-  ambiguouslyTypedExpression,
   literal,
 );
 
-const product = alt_sc(
-  lrec_sc(
+const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
+  simpleNumericExpression,
+  ambiguouslyTypedExpression,
+);
+
+const product = (params: { allow_unary: boolean } = { allow_unary: false }) =>
+  operation_chain_sc(
     factor,
-    seq(
-      alt_sc(str("*"), str("/")),
-      factor,
-    ),
-    (
-      a: NumericExpressionAstNode,
-      b: [Token<TokenType>, NumericExpressionAstNode],
-    ): NumericExpressionAstNode =>
+    alt_sc(str("*"), str("/")),
+    (first, op, second: NumericExpressionAstNode) =>
       createBinaryNumericExpressionAstNode({
-        lhs: a,
-        token: b[0],
-        rhs: b[1],
+        lhs: first,
+        rhs: second,
+        token: op,
       }),
-  ),
-  factor,
+    params.allow_unary ? 0 : 1,
+  );
+
+const sum = operation_chain_sc(
+  product({ allow_unary: true }),
+  alt_sc(str("+"), str("-")),
+  (first, op, second: NumericExpressionAstNode) =>
+    createBinaryNumericExpressionAstNode({
+      lhs: first,
+      rhs: second,
+      token: op,
+    }),
 );
 
-const sum = alt_sc(
-  lrec_sc(
-    product,
-    seq(
-      alt_sc(str("+"), str("-")),
-      product,
-    ),
-    (
-      a: NumericExpressionAstNode,
-      b: [Token<TokenType>, NumericExpressionAstNode],
-    ): NumericExpressionAstNode =>
-      createBinaryNumericExpressionAstNode({
-        lhs: a,
-        token: b[0],
-        rhs: b[1],
-      }),
-  ),
-  product,
-);
-
-numericExpression.setPattern(sum);
+numericExpression.setPattern(alt_sc(
+  sum,
+  product({ allow_unary: false }),
+  simpleNumericExpression,
+));

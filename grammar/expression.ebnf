@@ -1,4 +1,5 @@
 (* IMPORT numeric_expression.ebnf *)
+(* IMPORT boolean_expression.ebnf *)
 (* IMPORT token.ebnf *)
 (* IMPORT util.ebnf *)
 
@@ -9,13 +10,6 @@ invocation = identifier, "(", expressions, ")";
 method_invocation = ".", invocation;
 property_access = ".", identifier;
 chain = expression, { ".", ( method_invocation, property_access ) };
-
-(* TODO: put into own file *)
-boolean_expression =
-    boolean_expression, ( "||", "&&", "!" ), boolean_expression
-    | "(", boolean_expression, ")"
-    | boolean_literal
-    | expression;
 
 (* EXPORT *)
 expression =

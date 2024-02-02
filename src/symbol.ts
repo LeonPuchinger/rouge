@@ -49,6 +49,7 @@ export class StaticSymbol implements Symbol {
 
 export enum SymbolValueKind {
   number,
+  boolean,
 }
 
 interface SymbolValueParams<T> {

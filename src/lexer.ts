@@ -5,19 +5,23 @@ import { Err, Ok, Result } from "./util/monad/index.ts";
 export enum TokenType {
   breaking_whitespace,
   whitespace,
-  eq_operator,
   numeric_literal,
+  boolean_literal,
   ident,
+  brackets,
+  punctuation,
   unspecified,
 }
 
-export const lexer = buildLexer([
+const lexer = buildLexer([
   [true, /^\s*\n\s*/g, TokenType.breaking_whitespace],
   [false, /^\s+/g, TokenType.whitespace],
-  [true, /^=/g, TokenType.eq_operator],
   [true, /^[0-9]+(\.[0-9]+)?/g, TokenType.numeric_literal],
+  [true, /^(false|true)/g, TokenType.boolean_literal],
   [true, /^[_A-Za-z]+[\-_0-9A-Za-z]*/g, TokenType.ident],
-  [true, /^./g, TokenType.unspecified],
+  [true, /^{}()<>/g, TokenType.brackets],
+  [true, /^[!@=#$%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenType.punctuation],
+  [true, /^\S/g, TokenType.unspecified],
 ]);
 
 /**

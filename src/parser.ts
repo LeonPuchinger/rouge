@@ -4,15 +4,17 @@ import {
   expectEOF,
   list_sc,
   seq,
+  str,
   tok,
   Token,
 } from "typescript-parsec";
 import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
-import * as interpreter from "./interpreter.ts";
-import { TokenType } from "./lexer.ts";
+import { booleanExpression } from "./features/boolean_expression.ts";
 import { symbolExpression } from "./features/expression.ts";
 import { numericExpression } from "./features/numeric_expression.ts";
+import * as interpreter from "./interpreter.ts";
+import { TokenType } from "./lexer.ts";
 import { AppError, InternalError, Panic } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { Err, Ok, Result } from "./util/monad/index.ts";
@@ -20,8 +22,9 @@ import { toMultiline } from "./util/string.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
 
-const EXPRESSION = apply(
+const expression = apply(
   alt_sc(
+    booleanExpression,
     numericExpression,
     symbolExpression,
   ),
@@ -39,8 +42,8 @@ const EXPRESSION = apply(
 const ASSIGNMENT = apply(
   seq(
     tok(TokenType.ident),
-    tok(TokenType.eq_operator),
-    EXPRESSION,
+    str("="),
+    expression,
   ),
   (values): ast.AssignAstNode => ({
     token: values[0],
@@ -57,7 +60,7 @@ const ASSIGNMENT = apply(
 const STATEMENT = apply(
   alt_sc(
     ASSIGNMENT,
-    EXPRESSION,
+    expression,
   ),
   (statement): ast.StatementAstNode => statement,
 );

@@ -40,7 +40,7 @@ interface AnalysisFindingParams {
   /**
    * The AST node where the snippet begins.
    */
-  beginHighlight: ValueAstNode<unknown> | TokenAstNode;
+  beginHighlight: TokenAstNode;
 
   /**
    * The AST node where the snippet should end. The end of the line if None.

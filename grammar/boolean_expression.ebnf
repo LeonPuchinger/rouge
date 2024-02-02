@@ -1,0 +1,29 @@
+(* IMPORT expression.ebnf *)
+(* IMPORT token.ebnf *)
+
+literal = boolean_literal;
+negation = "!", boolean_expression;
+parenthesized = "(", boolean_expression, ")";
+booleanless_expression =
+    ambiguously_typed_expression
+    | numeric_expression
+    | string_literal
+    | invocation
+    | chain
+    | symbol;
+unary_boolean_expression =
+    negation
+    | parenthesized
+    | literal;
+boolean_operand =
+    unary_boolean_expression
+    | booleanless_expression;
+binary_boolean_expression =
+    boolean_operand,
+    ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ),
+    boolean_operand, {
+        ( "==" | "!=" | ">" | ">=" | "<" | "<=" | "&&" | "||" | "^" ),
+        boolean_operand,
+    };
+(* EXPORT *)
+boolean_expression = binary_boolean_expression | unary_boolean_expression;
