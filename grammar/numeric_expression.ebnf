@@ -16,5 +16,8 @@ factor =
 product = factor { ( "*" | "/" ), factor };
 sum = product, ( "+" | "-" ), product, { ( "+" | "-" ), product };
 
+(* top-level `product` has to be binary. otherwise it could let through `ambiguously_typed_expression` *)
 (* EXPORT *)
-numeric_expression = sum | simple_expression;
+numeric_expression = sum
+    | product, ( "*" | "/" ), factor
+    | simple_expression;

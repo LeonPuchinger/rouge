@@ -2,7 +2,6 @@ import {
   alt_sc,
   apply,
   kmid,
-  lrec_sc,
   Parser,
   rule,
   seq,
@@ -287,28 +286,21 @@ const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
   ambiguouslyTypedExpression,
 );
 
-const product = alt_sc(
-  lrec_sc(
+const product = (params: { allow_unary: boolean } = { allow_unary: false }) =>
+  operation_chain_sc(
     factor,
-    seq(
-      alt_sc(str("*"), str("/")),
-      factor,
-    ),
-    (
-      a: NumericExpressionAstNode,
-      b: [Token<TokenType>, NumericExpressionAstNode],
-    ): NumericExpressionAstNode =>
+    alt_sc(str("*"), str("/")),
+    (first, op, second: NumericExpressionAstNode) =>
       createBinaryNumericExpressionAstNode({
-        lhs: a,
-        token: b[0],
-        rhs: b[1],
+        lhs: first,
+        rhs: second,
+        token: op,
       }),
-  ),
-  factor,
-);
+    params.allow_unary ? 0 : 1,
+  );
 
 const sum = operation_chain_sc(
-  product,
+  product({ allow_unary: true }),
   alt_sc(str("+"), str("-")),
   (first, op, second: NumericExpressionAstNode) =>
     createBinaryNumericExpressionAstNode({
@@ -320,5 +312,6 @@ const sum = operation_chain_sc(
 
 numericExpression.setPattern(alt_sc(
   sum,
+  product({ allow_unary: false }),
   simpleNumericExpression,
 ));
