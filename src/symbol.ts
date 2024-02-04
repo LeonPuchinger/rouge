@@ -44,12 +44,14 @@ export enum SymbolValueKind {
 export interface SymbolValue<T> {
   valueKind: SymbolValueKind;
   value: T;
-};
+  typeCompatibleWith(other: SymbolValue<unknown>): boolean;
+}
 
 export function BooleanSymbolValue(value: boolean): SymbolValue<boolean> {
   return {
     valueKind: SymbolValueKind.boolean,
     value: value,
+    typeCompatibleWith: (other) => other.valueKind === SymbolValueKind.boolean,
   };
 }
 
@@ -57,6 +59,7 @@ export function NumericSymbolValue(value: number): SymbolValue<number> {
   return {
     valueKind: SymbolValueKind.number,
     value: value,
+    typeCompatibleWith: (other) => other.value === SymbolValueKind.number,
   };
 }
 
