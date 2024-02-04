@@ -41,19 +41,23 @@ export enum SymbolValueKind {
   boolean,
 }
 
-interface SymbolValueParams<T> {
+export interface SymbolValue<T> {
   valueKind: SymbolValueKind;
   value: T;
+};
+
+export function BooleanSymbolValue(value: boolean): SymbolValue<boolean> {
+  return {
+    valueKind: SymbolValueKind.boolean,
+    value: value,
+  };
 }
 
-export class SymbolValue<T> {
-  valueKind: SymbolValueKind;
-  value: T;
-
-  constructor(params: SymbolValueParams<T>) {
-    this.valueKind = params.valueKind;
-    this.value = params.value;
-  }
+export function NumericSymbolValue(value: number): SymbolValue<number> {
+  return {
+    valueKind: SymbolValueKind.number,
+    value: value,
+  };
 }
 
 // Symbol Table
