@@ -13,7 +13,7 @@ import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
-import { SymbolValue, SymbolValueKind } from "../symbol.ts";
+import { NumericSymbolValue, SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, Ok, Result, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
@@ -54,12 +54,7 @@ function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
 function evaluateNumericLiteral(
   node: NumericLiteralAstNode,
 ): Result<SymbolValue<number>, AppError> {
-  return Ok(
-    new SymbolValue({
-      valueKind: SymbolValueKind.number,
-      value: node.value,
-    }),
-  );
+  return Ok(NumericSymbolValue(node.value));
 }
 
 /* Unary Expression */
@@ -108,9 +103,7 @@ function evaluateUnaryExpression(
       }
       return result.value;
     })
-    .map((result) =>
-      new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
-    );
+    .map((result) => NumericSymbolValue(result));
 }
 
 /* Binary expression */
@@ -172,9 +165,7 @@ function evaluateBinaryExpression(
           return 0;
       }
     })
-    .map((result) =>
-      new SymbolValue({ value: result, valueKind: SymbolValueKind.number })
-    );
+    .map((result) => NumericSymbolValue(result));
 }
 
 /* Ambiguously typed expression */

@@ -2,7 +2,6 @@ import * as ast from "./ast.ts";
 import {
   InterpreterSymbolTable,
   RuntimeSymbol,
-  SymbolKind,
   SymbolTable,
 } from "./symbol.ts";
 // required for extension methods to be usable
@@ -27,7 +26,6 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
   runtimeTable.setSymbol(
     ident,
     new RuntimeSymbol({
-      symbolKind: SymbolKind.variable,
       node: node.child,
       value: expressionResult.unwrap(),
     }),

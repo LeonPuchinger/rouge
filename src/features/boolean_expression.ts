@@ -16,7 +16,7 @@ import * as ast from "../ast.ts";
 import { AnalysisError, AnalysisFinding } from "../finding.ts";
 import * as interpreter from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
-import { SymbolValue, SymbolValueKind } from "../symbol.ts";
+import { BooleanSymbolValue, SymbolValue, SymbolValueKind } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, None, Ok, Result, Some } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
@@ -58,10 +58,7 @@ function evaluateBooleanLiteralAstNode(
   node: BooleanLiteralAstNode,
 ): Result<SymbolValue<boolean>, AppError> {
   return Ok(
-    new SymbolValue({
-      valueKind: SymbolValueKind.boolean,
-      value: node.value,
-    }),
+    BooleanSymbolValue(node.value),
   );
 }
 
@@ -97,12 +94,7 @@ function evaluateBooleanNegationAstNode(
   node: BooleanNegationAstNode,
 ): Result<SymbolValue<boolean>, AppError> {
   return node.child.evaluate()
-    .map((value) =>
-      new SymbolValue({
-        valueKind: SymbolValueKind.boolean,
-        value: !value,
-      })
-    );
+    .map((value) => BooleanSymbolValue(!value));
 }
 
 /* Binary Boolean Expression */
@@ -223,9 +215,7 @@ function evaluateBinaryExpression(
           return false;
       }
     })
-    .map((result) =>
-      new SymbolValue({ value: result, valueKind: SymbolValueKind.boolean })
-    );
+    .map((result) => BooleanSymbolValue(result));
 }
 
 /* Boolean Expression */

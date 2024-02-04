@@ -1,11 +1,6 @@
 import * as ast from "./ast.ts";
 import { AnalysisError, AnalysisFinding } from "./finding.ts";
-import {
-  AnalysisSymbolTable,
-  StaticSymbol,
-  SymbolKind,
-  SymbolTable,
-} from "./symbol.ts";
+import { AnalysisSymbolTable, StaticSymbol, SymbolTable } from "./symbol.ts";
 import { None, Option } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
@@ -58,7 +53,6 @@ export function checkAssign(
       analysisTable.setSymbol(
         ident,
         new StaticSymbol({
-          symbolKind: SymbolKind.variable,
           valueKind: expressionKind,
         }),
       );
