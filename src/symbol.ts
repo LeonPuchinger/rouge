@@ -39,6 +39,7 @@ export class StaticSymbol implements Symbol {
 export enum SymbolValueKind {
   number,
   boolean,
+  function,
 }
 
 export interface SymbolValue<T> {
@@ -60,6 +61,25 @@ export function NumericSymbolValue(value: number): SymbolValue<number> {
     valueKind: SymbolValueKind.number,
     value: value,
     typeCompatibleWith: (other) => other.value === SymbolValueKind.number,
+  };
+}
+
+export interface Function {
+  returnType: SymbolValueKind;
+  params: SymbolValueKind[];
+}
+
+export function FunctionSymbolValue(value: Function): SymbolValue<Function> {
+  return {
+    valueKind: SymbolValueKind.function,
+    value: value,
+    typeCompatibleWith: (other) => {
+      if (other.valueKind !== SymbolValueKind.function) {
+        return false;
+      }
+      // TODO: check for params & return type compatability
+      return true;
+    },
   };
 }
 
