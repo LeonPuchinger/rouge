@@ -85,13 +85,13 @@ export function FunctionSymbolValue(value: Function): SymbolValue<Function> {
 
 // Symbol Table
 
-type Scope<SymbolType> = Map<string, SymbolType>;
+type Scope<S extends Symbol> = Map<string, S>;
 
 export type InterpreterSymbolTable = SymbolTable<RuntimeSymbol>;
 export type AnalysisSymbolTable = SymbolTable<StaticSymbol>;
 
-export class SymbolTable<SymbolType extends Symbol> {
-  private scopes: Scope<SymbolType>[] = [new Map()];
+export class SymbolTable<S extends Symbol> {
+  private scopes: Scope<S>[] = [new Map()];
 
   pushScope() {
     this.scopes.push(new Map());
@@ -106,15 +106,15 @@ export class SymbolTable<SymbolType extends Symbol> {
 
   private findSymbolInScope(
     name: string,
-    scope: Scope<SymbolType>,
-  ): Option<SymbolType> {
+    scope: Scope<S>,
+  ): Option<S> {
     const symbol = scope.get(name);
     return Some(symbol);
   }
 
   findSymbolInCurrentScope(
     name: string,
-  ): Option<SymbolType> {
+  ): Option<S> {
     const current = this.scopes.toReversed().at(0);
     if (current !== undefined) {
       return this.findSymbolInScope(name, current);
@@ -122,7 +122,7 @@ export class SymbolTable<SymbolType extends Symbol> {
     return None();
   }
 
-  findSymbol(name: string): Option<SymbolType> {
+  findSymbol(name: string): Option<S> {
     for (const current_scope of this.scopes.toReversed()) {
       const symbol = this.findSymbolInScope(name, current_scope);
       if (symbol.kind === "none") {
@@ -133,7 +133,7 @@ export class SymbolTable<SymbolType extends Symbol> {
     return None();
   }
 
-  setSymbol(name: string, symbol: SymbolType) {
+  setSymbol(name: string, symbol: S) {
     const current_scope = this.scopes[this.scopes.length - 1];
     current_scope.set(name, symbol);
   }
