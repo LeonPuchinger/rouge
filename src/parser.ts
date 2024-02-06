@@ -65,7 +65,7 @@ const STATEMENT = apply(
   (statement): ast.StatementAstNode => statement,
 );
 
-const STATEMENTS = apply(
+export const statements = apply(
   list_sc(
     STATEMENT,
     BREAKING_WHITESPACE,
@@ -81,7 +81,7 @@ const STATEMENTS = apply(
   }),
 );
 
-export const START = STATEMENTS;
+export const START = statements;
 
 /**
  * Parse a sequence of tokens into an AST based the grammar of the language.
