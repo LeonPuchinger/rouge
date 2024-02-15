@@ -4,7 +4,7 @@ import { EvaluableAstNode, TokenAstNode } from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { runtimeTable } from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
-import { SymbolValue, SymbolValueKind } from "../symbol.ts";
+import { SymbolValue, SymbolType } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { None, Result } from "../util/monad/index.ts";
 
@@ -28,9 +28,9 @@ export function evaluateSymbolExpression(
 
 export function analyzeSymbolExpression(
   node: SymbolExpressionAstNode,
-): AnalysisResult<SymbolValueKind> {
+): AnalysisResult<SymbolType> {
   const ident = node.token.text;
-  const findings: AnalysisResult<SymbolValueKind> = {
+  const findings: AnalysisResult<SymbolType> = {
     value: analysisTable.findSymbol(ident)
       .map((symbol) => symbol.valueKind),
     warnings: [],

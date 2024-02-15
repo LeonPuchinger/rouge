@@ -13,7 +13,12 @@ import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
-import { NumericSymbolValue, SymbolValue, SymbolValueKind } from "../symbol.ts";
+import {
+  createNumericSymbolValue,
+  PrimitiveSymbolType,
+  SymbolType,
+  SymbolValue,
+} from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, Ok, Result, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
@@ -43,9 +48,9 @@ function createNumericLiteralAstNode(params: {
   };
 }
 
-function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
+function analyzeNumericLiteral(): AnalysisResult<SymbolType> {
   return {
-    value: Some(SymbolValueKind.number),
+    value: Some(new PrimitiveSymbolType("number")),
     warnings: [],
     errors: [],
   };
@@ -54,7 +59,7 @@ function analyzeNumericLiteral(): AnalysisResult<SymbolValueKind> {
 function evaluateNumericLiteral(
   node: NumericLiteralAstNode,
 ): Result<SymbolValue<number>, AppError> {
-  return Ok(NumericSymbolValue(node.value));
+  return Ok(createNumericSymbolValue(node.value));
 }
 
 /* Unary Expression */
@@ -81,7 +86,7 @@ function createUnaryNumericExpressionAstNode(params: {
 
 function analyzeUnaryExpression() {
   return {
-    value: Some(SymbolValueKind.number),
+    value: Some(new PrimitiveSymbolType("number")),
     warnings: [],
     errors: [],
   };
@@ -103,7 +108,7 @@ function evaluateUnaryExpression(
       }
       return result.value;
     })
-    .map((result) => NumericSymbolValue(result));
+    .map((result) => createNumericSymbolValue(result));
 }
 
 /* Binary expression */
@@ -131,7 +136,7 @@ function createBinaryNumericExpressionAstNode(params: {
 
 function analyzeBinaryExpression() {
   return {
-    value: Some(SymbolValueKind.number),
+    value: Some(new PrimitiveSymbolType("number")),
     warnings: [],
     errors: [],
   };
@@ -165,7 +170,7 @@ function evaluateBinaryExpression(
           return 0;
       }
     })
-    .map((result) => NumericSymbolValue(result));
+    .map((result) => createNumericSymbolValue(result));
 }
 
 /* Ambiguously typed expression */
@@ -192,11 +197,11 @@ function createAmbiguouslyTypedExpressionAstNode(params: {
 
 function analyzeAmbiguouslyTypedExpression(
   node: AmbiguouslyTypedExpressionAstNode,
-): AnalysisResult<SymbolValueKind> {
+): AnalysisResult<SymbolType> {
   const analysisResult = node.child.analyze();
   if (
     analysisResult.value.kind === "some" &&
-    analysisResult.value.unwrap() !== SymbolValueKind.number
+    analysisResult.value.unwrap().isPrimitive("number")
   ) {
     return {
       ...analysisResult,

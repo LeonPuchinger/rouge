@@ -1,4 +1,4 @@
-import { AstNode } from "./ast.ts";
+import { AstNode, StatementAstNodes } from "./ast.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 
 // Symbol
@@ -24,61 +24,96 @@ export class RuntimeSymbol implements Symbol {
 
 export class StaticSymbol implements Symbol {
   node: Option<AstNode>;
-  valueKind: SymbolValueKind;
+  valueKind: SymbolType;
 
   constructor(
-    params: Omit<SymbolParams, "value"> & { valueKind: SymbolValueKind },
+    params: Omit<SymbolParams, "value"> & { valueKind: SymbolType },
   ) {
     this.node = Some(params.node);
     this.valueKind = params.valueKind;
   }
 }
 
-// Symbol Value
+// Symbol Type
 
-export enum SymbolValueKind {
-  number,
-  boolean,
-  function,
+export interface SymbolType {
+  typeCompatibleWith(other: SymbolType): boolean;
+  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
 }
 
+type PrimitiveSymbolTypeKind = "number" | "boolean";
+
+export class PrimitiveSymbolType implements SymbolType {
+  constructor(private kind: PrimitiveSymbolTypeKind) {}
+
+  typeCompatibleWith(other: SymbolType): boolean {
+    return other instanceof PrimitiveSymbolType && other.kind === this.kind;
+  }
+
+  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
+    return kind === this.kind;
+  }
+}
+
+export class FunctionSymbolValue implements SymbolType {
+  constructor(private params: SymbolType[], private returnType: SymbolType) {}
+
+  typeCompatibleWith(other: SymbolType): boolean {
+    if (!(other instanceof FunctionSymbolValue)) {
+      return false;
+    }
+    if (other.returnType !== this.returnType) {
+      return false;
+    }
+    if (other.params.length !== this.params.length) {
+      return false;
+    }
+    return other.params.every((value, index) => value !== this.params[index]);
+  }
+
+  isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
+    return false;
+  }
+}
+
+// Symbol Value
+
 export interface SymbolValue<T> {
-  valueKind: SymbolValueKind;
+  valueKind: SymbolType;
   value: T;
   typeCompatibleWith(other: SymbolValue<unknown>): boolean;
 }
 
-export function BooleanSymbolValue(value: boolean): SymbolValue<boolean> {
+export function createBooleanSymbolValue(value: boolean): SymbolValue<boolean> {
   return {
-    valueKind: SymbolValueKind.boolean,
+    valueKind: new PrimitiveSymbolType("boolean"),
     value: value,
-    typeCompatibleWith: (other) => other.valueKind === SymbolValueKind.boolean,
+    typeCompatibleWith(other) {
+      return other.typeCompatibleWith(this);
+    },
   };
 }
 
-export function NumericSymbolValue(value: number): SymbolValue<number> {
+export function createNumericSymbolValue(value: number): SymbolValue<number> {
   return {
-    valueKind: SymbolValueKind.number,
+    valueKind: new PrimitiveSymbolType("number"),
     value: value,
-    typeCompatibleWith: (other) => other.value === SymbolValueKind.number,
+    typeCompatibleWith(other) {
+      return other.typeCompatibleWith(this);
+    },
   };
 }
 
-export interface Function {
-  returnType: SymbolValueKind;
-  params: SymbolValueKind[];
-}
-
-export function FunctionSymbolValue(value: Function): SymbolValue<Function> {
+export function createFunctionSymbolValue(
+  value: StatementAstNodes,
+  params: SymbolType[],
+  returnType: SymbolType,
+): SymbolValue<StatementAstNodes> {
   return {
-    valueKind: SymbolValueKind.function,
+    valueKind: new FunctionSymbolValue(params, returnType),
     value: value,
-    typeCompatibleWith: (other) => {
-      if (other.valueKind !== SymbolValueKind.function) {
-        return false;
-      }
-      // TODO: check for params & return type compatability
-      return true;
+    typeCompatibleWith(other) {
+      return other.typeCompatibleWith(this);
     },
   };
 }
