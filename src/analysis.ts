@@ -1,6 +1,7 @@
 import * as ast from "./ast.ts";
 import { AnalysisError, AnalysisFinding } from "./finding.ts";
 import { AnalysisSymbolTable, StaticSymbol, SymbolTable } from "./symbol.ts";
+import { emptyFindings } from "./util/finding.ts";
 import { None, Option } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
@@ -13,13 +14,6 @@ export type AnalysisResult<T> = {
 };
 
 export type AnalysisFindings = Omit<AnalysisResult<unknown>, "value">;
-
-function emptyFindings(): AnalysisFindings {
-  return {
-    warnings: [],
-    errors: [],
-  };
-}
 
 export function checkAssign(
   node: ast.AssignAstNode,

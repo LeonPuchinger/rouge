@@ -1,7 +1,7 @@
 import { Token } from "typescript-parsec";
 import { AnalysisFindings, AnalysisResult } from "./analysis.ts";
 import { TokenType } from "./lexer.ts";
-import { SymbolValue, SymbolType } from "./symbol.ts";
+import { SymbolType, SymbolValue } from "./symbol.ts";
 import { AppError } from "./util/error.ts";
 import { Option, Result } from "./util/monad/index.ts";
 
@@ -28,6 +28,10 @@ export interface WrapperAstNode<T extends AstNode> {
 
 export interface InterpretableAstNode {
   interpret(): Option<AppError>;
+  check(): AnalysisFindings;
+}
+
+export interface CheckableAstNode {
   check(): AnalysisFindings;
 }
 
