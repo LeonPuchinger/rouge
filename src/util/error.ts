@@ -1,4 +1,4 @@
-import { ValueAstNode } from "../ast.ts";
+import { TokenAstNode } from "../ast.ts";
 import { accessEnvironment } from "./environment.ts";
 import { Option, Some } from "./monad/index.ts";
 import { createSnippet } from "./snippet.ts";
@@ -81,8 +81,8 @@ export function InternalError(
  */
 export function InterpreterError(
   message: string,
-  beginHighlight: ValueAstNode<unknown>,
-  endHighlight: Option<ValueAstNode<unknown>>,
+  beginHighlight: TokenAstNode<unknown>,
+  endHighlight: Option<TokenAstNode<unknown>>,
   messageHighlight?: string,
 ): AppError {
   return {
