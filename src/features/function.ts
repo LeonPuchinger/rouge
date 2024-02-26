@@ -56,6 +56,14 @@ class ParameterAstNode {
   }
 }
 
+class FunctionAstNode {
+  parameters!: ParameterAstNode[];
+
+  constructor(params: Attributes<FunctionAstNode>) {
+    Object.assign(this, params);
+  }
+}
+
 /* PARSER */
 
 export const parameter = apply(
@@ -84,22 +92,28 @@ const returnType = apply(
   (token) => Some(token).map((token) => token.text),
 );
 
-export const functionDefinition = apply(kright(
-  str("function"),
-  seq(
-    kmid(
-      str("("),
-      parameters,
-      str(")"),
+export const functionDefinition = apply(
+  kright(
+    str("function"),
+    seq(
+      kmid(
+        str("("),
+        parameters,
+        str(")"),
+      ),
+      kright(
+        seq(str("-"), str(">")),
+        returnType,
+      ),
+      kmid(
+        str("{"),
+        statements,
+        str("}"),
+      ),
     ),
-    kright(
-      seq(str("-"), str(">")),
-      returnType,
-    ),
-    kmid(
-      str("{"),
-      statements,
-      str("}"),
-    )
   ),
-), ([parameters, returnType, statements]) => {/*TODO: create Function AST node*/});
+  ([parameters, _returnType, _statements]) =>
+    new FunctionAstNode({
+      parameters: parameters,
+    }),
+);
