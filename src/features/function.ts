@@ -1,6 +1,8 @@
 import {
   alt_sc,
   apply,
+  kmid,
+  kright,
   list_sc,
   opt_sc,
   seq,
@@ -82,14 +84,22 @@ const returnType = apply(
   (token) => Some(token).map((token) => token.text),
 );
 
-export const functionDefinition = seq(
+export const functionDefinition = apply(kright(
   str("function"),
-  str("("),
-  parameters,
-  str(")"),
-  seq(str("-"), str(">")),
-  returnType,
-  str("{"),
-  statements,
-  str("}"),
-);
+  seq(
+    kmid(
+      str("("),
+      parameters,
+      str(")"),
+    ),
+    kright(
+      seq(str("-"), str(">")),
+      returnType,
+    ),
+    kmid(
+      str("{"),
+      statements,
+      str("}"),
+    )
+  ),
+), ([parameters, returnType, statements]) => {/*TODO: create Function AST node*/});
