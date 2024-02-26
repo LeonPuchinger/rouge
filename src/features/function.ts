@@ -9,7 +9,6 @@ import {
   Token,
 } from "typescript-parsec";
 import { AnalysisFindings, analysisTable } from "../analysis.ts";
-import { CheckableAstNode } from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import { statements } from "../parser.ts";
