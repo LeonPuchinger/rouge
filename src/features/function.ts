@@ -20,7 +20,7 @@ import { Attributes } from "../util/type.ts";
 
 /* AST NODES */
 
-class ParameterAstNode implements CheckableAstNode {
+class ParameterAstNode {
   name!: Token<TokenType>;
   type!: Token<TokenType>;
 
@@ -57,7 +57,7 @@ class ParameterAstNode implements CheckableAstNode {
 
 /* PARSER */
 
-const parameter = apply(
+export const parameter = apply(
   kouter(
     tok(TokenType.ident),
     str(":"),
@@ -70,9 +70,12 @@ const parameter = apply(
     }),
 );
 
-const parameters = alt_sc(
-  list_sc(parameter, str(",")),
-  parameter,
+const parameters = apply(
+  alt_sc(
+    list_sc(parameter, str(",")),
+    parameter,
+  ),
+  (v) => [v].flat(),
 );
 
 const returnType = apply(
