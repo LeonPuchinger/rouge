@@ -10,7 +10,7 @@ import { Attributes } from "./util/type.ts";
 export function resolveType(input: string): SymbolType {
   if (["boolean", "number"].includes(input)) {
     // @ts-ignore type check has been performed in the if statement above
-    return new PrimitiveSymbolType(input)
+    return new PrimitiveSymbolType(input);
   }
   throw InternalError("unable to resolve type.", `Unknown input: "${input}".`);
 }
