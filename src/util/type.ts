@@ -9,4 +9,4 @@ type OmitFunctions<T> = {
 /**
  * Generate a type from all public members of a class (excluding methods).
  */
-export type Attributes<T> = OmitFunctions<Required<Partial<T>>>;
+export type Attributes<T> = OmitFunctions<T>;
