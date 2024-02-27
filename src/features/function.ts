@@ -62,6 +62,10 @@ class ParameterAstNode {
     }
     return findings;
   }
+
+  resolveType(): SymbolType {
+    return resolveType(this.type.text);
+  }
 }
 
 class FunctionAstNode implements EvaluableAstNode {
