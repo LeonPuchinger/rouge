@@ -19,7 +19,7 @@ import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import { statements } from "../parser.ts";
-import { FunctionSymbolType, resolveType, SymbolType, SymbolValue } from "../symbol.ts";
+import { FunctionSymbolType, resolveType, StaticSymbol, SymbolType, SymbolValue } from "../symbol.ts";
 import { AppError } from "../util/error.ts";
 import { emptyFindings, mergeFindings } from "../util/finding.ts";
 import { None, Option, Result, Some } from "../util/monad/index.ts";
@@ -80,6 +80,7 @@ class FunctionAstNode implements EvaluableAstNode {
   }
 
   analyze(): AnalysisResult<SymbolType> {
+    analysisTable.pushScope();
     const findings = emptyFindings();
     this.parameters.map((parameter) =>
       mergeFindings(findings, parameter.check())
@@ -87,8 +88,15 @@ class FunctionAstNode implements EvaluableAstNode {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
+    for (const index in this.parameters) {
+      analysisTable.setSymbol(
+        this.parameters[index].name.text,
+        new StaticSymbol({valueKind: parameterTypes[index]}),
+      )
+    }
     const returnType = this.returnType.map((token) => resolveType(token.text));
     // TODO: introduce return statements and check with return type
+    analysisTable.popScope();
     return {
       ...findings,
       value: Some(
