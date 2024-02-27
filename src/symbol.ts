@@ -1,5 +1,6 @@
 import { AstNode, StatementAstNodes } from "./ast.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
+import { Attributes } from "./util/type.ts";
 
 // Symbol
 
@@ -55,23 +56,30 @@ export class PrimitiveSymbolType implements SymbolType {
   }
 }
 
-export class FunctionSymbolValue implements SymbolType {
-  constructor(private params: SymbolType[], private returnType: SymbolType) {}
+export class FunctionSymbolType implements SymbolType {
+  parameters!: SymbolType[];
+  returnType!: SymbolType;
+
+  constructor(params: Attributes<FunctionSymbolType>) {
+    Object.assign(this, params);
+  }
 
   typeCompatibleWith(other: SymbolType): boolean {
-    if (!(other instanceof FunctionSymbolValue)) {
+    if (!(other instanceof FunctionSymbolType)) {
       return false;
     }
     if (other.returnType !== this.returnType) {
       return false;
     }
-    if (other.params.length !== this.params.length) {
+    if (other.parameters.length !== this.parameters.length) {
       return false;
     }
-    return other.params.every((value, index) => value !== this.params[index]);
+    return other.parameters.every((value, index) =>
+      value !== this.parameters[index]
+    );
   }
 
-  isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
+  isPrimitive(): boolean {
     return false;
   }
 }
@@ -110,7 +118,10 @@ export function createFunctionSymbolValue(
   returnType: SymbolType,
 ): SymbolValue<StatementAstNodes> {
   return {
-    valueKind: new FunctionSymbolValue(params, returnType),
+    valueKind: new FunctionSymbolType({
+      parameters: params,
+      returnType: returnType,
+    }),
     value: value,
     typeCompatibleWith(other) {
       return other.typeCompatibleWith(this);
