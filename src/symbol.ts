@@ -73,7 +73,7 @@ export class PrimitiveSymbolType implements SymbolType {
 
 export class FunctionSymbolType implements SymbolType {
   parameters!: SymbolType[];
-  returnType!: SymbolType;
+  returnType!: Option<SymbolType>;
 
   constructor(params: Attributes<FunctionSymbolType>) {
     Object.assign(this, params);
@@ -83,14 +83,18 @@ export class FunctionSymbolType implements SymbolType {
     if (!(other instanceof FunctionSymbolType)) {
       return false;
     }
-    if (other.returnType !== this.returnType) {
+    const matchingReturnTypes = other.returnType
+      .zip(this.returnType)
+      .map((returnTypes) => returnTypes[0].typeCompatibleWith(returnTypes[1]))
+      .unwrapOr(false);
+    if (!matchingReturnTypes) {
       return false;
     }
     if (other.parameters.length !== this.parameters.length) {
       return false;
     }
     return other.parameters.every((value, index) =>
-      value !== this.parameters[index]
+      value.typeCompatibleWith(this.parameters[index])
     );
   }
 
@@ -130,12 +134,12 @@ export function createNumericSymbolValue(value: number): SymbolValue<number> {
 export function createFunctionSymbolValue(
   value: StatementAstNodes,
   params: SymbolType[],
-  returnType: SymbolType,
+  returnType?: SymbolType,
 ): SymbolValue<StatementAstNodes> {
   return {
     valueKind: new FunctionSymbolType({
       parameters: params,
-      returnType: returnType,
+      returnType: Some(returnType),
     }),
     value: value,
     typeCompatibleWith(other) {
