@@ -6,3 +6,13 @@ export function emptyFindings(): AnalysisFindings {
     errors: [],
   };
 }
+
+export function mergeFindings(
+  a: AnalysisFindings,
+  b: AnalysisFindings,
+): AnalysisFindings {
+  return {
+    warnings: [...a.warnings, ...b.warnings],
+    errors: [...a.errors, ...b.errors],
+  };
+}
