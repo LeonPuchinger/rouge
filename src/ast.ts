@@ -63,8 +63,8 @@ export type AssignAstNode =
 export type StatementAstNode =
   | ExpressionAstNode
   | AssignAstNode;
-export type StatementAstNodes =
+export type StatementsAstNode =
   & NaryAstNode<StatementAstNode>
   & InterpretableAstNode;
 
-export type AST = StatementAstNodes;
+export type AST = StatementsAstNode;

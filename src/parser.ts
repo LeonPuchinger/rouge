@@ -70,7 +70,7 @@ export const statements = apply(
     STATEMENT,
     BREAKING_WHITESPACE,
   ),
-  (statements): ast.StatementAstNodes => ({
+  (statements): ast.StatementsAstNode => ({
     children: statements,
     interpret() {
       return interpreter.interpretStatements(this);

@@ -1,4 +1,4 @@
-import { AstNode, StatementAstNodes } from "./ast.ts";
+import { AstNode, StatementsAstNode } from "./ast.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { Attributes } from "./util/type.ts";
@@ -132,10 +132,10 @@ export function createNumericSymbolValue(value: number): SymbolValue<number> {
 }
 
 export function createFunctionSymbolValue(
-  value: StatementAstNodes,
+  value: StatementsAstNode,
   params: SymbolType[],
   returnType?: SymbolType,
-): SymbolValue<StatementAstNodes> {
+): SymbolValue<StatementsAstNode> {
   return {
     valueKind: new FunctionSymbolType({
       parameters: params,

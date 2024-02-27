@@ -61,7 +61,7 @@ export function checkExpression(
 }
 
 export function checkStatements(
-  node: ast.StatementAstNodes,
+  node: ast.StatementsAstNode,
 ): AnalysisFindings {
   return node.children
     .map((statement) => statement.check())
