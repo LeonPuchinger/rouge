@@ -16,7 +16,12 @@ import * as ast from "../ast.ts";
 import { AnalysisError, AnalysisFinding } from "../finding.ts";
 import * as interpreter from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
-import { BooleanSymbolValue, SymbolValue, SymbolValueKind } from "../symbol.ts";
+import {
+  createBooleanSymbolValue,
+  PrimitiveSymbolType,
+  SymbolType,
+  SymbolValue,
+} from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { Err, None, Ok, Result, Some } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
@@ -46,11 +51,11 @@ function createBooleanLiteralAstNode(params: {
   };
 }
 
-function analyzeBooleanLiteralAstNode(): AnalysisResult<SymbolValueKind> {
+function analyzeBooleanLiteralAstNode(): AnalysisResult<SymbolType> {
   return {
     warnings: [],
     errors: [],
-    value: Some(SymbolValueKind.boolean),
+    value: Some(new PrimitiveSymbolType("boolean")),
   };
 }
 
@@ -58,7 +63,7 @@ function evaluateBooleanLiteralAstNode(
   node: BooleanLiteralAstNode,
 ): Result<SymbolValue<boolean>, AppError> {
   return Ok(
-    BooleanSymbolValue(node.value),
+    createBooleanSymbolValue(node.value),
   );
 }
 
@@ -82,11 +87,11 @@ function createBooleanNegationAstNode(params: {
   };
 }
 
-function analyzeBooleanNegationAstNode(): AnalysisResult<SymbolValueKind> {
+function analyzeBooleanNegationAstNode() {
   return {
     warnings: [],
     errors: [],
-    value: Some(SymbolValueKind.boolean),
+    value: Some(new PrimitiveSymbolType("boolean")),
   };
 }
 
@@ -94,7 +99,7 @@ function evaluateBooleanNegationAstNode(
   node: BooleanNegationAstNode,
 ): Result<SymbolValue<boolean>, AppError> {
   return node.child.evaluate()
-    .map((value) => BooleanSymbolValue(!value));
+    .map((value) => createBooleanSymbolValue(!value));
 }
 
 /* Binary Boolean Expression */
@@ -122,7 +127,7 @@ function createBinaryBooleanExpressionAstNode(params: {
 
 function analyzeBinaryExpression(
   node: BinaryBooleanExpressionAstNode,
-): AnalysisResult<SymbolValueKind> {
+): AnalysisResult<SymbolType> {
   const errors: AnalysisFinding[] = [];
   const operator = node.token.text;
   node.lhs.analyze().value
@@ -141,8 +146,7 @@ function analyzeBinaryExpression(
       }
       if (
         [">", ">=", "<", "<="].includes(operator) &&
-        (leftType !== SymbolValueKind.number ||
-          rightType !== SymbolValueKind.number)
+        (!leftType.isPrimitive("number") || !rightType.isPrimitive("number"))
       ) {
         errors.push(AnalysisError({
           message:
@@ -153,8 +157,7 @@ function analyzeBinaryExpression(
       }
       if (
         ["&&", "||", "^"].includes(operator) &&
-        (leftType !== SymbolValueKind.boolean ||
-          rightType !== SymbolValueKind.boolean)
+        (!leftType.isPrimitive("boolean") || !rightType.isPrimitive("boolean"))
       ) {
         errors.push(AnalysisError({
           message:
@@ -168,7 +171,7 @@ function analyzeBinaryExpression(
       }
     });
   return {
-    value: Some(SymbolValueKind.boolean),
+    value: Some(new PrimitiveSymbolType("boolean")),
     warnings: [],
     errors: errors,
   };
@@ -215,7 +218,7 @@ function evaluateBinaryExpression(
           return false;
       }
     })
-    .map((result) => BooleanSymbolValue(result));
+    .map((result) => createBooleanSymbolValue(result));
 }
 
 /* Boolean Expression */

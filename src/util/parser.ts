@@ -1,7 +1,7 @@
 import { apply, Parser, rep_sc, seq } from "typescript-parsec";
 
 /**
- * Like rep_sc(p) from `typescript-parsec`, but consumes p at least once.
+ * Like `rep_sc(p)` from `typescript-parsec`, but consumes p at least once.
  */
 export function rep_at_least_once_sc<TKind, Result>(
   p: Parser<TKind, Result>,
@@ -12,6 +12,24 @@ export function rep_at_least_once_sc<TKind, Result>(
       rep_sc(p),
     ),
     ([first, remainder]) => [first, ...remainder],
+  );
+}
+
+/**
+ * Like `kmid(a, b, c)` from `typescript-parsec`, but returns Ta and Tc instead of Tb.
+ */
+export function kouter<TKind, Left, Right>(
+  left: Parser<TKind, Left>,
+  ignore: Parser<TKind, unknown>,
+  right: Parser<TKind, Right>,
+): Parser<TKind, [Left, Right]> {
+  return apply(
+    seq(
+      left,
+      ignore,
+      right,
+    ),
+    (results) => [results[0], results[2]],
   );
 }
 

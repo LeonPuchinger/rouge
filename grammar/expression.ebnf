@@ -2,6 +2,7 @@
 (* IMPORT boolean_expression.ebnf *)
 (* IMPORT token.ebnf *)
 (* IMPORT util.ebnf *)
+(* IMPORT function.ebnf *)
 
 symbol = identifier;
 
@@ -16,6 +17,7 @@ expression =
     ambiguously_typed_expression
     | numeric_expression
     | boolean_expression
+    | function_definition
     | string_literal
     | invocation
     | chain

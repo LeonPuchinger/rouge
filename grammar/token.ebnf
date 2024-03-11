@@ -1,9 +1,11 @@
 (* tokens, not handeled by parser *)
 
+(* IMPORT util.ebnf *)
+
 (* EXPORT ALL *)
 
 boolean_literal = "true" | "false";
-string_literal = "\"", ( letter | digit ), "\"";
+string_literal = "\"", { letter | digit }, "\"";
 identifier = letter, { letter | digit };
 breaking_whitespace = "\n", { "\n" };
 numeric_literal = { digit }, [ ".", { digit } ];

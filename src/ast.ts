@@ -1,7 +1,7 @@
 import { Token } from "typescript-parsec";
 import { AnalysisFindings, AnalysisResult } from "./analysis.ts";
 import { TokenType } from "./lexer.ts";
-import { SymbolValue, SymbolValueKind } from "./symbol.ts";
+import { SymbolType, SymbolValue } from "./symbol.ts";
 import { AppError } from "./util/error.ts";
 import { Option, Result } from "./util/monad/index.ts";
 
@@ -31,7 +31,11 @@ export interface InterpretableAstNode {
   check(): AnalysisFindings;
 }
 
-export interface EvaluableAstNode<R = SymbolValue<unknown>, A = SymbolValueKind> {
+export interface CheckableAstNode {
+  check(): AnalysisFindings;
+}
+
+export interface EvaluableAstNode<R = SymbolValue<unknown>, A = SymbolType> {
   evaluate(): Result<R, AppError>;
   analyze(): AnalysisResult<A>;
 }
@@ -59,8 +63,8 @@ export type AssignAstNode =
 export type StatementAstNode =
   | ExpressionAstNode
   | AssignAstNode;
-export type StatementAstNodes =
+export type StatementsAstNode =
   & NaryAstNode<StatementAstNode>
   & InterpretableAstNode;
 
-export type AST = StatementAstNodes;
+export type AST = StatementsAstNode;

@@ -65,12 +65,12 @@ const STATEMENT = apply(
   (statement): ast.StatementAstNode => statement,
 );
 
-const STATEMENTS = apply(
+export const statements = apply(
   list_sc(
     STATEMENT,
     BREAKING_WHITESPACE,
   ),
-  (statements): ast.StatementAstNodes => ({
+  (statements): ast.StatementsAstNode => ({
     children: statements,
     interpret() {
       return interpreter.interpretStatements(this);
@@ -81,7 +81,7 @@ const STATEMENTS = apply(
   }),
 );
 
-export const START = STATEMENTS;
+export const START = statements;
 
 /**
  * Parse a sequence of tokens into an AST based the grammar of the language.

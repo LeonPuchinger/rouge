@@ -34,7 +34,7 @@ export function interpretAssign(node: ast.AssignAstNode): Option<AppError> {
 }
 
 export function interpretStatements(
-  node: ast.StatementAstNodes,
+  node: ast.StatementsAstNode,
 ): Option<AppError> {
   return node.children.mapUntil(
     (node) => node.interpret(),
