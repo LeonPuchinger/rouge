@@ -134,12 +134,12 @@ export function createNumericSymbolValue(value: number): SymbolValue<number> {
 export function createFunctionSymbolValue(
   value: StatementsAstNode,
   params: SymbolType[],
-  returnType?: SymbolType,
+  returnType: Option<SymbolType>,
 ): SymbolValue<StatementsAstNode> {
   return {
     valueKind: new FunctionSymbolType({
       parameters: params,
-      returnType: Some(returnType),
+      returnType: returnType,
     }),
     value: value,
     typeCompatibleWith(other) {

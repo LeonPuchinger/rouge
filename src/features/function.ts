@@ -15,16 +15,27 @@ import {
   AnalysisResult,
   analysisTable,
 } from "../analysis.ts";
-import { EvaluableAstNode } from "../ast.ts";
+import { EvaluableAstNode, StatementsAstNode } from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import { statements } from "../parser.ts";
-import { FunctionSymbolType, resolveType, StaticSymbol, SymbolType, SymbolValue } from "../symbol.ts";
+import {
+  createFunctionSymbolValue,
+  FunctionSymbolType,
+  resolveType,
+  StaticSymbol,
+  SymbolType,
+  SymbolValue,
+} from "../symbol.ts";
 import { AppError } from "../util/error.ts";
 import { emptyFindings, mergeFindings } from "../util/finding.ts";
-import { None, Option, Result, Some } from "../util/monad/index.ts";
+import { None, Ok, Option, Result, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
+
+/* DATA TYPES */
+
+type Function = StatementsAstNode;
 
 /* AST NODES */
 
@@ -70,13 +81,18 @@ class ParameterAstNode {
 class FunctionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   returnType!: Option<Token<TokenType>>;
+  statements!: StatementsAstNode;
 
   constructor(params: Attributes<FunctionAstNode>) {
     Object.assign(this, params);
   }
 
-  evaluate(): Result<SymbolValue<unknown>, AppError> {
-    throw new Error("Method not implemented.");
+  evaluate(): Result<SymbolValue<Function>, AppError> {
+    const params = this.parameters.map((v) => v.resolveType());
+    const returnType = this.returnType.map((token) => resolveType(token.text));
+    return Ok(
+      createFunctionSymbolValue(this.statements, params, returnType),
+    );
   }
 
   analyze(): AnalysisResult<SymbolType> {
@@ -91,8 +107,8 @@ class FunctionAstNode implements EvaluableAstNode {
     for (const index in this.parameters) {
       analysisTable.setSymbol(
         this.parameters[index].name.text,
-        new StaticSymbol({valueKind: parameterTypes[index]}),
-      )
+        new StaticSymbol({ valueKind: parameterTypes[index] }),
+      );
     }
     const returnType = this.returnType.map((token) => resolveType(token.text));
     // TODO: introduce return statements and check with return type
@@ -157,9 +173,10 @@ export const functionDefinition = apply(
       ),
     ),
   ),
-  ([parameters, returnType, _statements]) =>
+  ([parameters, returnType, statements]) =>
     new FunctionAstNode({
       parameters: parameters,
       returnType: returnType,
+      statements: statements,
     }),
 );
