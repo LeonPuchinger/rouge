@@ -103,7 +103,7 @@ function peelToTokenNode(
   if ("token" in node) {
     return node;
   }
-  throw InternalError(
+  throw new InternalError(
     "Failed to peel an AST node to a TokenAstNode.",
     `No TokenAstNode could be found while peeling in the ${direction} direction.`,
   );

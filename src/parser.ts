@@ -96,10 +96,12 @@ export function parse(
   if (!parseResult.successful) {
     const parseError = parseResult.error;
     // TODO: replace with different error type that shows a snippet, e.g. InterpreterError
-    return Err(InternalError(toMultiline(
-      "Encountered Syntax Error:",
-      parseError.message,
-    )));
+    return Err(
+      new InternalError(toMultiline(
+        "Encountered Syntax Error:",
+        parseError.message,
+      )),
+    );
   }
   const numberCandidates = parseResult.candidates.length;
   if (numberCandidates < 1) {

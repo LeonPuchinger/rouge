@@ -23,49 +23,35 @@ export function assert(
   }
 }
 
-export interface LocatableError {
-  stacktrace: string[];
-}
-
-export interface PrintableError {
+export interface AppError {
   toString: () => string;
-}
-
-export type AppError = LocatableError & PrintableError;
-
-function captureStackTrace(subtractFrames = 0): string[] {
-  const stackTrace = new Error().stack?.split("\n")
-    .slice(subtractFrames + 2)
-    .map((line) => line.trim());
-  if (stackTrace) {
-    return stackTrace;
-  } else {
-    return [];
-  }
 }
 
 /**
  * A type of error that is the result of internal behavior
  * of the implementation of the language, not the user's input.
- *
- * @param message Header text to display at the top of the error message.
  */
-export function InternalError(
-  message: string,
-  extendedMessage = "",
-): AppError {
-  if (extendedMessage !== "") {
-    extendedMessage = `\n${extendedMessage}`;
+export class InternalError extends Error implements AppError {
+  message: string;
+  extendedMessage: string;
+
+  /**
+   * @param message Header text to display at the top of the error message.
+   * @param extendedMessage Additional information about the error.
+   */
+  constructor(message: string, extendedMessage: string = "") {
+    super(`${message}${extendedMessage}`);
+    this.message = message;
+    this.extendedMessage = extendedMessage;
   }
-  return {
-    stacktrace: captureStackTrace(1),
-    toString() {
-      return toMultiline(
-        `INTERNAL ERROR: ${message}${extendedMessage}`,
-        `${toMultiline(...this.stacktrace)}`,
-      );
-    },
-  };
+
+  toString(): string {
+    const separator = this.extendedMessage === "" ? "" : " ";
+    return toMultiline(
+      `INTERNAL ERROR: ${this.message}${separator}${this.extendedMessage}`,
+      `${toMultiline(...this.stack ?? "")}`,
+    );
+  }
 }
 
 /**
@@ -86,7 +72,6 @@ export function InterpreterError(
   messageHighlight?: string,
 ): AppError {
   return {
-    stacktrace: captureStackTrace(1),
     toString() {
       return toMultiline(
         message,

@@ -184,10 +184,12 @@ function evaluateBinaryExpression(
     !["==", "!=", ">", ">=", "<", "<=", "&&", "||", "^"]
       .includes(node.token.text)
   ) {
-    return Err(InternalError(
-      `The interpreter recieved instructions to perform the following unknown operation on two booleans: ${node.token.text}`,
-      "This should have either been caught during static analysis or be prevented by the parser.",
-    ));
+    return Err(
+      new InternalError(
+        `The interpreter recieved instructions to perform the following unknown operation on two booleans: ${node.token.text}`,
+        "This should have either been caught during static analysis or be prevented by the parser.",
+      ),
+    );
   }
   return node.lhs.evaluate()
     .combine(node.rhs.evaluate())

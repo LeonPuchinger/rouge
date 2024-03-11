@@ -35,9 +35,11 @@ const lexer = buildLexer([
 export function tokenize(source: string): Result<Token<TokenType>, AppError> {
   const tokenStream = lexer.parse(source);
   if (tokenStream === undefined) {
-    return Err(InternalError(
-      "The tokenizer did not emit any tokens",
-    ));
+    return Err(
+      new InternalError(
+        "The tokenizer did not emit any tokens",
+      ),
+    );
   }
   return Ok(tokenStream);
 }

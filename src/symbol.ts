@@ -12,7 +12,10 @@ export function resolveType(input: string): SymbolType {
     // @ts-ignore type check has been performed in the if statement above
     return new PrimitiveSymbolType(input);
   }
-  throw InternalError("unable to resolve type.", `Unknown input: "${input}".`);
+  throw new InternalError(
+    "unable to resolve type.",
+    `Unknown input: "${input}".`,
+  );
 }
 
 /* ~~~~~~ TEMPORARY ~~~~~~ */

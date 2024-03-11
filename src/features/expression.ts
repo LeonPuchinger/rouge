@@ -4,7 +4,7 @@ import { EvaluableAstNode, TokenAstNode } from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { runtimeTable } from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
-import { SymbolValue, SymbolType } from "../symbol.ts";
+import { SymbolType, SymbolValue } from "../symbol.ts";
 import { AppError, InternalError } from "../util/error.ts";
 import { None, Result } from "../util/monad/index.ts";
 
@@ -19,7 +19,7 @@ export function evaluateSymbolExpression(
 ): Result<SymbolValue<unknown>, AppError> {
   const ident = node.token.text;
   return runtimeTable.findSymbol(ident).ok_or(
-    InternalError(
+    new InternalError(
       `Unable to resolve symbol ${ident}.`,
       "This should have been caught during static analysis.",
     ),
