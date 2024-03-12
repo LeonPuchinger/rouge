@@ -31,18 +31,11 @@ export interface InterpretableAstNode {
   check(): AnalysisFindings;
 }
 
-export interface CheckableAstNode {
-  check(): AnalysisFindings;
-}
-
 export interface EvaluableAstNode<R = SymbolValue<unknown>, A = SymbolType> {
   evaluate(): Result<R, AppError>;
   analyze(): AnalysisResult<A>;
 }
 
-export interface AnalyzableAstNode<A> {
-  analyze(): AnalysisResult<A>;
-}
 
 export type AstNode =
   | BinaryAstNode<AstNode, AstNode>
