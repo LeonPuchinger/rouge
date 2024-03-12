@@ -10,11 +10,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import {
-  AnalysisFindings,
-  AnalysisResult,
-  analysisTable,
-} from "../analysis.ts";
+import { AnalysisFindings, analysisTable } from "../analysis.ts";
 import { EvaluableAstNode, StatementsAstNode } from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
@@ -27,9 +23,8 @@ import {
   SymbolType,
   SymbolValue,
 } from "../symbol.ts";
-import { AppError } from "../util/error.ts";
 import { emptyFindings, mergeFindings } from "../util/finding.ts";
-import { None, Ok, Option, Result, Some } from "../util/monad/index.ts";
+import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 
@@ -87,15 +82,13 @@ class FunctionAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): Result<SymbolValue<Function>, AppError> {
+  evaluate(): SymbolValue<Function> {
     const params = this.parameters.map((v) => v.resolveType());
     const returnType = this.returnType.map((token) => resolveType(token.text));
-    return Ok(
-      createFunctionSymbolValue(this.statements, params, returnType),
-    );
+    return createFunctionSymbolValue(this.statements, params, returnType);
   }
 
-  analyze(): AnalysisResult<SymbolType> {
+  analyze(): AnalysisFindings {
     analysisTable.pushScope();
     const findings = emptyFindings();
     this.parameters.map((parameter) =>
@@ -110,18 +103,20 @@ class FunctionAstNode implements EvaluableAstNode {
         new StaticSymbol({ valueKind: parameterTypes[index] }),
       );
     }
-    const returnType = this.returnType.map((token) => resolveType(token.text));
     // TODO: introduce return statements and check with return type
     analysisTable.popScope();
-    return {
-      ...findings,
-      value: Some(
-        new FunctionSymbolType({
-          parameters: parameterTypes,
-          returnType: returnType,
-        }),
-      ),
-    };
+    return findings;
+  }
+
+  resolveType(): SymbolType {
+    const parameterTypes = this.parameters.map((parameter) =>
+      parameter.resolveType()
+    );
+    const returnType = this.returnType.map((token) => resolveType(token.text));
+    return new FunctionSymbolType({
+      parameters: parameterTypes,
+      returnType: returnType,
+    });
   }
 }
 
