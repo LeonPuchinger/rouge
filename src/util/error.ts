@@ -65,7 +65,7 @@ export class InternalError extends Error implements AppError {
  * @param endHighlight The AST node where the snippet should end. The end of the line if None.
  * @param messageHighlight A message to attach to the highlighted section of code.
  */
-export function InterpreterError(
+export function InterpreterError( // TODO: revamp with dataclass
   message: string,
   beginHighlight: TokenAstNode<unknown>,
   endHighlight: Option<TokenAstNode<unknown>>,
