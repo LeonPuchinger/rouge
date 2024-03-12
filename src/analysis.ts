@@ -13,7 +13,10 @@ export type AnalysisResult<T> = {
   errors: AnalysisFinding[];
 };
 
-export type AnalysisFindings = Omit<AnalysisResult<unknown>, "value">;
+export type AnalysisFindings = {
+  warnings: AnalysisFinding[];
+  errors: AnalysisFinding[];
+}
 
 export function checkAssign(
   node: ast.AssignAstNode,
