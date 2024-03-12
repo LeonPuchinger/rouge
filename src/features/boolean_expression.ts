@@ -23,7 +23,7 @@ import {
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
 import { emptyFindings } from "../util/finding.ts";
-import { None, Some } from "../util/monad/index.ts";
+import { None, Some, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
 import { symbolExpression } from "./expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
@@ -188,44 +188,36 @@ function evaluateBinaryExpression(
       "This should have either been caught during static analysis or be prevented by the parser.",
     );
   }
-  const left = node.lhs.evaluate();
-  const right = node.rhs.evaluate();
-  let result = false;
-  // values can safely be type-casted because their type has been checked during analysis
-  switch (node.token.text) {
-    case "==":
-      result = left.value == right.value;
-      break;
-    case "!=":
-      result = left.value != right.value;
-      break;
-    case ">":
-      result = (left.value as number) > (right.value as number);
-      break;
-    case ">=":
-      result = (left.value as number) >= (right.value as number);
-      break;
-    case "<":
-      result = (left.value as number) < (right.value as number);
-      break;
-    case "<=":
-      result = (left.value as number) <= (right.value as number);
-      break;
-    case "&&":
-      result = (left.value as boolean) && (right.value as boolean);
-      break;
-    case "||":
-      result = (left.value as boolean) || (right.value as boolean);
-      break;
-    case "^":
-      result = ((left.value as boolean) || (right.value as boolean)) &&
-        !((left.value as boolean) && (right.value as boolean));
-      break;
-    default:
-      // this never happens, TS simply does not get that the symbol of operations has been checked previously.
-      result = false;
-  }
-  return createBooleanSymbolValue(result);
+  return new Wrapper([node.lhs.evaluate(), node.rhs.evaluate()])
+    .map(([left, right]) => {
+      // values can safely be type-casted because their type has been checked during analysis
+      switch (node.token.text) {
+        case "==":
+          return left.value == right.value;
+        case "!=":
+          return left.value != right.value;
+        case ">":
+          return (left.value as number) > (right.value as number);
+        case ">=":
+          return (left.value as number) >= (right.value as number);
+        case "<":
+          return (left.value as number) < (right.value as number);
+        case "<=":
+          return (left.value as number) <= (right.value as number);
+        case "&&":
+          return (left.value as boolean) && (right.value as boolean);
+        case "||":
+          return (left.value as boolean) || (right.value as boolean);
+        case "^":
+          return ((left.value as boolean) || (right.value as boolean)) &&
+            !((left.value as boolean) && (right.value as boolean));
+        default:
+          // this never happens, TS simply does not get that the symbol of operations has been checked previously.
+          return false;
+      }
+    })
+    .map((result) => createBooleanSymbolValue(result))
+    .unwrap();
 }
 
 /* Boolean Expression */
