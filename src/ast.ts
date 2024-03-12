@@ -37,7 +37,6 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>, A = SymbolType> {
   resolveType(): A;
 }
 
-
 export type AstNode =
   | BinaryAstNode<AstNode, AstNode>
   | NaryAstNode<AstNode>
