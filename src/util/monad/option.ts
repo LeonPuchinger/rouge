@@ -4,7 +4,7 @@ import { Err, Ok, Result } from "./index.ts";
 export interface Option<T> {
   kind: "some" | "none";
   map<U>(fn: (value: T) => U): Option<U>;
-  ok_or<E>(err: E): Result<T, E>;
+  orOr<E>(err: E): Result<T, E>;
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
   then(fn: (value: T) => void): Option<T>;
@@ -25,7 +25,7 @@ export function Some<T>(value: T | undefined): Option<T> {
       return Some(fn(value));
     },
 
-    ok_or<E>(_err: E): Result<T, E> {
+    orOr<E>(_err: E): Result<T, E> {
       return Ok(value);
     },
 
@@ -67,7 +67,7 @@ export function None<T>(): Option<T> {
       return None();
     },
 
-    ok_or<E>(err: E): Result<T, E> {
+    orOr<E>(err: E): Result<T, E> {
       return Err(err);
     },
 
