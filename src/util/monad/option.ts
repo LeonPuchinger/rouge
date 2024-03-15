@@ -11,6 +11,7 @@ export interface Option<T> {
   onNone(fn: () => void): Option<T>;
   zip<U>(other: Option<U>): Option<[T, U]>;
   iter(): T[];
+  dependsOn(dependency: Option<unknown>): Option<T>;
 }
 
 export function Some<T>(value: T | undefined): Option<T> {
@@ -56,6 +57,13 @@ export function Some<T>(value: T | undefined): Option<T> {
     iter(): T[] {
       return [value];
     },
+
+    dependsOn(dependency: Option<unknown>): Option<T> {
+      if (dependency.kind === "some") {
+        return this;
+      }
+      return None();
+    },
   };
 }
 
@@ -94,6 +102,10 @@ export function None<T>(): Option<T> {
 
     iter(): T[] {
       return [];
+    },
+
+    dependsOn(_dependency: Option<unknown>): Option<T> {
+      return None();
     },
   };
 }
