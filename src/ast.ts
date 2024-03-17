@@ -1,9 +1,9 @@
 import { Token } from "typescript-parsec";
-import { AnalysisFindings, AnalysisResult } from "./analysis.ts";
+import { AnalysisFindings } from "./analysis.ts";
 import { TokenType } from "./lexer.ts";
 import { SymbolType, SymbolValue } from "./symbol.ts";
 import { AppError } from "./util/error.ts";
-import { Option, Result } from "./util/monad/index.ts";
+import { Option } from "./util/monad/index.ts";
 
 export interface BinaryAstNode<L extends AstNode, R extends AstNode> {
   lhs: L;
