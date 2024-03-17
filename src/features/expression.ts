@@ -1,12 +1,13 @@
 import { apply, tok } from "typescript-parsec";
-import { AnalysisResult, analysisTable } from "../analysis.ts";
+import { AnalysisFindings, analysisTable } from "../analysis.ts";
 import { EvaluableAstNode, TokenAstNode } from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import { runtimeTable } from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
-import { SymbolType, SymbolValue } from "../symbol.ts";
-import { AppError, InternalError } from "../util/error.ts";
-import { None, Result } from "../util/monad/index.ts";
+import { SymbolValue } from "../symbol.ts";
+import { InternalError } from "../util/error.ts";
+import { emptyFindings } from "../util/finding.ts";
+import { None } from "../util/monad/index.ts";
 
 /* Identifier expression */
 
@@ -16,27 +17,25 @@ export type SymbolExpressionAstNode =
 
 export function evaluateSymbolExpression(
   node: SymbolExpressionAstNode,
-): Result<SymbolValue<unknown>, AppError> {
+): SymbolValue<unknown> {
   const ident = node.token.text;
-  return runtimeTable.findSymbol(ident).ok_or(
-    new InternalError(
-      `Unable to resolve symbol ${ident}.`,
-      "This should have been caught during static analysis.",
-    ),
-  ).map((symbol) => symbol.value);
+  return runtimeTable
+    .findSymbol(ident)
+    .map((symbol) => symbol.value)
+    .unwrapOrThrow(
+      new InternalError(
+        `Unable to resolve symbol ${ident} in the symbol table.`,
+        "This should have been caught during static analysis.",
+      ),
+    );
 }
 
 export function analyzeSymbolExpression(
   node: SymbolExpressionAstNode,
-): AnalysisResult<SymbolType> {
+): AnalysisFindings {
   const ident = node.token.text;
-  const findings: AnalysisResult<SymbolType> = {
-    value: analysisTable.findSymbol(ident)
-      .map((symbol) => symbol.valueKind),
-    warnings: [],
-    errors: [],
-  };
-  findings.value.onNone(() => {
+  const findings = emptyFindings();
+  analysisTable.findSymbol(ident).onNone(() => {
     findings.errors.push(
       AnalysisError({
         message:
@@ -59,6 +58,17 @@ export const symbolExpression = apply(
     },
     analyze() {
       return analyzeSymbolExpression(this);
+    },
+    resolveType() {
+      return analysisTable
+        .findSymbol(this.token.text)
+        .map((symbol) => symbol.valueKind)
+        .unwrapOrThrow(
+          new InternalError(
+            "Unable to resolve a symbol in the symbol table.",
+            "This should have been caught by static analysis.",
+          ),
+        );
     },
   }),
 );
