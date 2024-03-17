@@ -3,7 +3,7 @@ export function toMultiline(...lines: string[]): string {
 }
 
 export function concatLines(...lines: string[]): string {
-  return lines.join(" ");
+  return lines.join(" ").trim();
 }
 
 export function indentLines(lines: string[], width: number): string[] {

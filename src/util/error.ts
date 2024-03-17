@@ -2,7 +2,7 @@ import { TokenAstNode } from "../ast.ts";
 import { accessEnvironment } from "./environment.ts";
 import { Option, Some } from "./monad/index.ts";
 import { createSnippet } from "./snippet.ts";
-import { toMultiline } from "./string.ts";
+import { concatLines, toMultiline } from "./string.ts";
 
 export function Panic(reason: string): Error {
   return new Error(`PANIC: ${reason}.`);
@@ -30,25 +30,31 @@ export interface AppError {
 /**
  * A type of error that is the result of internal behavior
  * of the implementation of the language, not the user's input.
+ *
+ * A type of error that is the result of internal behavior of the interpreter.
+ * This error is never the result of the users input.
+ *
+ * Example:
+ * Evaluable AST nodes require that static analysis is performed ahead of resolving the type of the node.
+ * This error is thrown when the interpreter detects that those two methods have been called in the wrong order.
  */
 export class InternalError extends Error implements AppError {
-  message: string;
-  extendedMessage: string;
-
   /**
-   * @param message Header text to display at the top of the error message.
+   * @param message A concise summary of the error.
    * @param extendedMessage Additional information about the error.
    */
-  constructor(message: string, extendedMessage: string = "") {
-    super(`${message}${extendedMessage}`);
+  constructor(public message: string, public extendedMessage: string = "") {
+    super(concatLines(message, extendedMessage));
     this.message = message;
     this.extendedMessage = extendedMessage;
   }
 
   toString(): string {
-    const separator = this.extendedMessage === "" ? "" : " ";
     return toMultiline(
-      `INTERNAL ERROR: ${this.message}${separator}${this.extendedMessage}`,
+      "INTERNAL ERROR: The language/interpreter reached an internal state which does not allow it to continue running.",
+      "This error is not the result of the users input but an issue with the language itself and needs to be fixed.",
+      "Please submit an issue at 'github.com/LeonPuchinger/rouge/issues' with this entire error message attached.",
+      `Further information: ${concatLines(this.message, this.extendedMessage)}`,
       `${toMultiline(...this.stack ?? "")}`,
     );
   }
