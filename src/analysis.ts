@@ -2,17 +2,10 @@ import * as ast from "./ast.ts";
 import { AnalysisError, AnalysisFinding } from "./finding.ts";
 import { AnalysisSymbolTable, StaticSymbol, SymbolTable } from "./symbol.ts";
 import { emptyFindings, mergeFindings } from "./util/finding.ts";
-import { None, Option } from "./util/monad/index.ts";
+import { None } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
 export const analysisTable: AnalysisSymbolTable = new SymbolTable();
-
-// TODO: remove
-export type AnalysisResult<T> = {
-  value: Option<T>;
-  warnings: AnalysisFinding[];
-  errors: AnalysisFinding[];
-};
 
 export interface AnalysisFindings {
   warnings: AnalysisFinding[];
