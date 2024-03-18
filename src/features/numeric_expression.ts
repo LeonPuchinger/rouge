@@ -19,6 +19,7 @@ import {
   SymbolValue,
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
+import { emptyFindings } from "../util/finding.ts";
 import { Wrapper } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import { operation_chain_sc } from "../util/parser.ts";
@@ -51,10 +52,7 @@ function createNumericLiteralAstNode(params: {
 }
 
 function analyzeNumericLiteral(): AnalysisFindings {
-  return {
-    warnings: [],
-    errors: [],
-  };
+  return emptyFindings();
 }
 
 function evaluateNumericLiteral(
@@ -89,10 +87,7 @@ function createUnaryNumericExpressionAstNode(params: {
 }
 
 function analyzeUnaryExpression() {
-  return {
-    warnings: [],
-    errors: [],
-  };
+  return emptyFindings();
 }
 
 function evaluateUnaryExpression(
@@ -141,10 +136,7 @@ function createBinaryNumericExpressionAstNode(params: {
 }
 
 function analyzeBinaryExpression() {
-  return {
-    warnings: [],
-    errors: [],
-  };
+  return emptyFindings();
 }
 
 function evaluateBinaryExpression(

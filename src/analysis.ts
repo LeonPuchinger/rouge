@@ -1,21 +1,23 @@
 import * as ast from "./ast.ts";
 import { AnalysisError, AnalysisFinding } from "./finding.ts";
 import { AnalysisSymbolTable, StaticSymbol, SymbolTable } from "./symbol.ts";
-import { emptyFindings } from "./util/finding.ts";
+import { emptyFindings, mergeFindings } from "./util/finding.ts";
 import { None, Option } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
 export const analysisTable: AnalysisSymbolTable = new SymbolTable();
 
+// TODO: remove
 export type AnalysisResult<T> = {
   value: Option<T>;
   warnings: AnalysisFinding[];
   errors: AnalysisFinding[];
 };
 
-export type AnalysisFindings = {
+export interface AnalysisFindings {
   warnings: AnalysisFinding[];
   errors: AnalysisFinding[];
+  isErroneous: () => boolean;
 }
 
 export function checkAssign(
@@ -23,14 +25,14 @@ export function checkAssign(
 ): AnalysisFindings {
   const findings = emptyFindings();
   const ident = node.token.text;
-  const expressionResult = node.child.analyze();
-  if (expressionResult.value.kind === "none") {
-    return expressionResult;
+  mergeFindings(findings, node.child.analyze());
+  if (findings.isErroneous()) {
+    return findings;
   }
-  const expressionKind = expressionResult.value.unwrap();
+  const expressionType = node.child.resolveType();
   analysisTable.findSymbol(ident)
     .then((existing) => {
-      if (existing.valueKind === expressionKind) {
+      if (existing.valueKind === expressionType) {
         return;
       }
       findings.errors.push(
@@ -50,7 +52,7 @@ export function checkAssign(
       analysisTable.setSymbol(
         ident,
         new StaticSymbol({
-          valueKind: expressionKind,
+          valueKind: expressionType,
         }),
       );
     });
@@ -71,6 +73,7 @@ export function checkStatements(
     .reduce((previous, current) => ({
       warnings: [...previous.warnings, ...current.warnings],
       errors: [...previous.errors, ...current.errors],
+      isErroneous: previous.isErroneous,
     }));
 }
 

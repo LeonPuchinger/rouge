@@ -23,7 +23,7 @@ import {
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
 import { emptyFindings } from "../util/finding.ts";
-import { None, Some, Wrapper } from "../util/monad/index.ts";
+import { None, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
 import { symbolExpression } from "./expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
@@ -55,10 +55,7 @@ function createBooleanLiteralAstNode(params: {
 }
 
 function analyzeBooleanLiteralAstNode(): AnalysisFindings {
-  return {
-    warnings: [],
-    errors: [],
-  };
+  return emptyFindings();
 }
 
 function evaluateBooleanLiteralAstNode(
@@ -91,11 +88,7 @@ function createBooleanNegationAstNode(params: {
 }
 
 function analyzeBooleanNegationAstNode() {
-  return {
-    warnings: [],
-    errors: [],
-    value: Some(new PrimitiveSymbolType("boolean")),
-  };
+  return emptyFindings();
 }
 
 function evaluateBooleanNegationAstNode(

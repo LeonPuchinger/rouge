@@ -6,9 +6,9 @@ logger.updateLoggerConfig({ loglevel: logger.Loglevel.debug });
 
 // test with example string
 try {
-  const findings = run("a = 1");
+  const findings = run("a = 1; b");
   findings.errors.forEach(logger.error);
   findings.warnings.forEach(logger.warning);
-} catch(error) {
+} catch (error) {
   logger.error(error);
 }
