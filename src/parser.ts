@@ -15,9 +15,8 @@ import { symbolExpression } from "./features/expression.ts";
 import { numericExpression } from "./features/numeric_expression.ts";
 import * as interpreter from "./interpreter.ts";
 import { TokenType } from "./lexer.ts";
-import { AppError, InternalError, Panic } from "./util/error.ts";
+import { InternalError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
-import { Err, Ok, Result } from "./util/monad/index.ts";
 import { toMultiline } from "./util/string.ts";
 
 const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
@@ -89,23 +88,19 @@ export const START = statements;
  * @param tokenStream A linked list of tokens to parse
  * @returns An abstract syntax tree that has not been semantically analyzed yet
  */
-export function parse(
-  tokenStream: Token<TokenType>,
-): Result<ast.AST, AppError> {
+export function parse(tokenStream: Token<TokenType>): ast.AST {
   const parseResult = expectEOF(START.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
     // TODO: replace with different error type that shows a snippet, e.g. InterpreterError
-    return Err(
-      new InternalError(toMultiline(
-        "Encountered Syntax Error:",
-        parseError.message,
-      )),
-    );
+    throw new InternalError(toMultiline(
+      "Encountered Syntax Error:",
+      parseError.message,
+    ));
   }
   const numberCandidates = parseResult.candidates.length;
   if (numberCandidates < 1) {
-    throw Panic(
+    throw new InternalError(
       "Parsing was successful but the parser did not yield any results",
     );
   }
@@ -118,5 +113,5 @@ export function parse(
     ));
   }
   const ast = parseResult.candidates[0].result;
-  return Ok(ast);
+  return ast;
 }

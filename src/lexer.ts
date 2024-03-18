@@ -1,6 +1,5 @@
 import { buildLexer, Token } from "typescript-parsec";
-import { AppError, InternalError } from "./util/error.ts";
-import { Err, Ok, Result } from "./util/monad/index.ts";
+import { InternalError } from "./util/error.ts";
 
 export enum TokenType {
   breaking_whitespace,
@@ -32,14 +31,10 @@ const lexer = buildLexer([
  * @param source The input souce code
  * @returns A linked list of Tokens
  */
-export function tokenize(source: string): Result<Token<TokenType>, AppError> {
+export function tokenize(source: string): Token<TokenType> {
   const tokenStream = lexer.parse(source);
   if (tokenStream === undefined) {
-    return Err(
-      new InternalError(
-        "The tokenizer did not emit any tokens",
-      ),
-    );
+    throw new InternalError("The tokenizer did not emit any tokens");
   }
-  return Ok(tokenStream);
+  return tokenStream;
 }

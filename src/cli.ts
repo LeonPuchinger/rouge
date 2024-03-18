@@ -5,5 +5,10 @@ import * as logger from "./util/logger.ts";
 logger.updateLoggerConfig({ loglevel: logger.Loglevel.debug });
 
 // test with example string
-const interpretationErrors = run("a = 1");
-interpretationErrors.forEach(logger.error);
+try {
+  const findings = run("a = 1");
+  findings.errors.forEach(logger.error);
+  findings.warnings.forEach(logger.warning);
+} catch(error) {
+  logger.error(error);
+}
