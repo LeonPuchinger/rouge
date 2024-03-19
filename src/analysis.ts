@@ -56,11 +56,7 @@ export function checkStatements(
 ): AnalysisFindings {
   return node.children
     .map((statement) => statement.check())
-    .reduce((previous, current) => ({
-      warnings: [...previous.warnings, ...current.warnings],
-      errors: [...previous.errors, ...current.errors],
-      isErroneous: previous.isErroneous,
-    }));
+    .reduce((previous, current) => AnalysisFindings.merge(previous, current));
 }
 
 export const analyze = (node: ast.AST) => node.check();
