@@ -171,7 +171,7 @@ function evaluateBinaryExpression(
   node: BinaryBooleanExpressionAstNode,
 ): SymbolValue<boolean> {
   if (
-    !["==", "!=", ">", ">=", "<", "<=", "&&", "||", "^"]
+    !["==", "!=", ">=", ">", "<=", "<", "&&", "||", "^"]
       .includes(node.token.text)
   ) {
     throw new InternalError(
@@ -187,14 +187,14 @@ function evaluateBinaryExpression(
           return left.value == right.value;
         case "!=":
           return left.value != right.value;
-        case ">":
-          return (left.value as number) > (right.value as number);
         case ">=":
           return (left.value as number) >= (right.value as number);
-        case "<":
-          return (left.value as number) < (right.value as number);
+        case ">":
+          return (left.value as number) > (right.value as number);
         case "<=":
           return (left.value as number) <= (right.value as number);
+        case "<":
+          return (left.value as number) < (right.value as number);
         case "&&":
           return (left.value as boolean) && (right.value as boolean);
         case "||":
@@ -281,10 +281,10 @@ const binaryBooleanExpression = apply(
         alt_sc(
           str("=="),
           str("!="),
-          str(">"),
           str(">="),
-          str("<"),
+          str(">"),
           str("<="),
+          str("<"),
           str("&&"),
           str("||"),
           str("^"),
