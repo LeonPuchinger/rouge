@@ -95,3 +95,9 @@ export const AnalysisError = (params: AnalysisFindingParams) =>
  */
 export const AnalysisWarning = (params: AnalysisFindingParams) =>
   createAnalysisFinding(params, "warning");
+
+export interface AnalysisFindings {
+  warnings: AnalysisFinding[];
+  errors: AnalysisFinding[];
+  isErroneous: () => boolean;
+}

@@ -1,4 +1,4 @@
-import { AnalysisFindings } from "../analysis.ts";
+import { AnalysisFindings } from "../finding.ts";
 
 export function emptyFindings(): AnalysisFindings {
   return {

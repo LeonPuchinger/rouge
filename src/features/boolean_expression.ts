@@ -11,7 +11,7 @@ import {
   Token,
 } from "typescript-parsec";
 import * as analysis from "../analysis.ts";
-import { AnalysisFindings } from "../analysis.ts";
+import { AnalysisFindings } from "../finding.ts";
 import * as ast from "../ast.ts";
 import { AnalysisError } from "../finding.ts";
 import * as interpreter from "../interpreter.ts";

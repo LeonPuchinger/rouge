@@ -10,9 +10,9 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { AnalysisFindings, analysisTable } from "../analysis.ts";
+import { analysisTable } from "../analysis.ts";
 import { EvaluableAstNode, StatementsAstNode } from "../ast.ts";
-import { AnalysisError } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import { statements } from "../parser.ts";
 import {

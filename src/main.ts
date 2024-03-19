@@ -1,4 +1,5 @@
-import { AnalysisFindings, analyze } from "./analysis.ts";
+import { analyze } from "./analysis.ts";
+import { AnalysisFindings } from "./finding.ts";
 import { interpret } from "./interpreter.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";

@@ -1,17 +1,11 @@
 import * as ast from "./ast.ts";
-import { AnalysisError, AnalysisFinding } from "./finding.ts";
+import { AnalysisError, AnalysisFindings } from "./finding.ts";
 import { AnalysisSymbolTable, StaticSymbol, SymbolTable } from "./symbol.ts";
 import { emptyFindings, mergeFindings } from "./util/finding.ts";
 import { None } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
 export const analysisTable: AnalysisSymbolTable = new SymbolTable();
-
-export interface AnalysisFindings {
-  warnings: AnalysisFinding[];
-  errors: AnalysisFinding[];
-  isErroneous: () => boolean;
-}
 
 export function checkAssign(
   node: ast.AssignAstNode,

@@ -1,5 +1,5 @@
 import { Token } from "typescript-parsec";
-import { AnalysisFindings } from "./analysis.ts";
+import { AnalysisFindings } from "./finding.ts";
 import { TokenType } from "./lexer.ts";
 import { SymbolType, SymbolValue } from "./symbol.ts";
 

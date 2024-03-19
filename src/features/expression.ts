@@ -1,7 +1,7 @@
 import { apply, tok } from "typescript-parsec";
-import { AnalysisFindings, analysisTable } from "../analysis.ts";
+import { analysisTable } from "../analysis.ts";
 import { EvaluableAstNode, TokenAstNode } from "../ast.ts";
-import { AnalysisError } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { runtimeTable } from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
 import { SymbolValue } from "../symbol.ts";

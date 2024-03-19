@@ -9,9 +9,8 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { AnalysisFindings } from "../analysis.ts";
 import * as ast from "../ast.ts";
-import { AnalysisError } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import {
   createNumericSymbolValue,
