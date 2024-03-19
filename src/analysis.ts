@@ -1,7 +1,6 @@
 import * as ast from "./ast.ts";
 import { AnalysisError, AnalysisFindings } from "./finding.ts";
 import { AnalysisSymbolTable, StaticSymbol, SymbolTable } from "./symbol.ts";
-import { emptyFindings, mergeFindings } from "./util/finding.ts";
 import { None } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
@@ -10,9 +9,9 @@ export const analysisTable: AnalysisSymbolTable = new SymbolTable();
 export function checkAssign(
   node: ast.AssignAstNode,
 ): AnalysisFindings {
-  const findings = emptyFindings();
+  const findings = AnalysisFindings.empty();
   const ident = node.token.text;
-  mergeFindings(findings, node.child.analyze());
+  AnalysisFindings.merge(findings, node.child.analyze());
   if (findings.isErroneous()) {
     return findings;
   }

@@ -3,6 +3,7 @@ import { accessEnvironment } from "./util/environment.ts";
 import { Option, Some } from "./util/monad/index.ts";
 import { createSnippet } from "./util/snippet.ts";
 import { toMultiline } from "./util/string.ts";
+import { Attributes } from "./util/type.ts";
 
 type AnalysisFindingKind = "error" | "warning";
 
@@ -96,8 +97,35 @@ export const AnalysisError = (params: AnalysisFindingParams) =>
 export const AnalysisWarning = (params: AnalysisFindingParams) =>
   createAnalysisFinding(params, "warning");
 
-export interface AnalysisFindings {
-  warnings: AnalysisFinding[];
-  errors: AnalysisFinding[];
-  isErroneous: () => boolean;
+/**
+ * A type that bundles warning and error findings together.
+ */
+export class AnalysisFindings {
+  warnings!: AnalysisFinding[];
+  errors!: AnalysisFinding[];
+
+  constructor(params: Attributes<AnalysisFindings>) {
+    Object.assign(this, params);
+  }
+
+  static empty(): AnalysisFindings {
+    return new AnalysisFindings({
+      warnings: [],
+      errors: [],
+    });
+  }
+
+  /**
+   * Create a new instance that contains the warnings and errors from two other instances.
+   */
+  static merge(a: AnalysisFindings, b: AnalysisFindings): AnalysisFindings {
+    return new AnalysisFindings({
+      warnings: [...a.warnings, ...b.warnings],
+      errors: [...a.errors, ...b.errors],
+    });
+  }
+
+  isErroneous() {
+    return this.errors.length >= 1;
+  }
 }

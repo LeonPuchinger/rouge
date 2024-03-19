@@ -23,7 +23,6 @@ import {
   SymbolType,
   SymbolValue,
 } from "../symbol.ts";
-import { emptyFindings, mergeFindings } from "../util/finding.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
@@ -43,7 +42,7 @@ class ParameterAstNode {
   }
 
   check(): AnalysisFindings {
-    const findings = emptyFindings();
+    const findings = AnalysisFindings.empty();
     const existingSymbol = analysisTable.findSymbol(this.name.text);
     if (existingSymbol.kind === "some") {
       findings.errors.push(AnalysisError({
@@ -90,9 +89,9 @@ class FunctionAstNode implements EvaluableAstNode {
 
   analyze(): AnalysisFindings {
     analysisTable.pushScope();
-    const findings = emptyFindings();
+    const findings = AnalysisFindings.empty();
     this.parameters.map((parameter) =>
-      mergeFindings(findings, parameter.check())
+      AnalysisFindings.merge(findings, parameter.check())
     );
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()

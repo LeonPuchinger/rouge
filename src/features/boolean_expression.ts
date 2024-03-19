@@ -11,9 +11,8 @@ import {
   Token,
 } from "typescript-parsec";
 import * as analysis from "../analysis.ts";
-import { AnalysisFindings } from "../finding.ts";
 import * as ast from "../ast.ts";
-import { AnalysisError } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import * as interpreter from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
 import {
@@ -22,7 +21,6 @@ import {
   SymbolValue,
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
-import { emptyFindings } from "../util/finding.ts";
 import { None, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
 import { symbolExpression } from "./expression.ts";
@@ -55,7 +53,7 @@ function createBooleanLiteralAstNode(params: {
 }
 
 function analyzeBooleanLiteralAstNode(): AnalysisFindings {
-  return emptyFindings();
+  return AnalysisFindings.empty();
 }
 
 function evaluateBooleanLiteralAstNode(
@@ -88,7 +86,7 @@ function createBooleanNegationAstNode(params: {
 }
 
 function analyzeBooleanNegationAstNode() {
-  return emptyFindings();
+  return AnalysisFindings.empty();
 }
 
 function evaluateBooleanNegationAstNode(
@@ -126,7 +124,7 @@ function createBinaryBooleanExpressionAstNode(params: {
 function analyzeBinaryExpression(
   node: BinaryBooleanExpressionAstNode,
 ): AnalysisFindings {
-  const findings = emptyFindings();
+  const findings = AnalysisFindings.empty();
   const operator = node.token.text;
   const leftType = node.lhs.resolveType();
   const rightType = node.rhs.resolveType();

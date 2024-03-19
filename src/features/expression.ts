@@ -6,7 +6,6 @@ import { runtimeTable } from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
 import { SymbolValue } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
-import { emptyFindings } from "../util/finding.ts";
 import { None } from "../util/monad/index.ts";
 
 /* Identifier expression */
@@ -34,7 +33,7 @@ export function analyzeSymbolExpression(
   node: SymbolExpressionAstNode,
 ): AnalysisFindings {
   const ident = node.token.text;
-  const findings = emptyFindings();
+  const findings = AnalysisFindings.empty();
   analysisTable.findSymbol(ident).onNone(() => {
     findings.errors.push(
       AnalysisError({
