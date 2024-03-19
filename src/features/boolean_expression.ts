@@ -130,7 +130,7 @@ function analyzeBinaryExpression(
   const rightType = node.rhs.resolveType();
   if (
     ["==", "!="].includes(operator) &&
-    leftType !== rightType
+    !leftType.typeCompatibleWith(rightType)
   ) {
     findings.errors.push(AnalysisError({
       message:
@@ -160,9 +160,6 @@ function analyzeBinaryExpression(
       beginHighlight: node,
       endHighlight: None(),
     }));
-  }
-  if (leftType !== rightType) {
-    findings.errors.push();
   }
   return findings;
 }
