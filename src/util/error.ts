@@ -54,8 +54,8 @@ export class InternalError extends Error implements AppError {
       "INTERNAL ERROR: The language/interpreter reached an internal state which does not allow it to continue running.",
       "This error is not the result of the users input but an issue with the language itself and needs to be fixed.",
       "Please submit an issue at 'github.com/LeonPuchinger/rouge/issues' with this entire error message attached.",
-      `Further information: ${concatLines(this.message, this.extendedMessage)}`,
-      `${toMultiline(...this.stack ?? "")}`,
+      "Detailed information:",
+      `${this.stack ?? ""}`,
     );
   }
 }
