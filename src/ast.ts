@@ -1,9 +1,7 @@
 import { Token } from "typescript-parsec";
-import { AnalysisFindings, AnalysisResult } from "./analysis.ts";
+import { AnalysisFindings } from "./finding.ts";
 import { TokenType } from "./lexer.ts";
 import { SymbolType, SymbolValue } from "./symbol.ts";
-import { AppError } from "./util/error.ts";
-import { Option, Result } from "./util/monad/index.ts";
 
 export interface BinaryAstNode<L extends AstNode, R extends AstNode> {
   lhs: L;
@@ -27,21 +25,14 @@ export interface WrapperAstNode<T extends AstNode> {
 }
 
 export interface InterpretableAstNode {
-  interpret(): Option<AppError>;
-  check(): AnalysisFindings;
-}
-
-export interface CheckableAstNode {
+  interpret(): void;
   check(): AnalysisFindings;
 }
 
 export interface EvaluableAstNode<R = SymbolValue<unknown>, A = SymbolType> {
-  evaluate(): Result<R, AppError>;
-  analyze(): AnalysisResult<A>;
-}
-
-export interface AnalyzableAstNode<A> {
-  analyze(): AnalysisResult<A>;
+  evaluate(): R;
+  analyze(): AnalysisFindings;
+  resolveType(): A;
 }
 
 export type AstNode =

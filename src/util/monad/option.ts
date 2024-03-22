@@ -4,13 +4,15 @@ import { Err, Ok, Result } from "./index.ts";
 export interface Option<T> {
   kind: "some" | "none";
   map<U>(fn: (value: T) => U): Option<U>;
-  ok_or<E>(err: E): Result<T, E>;
+  orOr<E>(err: E): Result<T, E>;
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
+  unwrapOrThrow(error: Error): T;
   then(fn: (value: T) => void): Option<T>;
   onNone(fn: () => void): Option<T>;
   zip<U>(other: Option<U>): Option<[T, U]>;
   iter(): T[];
+  dependsOn(dependency: Option<unknown>): Option<T>;
 }
 
 export function Some<T>(value: T | undefined): Option<T> {
@@ -25,7 +27,7 @@ export function Some<T>(value: T | undefined): Option<T> {
       return Some(fn(value));
     },
 
-    ok_or<E>(_err: E): Result<T, E> {
+    orOr<E>(_err: E): Result<T, E> {
       return Ok(value);
     },
 
@@ -34,6 +36,10 @@ export function Some<T>(value: T | undefined): Option<T> {
     },
 
     unwrapOr(_defaultValue: T): T {
+      return value;
+    },
+
+    unwrapOrThrow(_error: Error): T {
       return value;
     },
 
@@ -56,6 +62,13 @@ export function Some<T>(value: T | undefined): Option<T> {
     iter(): T[] {
       return [value];
     },
+
+    dependsOn(dependency: Option<unknown>): Option<T> {
+      if (dependency.kind === "some") {
+        return this;
+      }
+      return None();
+    },
   };
 }
 
@@ -67,7 +80,7 @@ export function None<T>(): Option<T> {
       return None();
     },
 
-    ok_or<E>(err: E): Result<T, E> {
+    orOr<E>(err: E): Result<T, E> {
       return Err(err);
     },
 
@@ -77,6 +90,10 @@ export function None<T>(): Option<T> {
 
     unwrapOr(defaultValue: T): T {
       return defaultValue;
+    },
+
+    unwrapOrThrow(error: Error): T {
+      throw error;
     },
 
     then(_fn): Option<T> {
@@ -94,6 +111,10 @@ export function None<T>(): Option<T> {
 
     iter(): T[] {
       return [];
+    },
+
+    dependsOn(_dependency: Option<unknown>): Option<T> {
+      return None();
     },
   };
 }

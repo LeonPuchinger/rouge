@@ -1,33 +1,24 @@
 import * as ast from "./ast.ts";
-import { AnalysisError, AnalysisFinding } from "./finding.ts";
+import { AnalysisError, AnalysisFindings } from "./finding.ts";
 import { AnalysisSymbolTable, StaticSymbol, SymbolTable } from "./symbol.ts";
-import { emptyFindings } from "./util/finding.ts";
-import { None, Option } from "./util/monad/index.ts";
+import { None } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
 
 export const analysisTable: AnalysisSymbolTable = new SymbolTable();
 
-export type AnalysisResult<T> = {
-  value: Option<T>;
-  warnings: AnalysisFinding[];
-  errors: AnalysisFinding[];
-};
-
-export type AnalysisFindings = Omit<AnalysisResult<unknown>, "value">;
-
 export function checkAssign(
   node: ast.AssignAstNode,
 ): AnalysisFindings {
-  const findings = emptyFindings();
+  const findings = AnalysisFindings.empty();
   const ident = node.token.text;
-  const expressionResult = node.child.analyze();
-  if (expressionResult.value.kind === "none") {
-    return expressionResult;
+  AnalysisFindings.merge(findings, node.child.analyze());
+  if (findings.isErroneous()) {
+    return findings;
   }
-  const expressionKind = expressionResult.value.unwrap();
+  const expressionType = node.child.resolveType();
   analysisTable.findSymbol(ident)
     .then((existing) => {
-      if (existing.valueKind === expressionKind) {
+      if (existing.valueKind === expressionType) {
         return;
       }
       findings.errors.push(
@@ -47,7 +38,7 @@ export function checkAssign(
       analysisTable.setSymbol(
         ident,
         new StaticSymbol({
-          valueKind: expressionKind,
+          valueKind: expressionType,
         }),
       );
     });
@@ -65,10 +56,7 @@ export function checkStatements(
 ): AnalysisFindings {
   return node.children
     .map((statement) => statement.check())
-    .reduce((previous, current) => ({
-      warnings: [...previous.warnings, ...current.warnings],
-      errors: [...previous.errors, ...current.errors],
-    }));
+    .reduce((previous, current) => AnalysisFindings.merge(previous, current));
 }
 
 export const analyze = (node: ast.AST) => node.check();

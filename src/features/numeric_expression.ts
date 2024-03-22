@@ -9,18 +9,16 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { AnalysisResult } from "../analysis.ts";
 import * as ast from "../ast.ts";
-import { AnalysisError } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import {
   createNumericSymbolValue,
   PrimitiveSymbolType,
-  SymbolType,
   SymbolValue,
 } from "../symbol.ts";
-import { AppError, InternalError } from "../util/error.ts";
-import { Err, Ok, Result, Some } from "../util/monad/index.ts";
+import { InternalError } from "../util/error.ts";
+import { Wrapper } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import { operation_chain_sc } from "../util/parser.ts";
 import { symbolExpression } from "./expression.ts";
@@ -39,27 +37,26 @@ function createNumericLiteralAstNode(params: {
 }): NumericLiteralAstNode {
   return {
     ...params,
+    evaluate() {
+      return evaluateNumericLiteral(this);
+    },
     analyze() {
       return analyzeNumericLiteral();
     },
-    evaluate() {
-      return evaluateNumericLiteral(this);
+    resolveType() {
+      return new PrimitiveSymbolType("number");
     },
   };
 }
 
-function analyzeNumericLiteral(): AnalysisResult<SymbolType> {
-  return {
-    value: Some(new PrimitiveSymbolType("number")),
-    warnings: [],
-    errors: [],
-  };
+function analyzeNumericLiteral(): AnalysisFindings {
+  return AnalysisFindings.empty();
 }
 
 function evaluateNumericLiteral(
   node: NumericLiteralAstNode,
-): Result<SymbolValue<number>, AppError> {
-  return Ok(createNumericSymbolValue(node.value));
+): SymbolValue<number> {
+  return createNumericSymbolValue(node.value);
 }
 
 /* Unary Expression */
@@ -75,40 +72,39 @@ function createUnaryNumericExpressionAstNode(params: {
 }): UnaryNumericExpressionAstNode {
   return {
     ...params,
+    evaluate() {
+      return evaluateUnaryExpression(this);
+    },
     analyze() {
       return analyzeUnaryExpression();
     },
-    evaluate() {
-      return evaluateUnaryExpression(this);
+    resolveType() {
+      return new PrimitiveSymbolType("number");
     },
   };
 }
 
 function analyzeUnaryExpression() {
-  return {
-    value: Some(new PrimitiveSymbolType("number")),
-    warnings: [],
-    errors: [],
-  };
+  return AnalysisFindings.empty();
 }
 
 function evaluateUnaryExpression(
   node: UnaryNumericExpressionAstNode,
-): Result<SymbolValue<number>, AppError> {
+): SymbolValue<number> {
   if (!["+", "-"].includes(node.token.text)) {
-    return Err(InternalError(
+    throw new InternalError(
       `The interpreter recieved instructions to perform the following unknown operation on a number: ${node.token.text}`,
       "This should have either been caught during static analysis or be prevented by the parser.",
-    ));
+    );
   }
+  node.child;
   return node.child.evaluate()
     .map((result) => {
       if (node.token.text === "-") {
-        return -result.value;
+        return -result;
       }
-      return result.value;
-    })
-    .map((result) => createNumericSymbolValue(result));
+      return result;
+    });
 }
 
 /* Binary expression */
@@ -125,34 +121,32 @@ function createBinaryNumericExpressionAstNode(params: {
 }): BinaryNumericExpressionAstNode {
   return {
     ...params,
+    evaluate() {
+      return evaluateBinaryExpression(this);
+    },
     analyze() {
       return analyzeBinaryExpression();
     },
-    evaluate() {
-      return evaluateBinaryExpression(this);
+    resolveType() {
+      return new PrimitiveSymbolType("number");
     },
   };
 }
 
 function analyzeBinaryExpression() {
-  return {
-    value: Some(new PrimitiveSymbolType("number")),
-    warnings: [],
-    errors: [],
-  };
+  return AnalysisFindings.empty();
 }
 
 function evaluateBinaryExpression(
   node: BinaryNumericExpressionAstNode,
-): Result<SymbolValue<number>, AppError> {
+): SymbolValue<number> {
   if (!["+", "-", "*", "/", "%"].includes(node.token.text)) {
-    return Err(InternalError(
+    throw new InternalError(
       `The interpreter recieved instructions to perform the following unknown operation on two numbers: ${node.token.text}`,
       "This should have either been caught during static analysis or be prevented by the parser.",
-    ));
+    );
   }
-  return node.lhs.evaluate()
-    .combine(node.rhs.evaluate())
+  return new Wrapper([node.lhs.evaluate(), node.rhs.evaluate()])
     .map(([left, right]) => {
       switch (node.token.text) {
         case "+":
@@ -170,7 +164,8 @@ function evaluateBinaryExpression(
           return 0;
       }
     })
-    .map((result) => createNumericSymbolValue(result));
+    .map((result) => createNumericSymbolValue(result))
+    .unwrap();
 }
 
 /* Ambiguously typed expression */
@@ -186,43 +181,39 @@ function createAmbiguouslyTypedExpressionAstNode(params: {
 }): AmbiguouslyTypedExpressionAstNode {
   return {
     ...params,
+    evaluate() {
+      return evaluateAmbiguouslyTypedExpression(this);
+    },
     analyze() {
       return analyzeAmbiguouslyTypedExpression(this);
     },
-    evaluate() {
-      return evaluateAmbiguouslyTypedExpression(this);
+    resolveType() {
+      return new PrimitiveSymbolType("number");
     },
   };
 }
 
 function analyzeAmbiguouslyTypedExpression(
   node: AmbiguouslyTypedExpressionAstNode,
-): AnalysisResult<SymbolType> {
+): AnalysisFindings {
   const analysisResult = node.child.analyze();
-  if (
-    analysisResult.value.kind === "some" &&
-    analysisResult.value.unwrap().isPrimitive("number")
-  ) {
-    return {
-      ...analysisResult,
-      value: None(),
-      errors: [AnalysisError({
-        message:
-          "You tried to use a numeric operation on something that is not a number.",
-        beginHighlight: node,
-        endHighlight: None(),
-        messageHighlight: `"${node.token.text}" can not be used as a number.`,
-      })],
-    };
+  if (!node.child.resolveType().isPrimitive("number")) {
+    analysisResult.errors.push(AnalysisError({
+      message:
+        "You tried to use a numeric operation on something that is not a number.",
+      beginHighlight: node,
+      endHighlight: None(),
+      messageHighlight: `"${node.token.text}" can not be used as a number.`,
+    }));
   }
   return analysisResult;
 }
 
 function evaluateAmbiguouslyTypedExpression(
   node: AmbiguouslyTypedExpressionAstNode,
-): Result<SymbolValue<number>, AppError> {
+): SymbolValue<number> {
   // Type safety has been assured by static analysis
-  return node.child.evaluate() as Result<SymbolValue<number>, AppError>;
+  return node.child.evaluate() as SymbolValue<number>;
 }
 
 /* Numeric expression */

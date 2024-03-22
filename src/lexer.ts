@@ -1,6 +1,5 @@
 import { buildLexer, Token } from "typescript-parsec";
-import { AppError, InternalError } from "./util/error.ts";
-import { Err, Ok, Result } from "./util/monad/index.ts";
+import { InternalError } from "./util/error.ts";
 
 export enum TokenType {
   breaking_whitespace,
@@ -9,7 +8,6 @@ export enum TokenType {
   boolean_literal,
   keyword,
   ident,
-  brackets,
   punctuation,
   unspecified,
 }
@@ -21,8 +19,7 @@ const lexer = buildLexer([
   [true, /^(false|true)/g, TokenType.boolean_literal],
   [true, /^function|structure|use|if|else|while/g, TokenType.keyword],
   [true, /^[_A-Za-z]+[\-_0-9A-Za-z]*/g, TokenType.ident],
-  [true, /^[{}()<>]/g, TokenType.brackets],
-  [true, /^[!@=#$%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenType.punctuation],
+  [true, /^[!@=<>{}()#$%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenType.punctuation],
   [true, /^\S/g, TokenType.unspecified],
 ]);
 
@@ -32,12 +29,10 @@ const lexer = buildLexer([
  * @param source The input souce code
  * @returns A linked list of Tokens
  */
-export function tokenize(source: string): Result<Token<TokenType>, AppError> {
+export function tokenize(source: string): Token<TokenType> {
   const tokenStream = lexer.parse(source);
   if (tokenStream === undefined) {
-    return Err(InternalError(
-      "The tokenizer did not emit any tokens",
-    ));
+    throw new InternalError("The tokenizer did not emit any tokens");
   }
-  return Ok(tokenStream);
+  return tokenStream;
 }

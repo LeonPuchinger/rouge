@@ -12,7 +12,10 @@ export function resolveType(input: string): SymbolType {
     // @ts-ignore type check has been performed in the if statement above
     return new PrimitiveSymbolType(input);
   }
-  throw InternalError("unable to resolve type.", `Unknown input: "${input}".`);
+  throw new InternalError(
+    "unable to resolve type.",
+    `Unknown input: "${input}".`,
+  );
 }
 
 /* ~~~~~~ TEMPORARY ~~~~~~ */
@@ -108,6 +111,7 @@ export class FunctionSymbolType implements SymbolType {
 export interface SymbolValue<T> {
   valueKind: SymbolType;
   value: T;
+  map(fn: (value: T) => T): SymbolValue<T>;
   typeCompatibleWith(other: SymbolValue<unknown>): boolean;
 }
 
@@ -115,6 +119,9 @@ export function createBooleanSymbolValue(value: boolean): SymbolValue<boolean> {
   return {
     valueKind: new PrimitiveSymbolType("boolean"),
     value: value,
+    map(fn: (value: boolean) => boolean): SymbolValue<boolean> {
+      return createBooleanSymbolValue(fn(value));
+    },
     typeCompatibleWith(other) {
       return other.typeCompatibleWith(this);
     },
@@ -125,6 +132,9 @@ export function createNumericSymbolValue(value: number): SymbolValue<number> {
   return {
     valueKind: new PrimitiveSymbolType("number"),
     value: value,
+    map(fn: (value: number) => number): SymbolValue<number> {
+      return createNumericSymbolValue(fn(value));
+    },
     typeCompatibleWith(other) {
       return other.typeCompatibleWith(this);
     },
@@ -142,6 +152,11 @@ export function createFunctionSymbolValue(
       returnType: returnType,
     }),
     value: value,
+    map(
+      fn: (value: StatementsAstNode) => StatementsAstNode,
+    ): SymbolValue<StatementsAstNode> {
+      return createFunctionSymbolValue(fn(value), params, returnType);
+    },
     typeCompatibleWith(other) {
       return other.typeCompatibleWith(this);
     },

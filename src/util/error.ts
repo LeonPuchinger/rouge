@@ -2,7 +2,7 @@ import { TokenAstNode } from "../ast.ts";
 import { accessEnvironment } from "./environment.ts";
 import { Option, Some } from "./monad/index.ts";
 import { createSnippet } from "./snippet.ts";
-import { toMultiline } from "./string.ts";
+import { concatLines, toMultiline } from "./string.ts";
 
 export function Panic(reason: string): Error {
   return new Error(`PANIC: ${reason}.`);
@@ -23,49 +23,41 @@ export function assert(
   }
 }
 
-export interface LocatableError {
-  stacktrace: string[];
-}
-
-export interface PrintableError {
+export interface AppError {
   toString: () => string;
-}
-
-export type AppError = LocatableError & PrintableError;
-
-function captureStackTrace(subtractFrames = 0): string[] {
-  const stackTrace = new Error().stack?.split("\n")
-    .slice(subtractFrames + 2)
-    .map((line) => line.trim());
-  if (stackTrace) {
-    return stackTrace;
-  } else {
-    return [];
-  }
 }
 
 /**
  * A type of error that is the result of internal behavior
  * of the implementation of the language, not the user's input.
  *
- * @param message Header text to display at the top of the error message.
+ * A type of error that is the result of internal behavior of the interpreter.
+ * This error is never the result of the users input.
+ *
+ * Example:
+ * Evaluable AST nodes require that static analysis is performed ahead of resolving the type of the node.
+ * This error is thrown when the interpreter detects that those two methods have been called in the wrong order.
  */
-export function InternalError(
-  message: string,
-  extendedMessage = "",
-): AppError {
-  if (extendedMessage !== "") {
-    extendedMessage = `\n${extendedMessage}`;
+export class InternalError extends Error implements AppError {
+  /**
+   * @param message A concise summary of the error.
+   * @param extendedMessage Additional information about the error.
+   */
+  constructor(public message: string, public extendedMessage: string = "") {
+    super(concatLines(message, extendedMessage));
+    this.message = message;
+    this.extendedMessage = extendedMessage;
   }
-  return {
-    stacktrace: captureStackTrace(1),
-    toString() {
-      return toMultiline(
-        `INTERNAL ERROR: ${message}${extendedMessage}`,
-        `${toMultiline(...this.stacktrace)}`,
-      );
-    },
-  };
+
+  toString(): string {
+    return toMultiline(
+      "INTERNAL ERROR: The language/interpreter reached an internal state which does not allow it to continue running.",
+      "This error is not the result of the users input but an issue with the language itself and needs to be fixed.",
+      "Please submit an issue at 'github.com/LeonPuchinger/rouge/issues' with this entire error message attached.",
+      "Detailed information:",
+      `${this.stack ?? ""}`,
+    );
+  }
 }
 
 /**
@@ -79,14 +71,13 @@ export function InternalError(
  * @param endHighlight The AST node where the snippet should end. The end of the line if None.
  * @param messageHighlight A message to attach to the highlighted section of code.
  */
-export function InterpreterError(
+export function InterpreterError( // TODO: revamp with dataclass
   message: string,
   beginHighlight: TokenAstNode<unknown>,
   endHighlight: Option<TokenAstNode<unknown>>,
   messageHighlight?: string,
 ): AppError {
   return {
-    stacktrace: captureStackTrace(1),
     toString() {
       return toMultiline(
         message,

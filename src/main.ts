@@ -1,24 +1,18 @@
 import { analyze } from "./analysis.ts";
+import { AnalysisFindings } from "./finding.ts";
 import { interpret } from "./interpreter.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { updateEnvironment } from "./util/environment.ts";
-import { PrintableError } from "./util/error.ts";
 
-export function run(source: string): PrintableError[] {
+// TODO: pick back up
+export function run(source: string): AnalysisFindings {
   updateEnvironment({ source: source });
   const tokenStream = tokenize(source);
-  if (tokenStream.kind === "err") {
-    return tokenStream.err().iter();
-  }
-  const parseResult = parse(tokenStream.unwrap());
-  if (parseResult.kind === "err") {
-    return parseResult.err().iter();
-  }
-  const ast = parseResult.unwrap();
+  const ast = parse(tokenStream);
   const analysisFindings = analyze(ast);
-  if (analysisFindings.errors.length >= 1) {
-    return analysisFindings.errors;
+  if (analysisFindings.errors.length == 0) {
+    interpret(ast);
   }
-  return interpret(ast).iter();
+  return analysisFindings;
 }
