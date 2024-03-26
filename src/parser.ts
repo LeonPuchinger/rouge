@@ -27,7 +27,7 @@ const expression = apply(
     numericExpression,
     symbolExpression,
   ),
-  (expression): ast.ExpressionAstNode => ({
+  (expression: ast.EvaluableAstNode): ast.ExpressionAstNode => ({
     ...expression,
     interpret() {
       return interpreter.interpretExpression(this);
