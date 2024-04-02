@@ -19,7 +19,7 @@ import { InternalError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { toMultiline } from "./util/string.ts";
 
-const BREAKING_WHITESPACE = tok(TokenType.breaking_whitespace);
+const breakingWhitespace = tok(TokenType.breaking_whitespace);
 
 const expression = apply(
   alt_sc(
@@ -38,7 +38,7 @@ const expression = apply(
   }),
 );
 
-const ASSIGNMENT = apply(
+const assignment = apply(
   seq(
     tok(TokenType.ident),
     str("="),
@@ -56,9 +56,9 @@ const ASSIGNMENT = apply(
   }),
 );
 
-const STATEMENT = apply(
+const statement = apply(
   alt_sc(
-    ASSIGNMENT,
+    assignment,
     expression,
   ),
   (statement): ast.StatementAstNode => statement,
@@ -66,8 +66,8 @@ const STATEMENT = apply(
 
 export const statements = apply(
   list_sc(
-    STATEMENT,
-    BREAKING_WHITESPACE,
+    statement,
+    breakingWhitespace,
   ),
   (statements): ast.StatementsAstNode => ({
     children: statements,
@@ -80,7 +80,7 @@ export const statements = apply(
   }),
 );
 
-export const START = statements;
+export const start = statements;
 
 /**
  * Parse a sequence of tokens into an AST based the grammar of the language.
@@ -89,7 +89,7 @@ export const START = statements;
  * @returns An abstract syntax tree that has not been semantically analyzed yet
  */
 export function parse(tokenStream: Token<TokenType>): ast.AST {
-  const parseResult = expectEOF(START.parse(tokenStream));
+  const parseResult = expectEOF(start.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
     // TODO: replace with different error type that shows a snippet, e.g. InterpreterError
