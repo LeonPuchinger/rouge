@@ -13,7 +13,7 @@ import {
 import { analysisTable } from "../analysis.ts";
 import { EvaluableAstNode, StatementsAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
-import { TokenType } from "../lexer.ts";
+import { TokenKind } from "../lexer.ts";
 import { statements } from "../parser.ts";
 import {
   FunctionSymbolType,
@@ -34,8 +34,8 @@ type Function = StatementsAstNode;
 /* AST NODES */
 
 class ParameterAstNode {
-  name!: Token<TokenType>;
-  type!: Token<TokenType>;
+  name!: Token<TokenKind>;
+  type!: Token<TokenKind>;
 
   constructor(params: Attributes<ParameterAstNode>) {
     Object.assign(this, params);
@@ -74,7 +74,7 @@ class ParameterAstNode {
 
 class FunctionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
-  returnType!: Option<Token<TokenType>>;
+  returnType!: Option<Token<TokenKind>>;
   statements!: StatementsAstNode;
 
   constructor(params: Attributes<FunctionAstNode>) {
@@ -123,9 +123,9 @@ class FunctionAstNode implements EvaluableAstNode {
 
 export const parameter = apply(
   kouter(
-    tok(TokenType.ident),
+    tok(TokenKind.ident),
     str(":"),
-    tok(TokenType.ident),
+    tok(TokenKind.ident),
   ),
   ([ident, type]) =>
     new ParameterAstNode({
@@ -143,7 +143,7 @@ const parameters = apply(
 );
 
 const returnType = apply(
-  opt_sc(tok(TokenType.ident)),
+  opt_sc(tok(TokenKind.ident)),
   (token) => Some(token),
 );
 

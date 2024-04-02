@@ -3,7 +3,7 @@ import { analysisTable } from "../analysis.ts";
 import { EvaluableAstNode, TokenAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { runtimeTable } from "../interpreter.ts";
-import { TokenType } from "../lexer.ts";
+import { TokenKind } from "../lexer.ts";
 import { SymbolType, SymbolValue } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
@@ -11,9 +11,9 @@ import { None } from "../util/monad/index.ts";
 /* AST Nodes */
 
 export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
-  token: Token<TokenType>;
+  token: Token<TokenKind>;
 
-  constructor(identifier: Token<TokenType>) {
+  constructor(identifier: Token<TokenKind>) {
     this.token = identifier;
   }
 
@@ -63,6 +63,6 @@ export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
 /* PARSER */
 
 export const symbolExpression = apply(
-  tok(TokenType.ident),
+  tok(TokenKind.ident),
   (identifier) => new SymbolExpressionAstNode(identifier),
 );

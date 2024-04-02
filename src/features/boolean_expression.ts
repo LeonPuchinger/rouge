@@ -14,7 +14,7 @@ import * as analysis from "../analysis.ts";
 import * as ast from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import * as interpreter from "../interpreter.ts";
-import { TokenType } from "../lexer.ts";
+import { TokenKind } from "../lexer.ts";
 import {
   BooleanSymbolValue,
   PrimitiveSymbolType,
@@ -36,7 +36,7 @@ type BooleanLiteralAstNode =
 
 function createBooleanLiteralAstNode(params: {
   value: boolean;
-  token: Token<TokenType>;
+  token: Token<TokenKind>;
 }): BooleanLiteralAstNode {
   return {
     ...params,
@@ -105,7 +105,7 @@ type BinaryBooleanExpressionAstNode =
 function createBinaryBooleanExpressionAstNode(params: {
   lhs: ast.EvaluableAstNode;
   rhs: ast.EvaluableAstNode;
-  token: Token<TokenType>;
+  token: Token<TokenKind>;
 }): BinaryBooleanExpressionAstNode {
   return {
     ...params,
@@ -215,10 +215,10 @@ type BooleanExpressionAstNode = ast.EvaluableAstNode<SymbolValue<boolean>>;
 /* PARSER */
 
 // Forward declaration of exported top-level rule
-export const booleanExpression = rule<TokenType, BooleanExpressionAstNode>();
+export const booleanExpression = rule<TokenKind, BooleanExpressionAstNode>();
 
 const literal = apply(
-  tok(TokenType.boolean_literal),
+  tok(TokenKind.boolean_literal),
   (token) =>
     createBooleanLiteralAstNode({
       token: token,
@@ -226,7 +226,7 @@ const literal = apply(
     }),
 );
 
-const negation: Parser<TokenType, BooleanExpressionAstNode> = apply(
+const negation: Parser<TokenKind, BooleanExpressionAstNode> = apply(
   kright(
     str("!"),
     booleanExpression,
@@ -237,7 +237,7 @@ const negation: Parser<TokenType, BooleanExpressionAstNode> = apply(
     }),
 );
 
-const parenthesized: Parser<TokenType, BooleanExpressionAstNode> = kmid(
+const parenthesized: Parser<TokenKind, BooleanExpressionAstNode> = kmid(
   str("("),
   booleanExpression,
   str(")"),
@@ -265,7 +265,7 @@ const unaryBooleanExpression = alt_sc(
   literal,
 );
 
-const booleanOperand: Parser<TokenType, ast.EvaluableAstNode> = alt_sc(
+const booleanOperand: Parser<TokenKind, ast.EvaluableAstNode> = alt_sc(
   unaryBooleanExpression,
   booleanlessExpression,
 );
@@ -292,8 +292,8 @@ const binaryBooleanExpression = apply(
   ),
   ([initial, operations]) => {
     function buildTree(
-      remainder: [Token<TokenType>, ast.EvaluableAstNode][],
-    ): [Token<TokenType>, BooleanExpressionAstNode] {
+      remainder: [Token<TokenKind>, ast.EvaluableAstNode][],
+    ): [Token<TokenKind>, BooleanExpressionAstNode] {
       if (remainder.length === 2) {
         // The recursion ends at 2 so we can always return a boolean expression.
         // If the recursion were to end at 1, the last step could return a generic expression

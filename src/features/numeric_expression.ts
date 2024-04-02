@@ -11,7 +11,7 @@ import {
 } from "typescript-parsec";
 import * as ast from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
-import { TokenType } from "../lexer.ts";
+import { TokenKind } from "../lexer.ts";
 import {
   NumericSymbolValue,
   PrimitiveSymbolType,
@@ -33,7 +33,7 @@ type NumericLiteralAstNode =
 
 function createNumericLiteralAstNode(params: {
   value: number;
-  token: Token<TokenType>;
+  token: Token<TokenKind>;
 }): NumericLiteralAstNode {
   return {
     ...params,
@@ -68,7 +68,7 @@ type UnaryNumericExpressionAstNode =
 
 function createUnaryNumericExpressionAstNode(params: {
   child: NumericExpressionAstNode;
-  token: Token<TokenType>;
+  token: Token<TokenKind>;
 }): UnaryNumericExpressionAstNode {
   return {
     ...params,
@@ -117,7 +117,7 @@ type BinaryNumericExpressionAstNode =
 function createBinaryNumericExpressionAstNode(params: {
   lhs: NumericExpressionAstNode;
   rhs: NumericExpressionAstNode;
-  token: Token<TokenType>;
+  token: Token<TokenKind>;
 }): BinaryNumericExpressionAstNode {
   return {
     ...params,
@@ -177,7 +177,7 @@ type AmbiguouslyTypedExpressionAstNode =
 
 function createAmbiguouslyTypedExpressionAstNode(params: {
   child: ast.EvaluableAstNode<SymbolValue<unknown>>;
-  token: Token<TokenType>;
+  token: Token<TokenKind>;
 }): AmbiguouslyTypedExpressionAstNode {
   return {
     ...params,
@@ -223,10 +223,10 @@ type NumericExpressionAstNode = ast.EvaluableAstNode<SymbolValue<number>>;
 /* PARSER */
 
 // Forward declaration of exported top-level rule
-export const numericExpression = rule<TokenType, NumericExpressionAstNode>();
+export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 
 const literal = apply(
-  tok(TokenType.numeric_literal),
+  tok(TokenKind.numeric_literal),
   (literal): NumericLiteralAstNode =>
     createNumericLiteralAstNode({
       token: literal,
@@ -235,7 +235,7 @@ const literal = apply(
 );
 
 const unaryOperation = apply(
-  seq<TokenType, Token<TokenType>, NumericExpressionAstNode>(
+  seq<TokenKind, Token<TokenKind>, NumericExpressionAstNode>(
     alt_sc(str("+"), str("-")),
     numericExpression,
   ),
@@ -246,7 +246,7 @@ const unaryOperation = apply(
     }),
 );
 
-const parenthesized: Parser<TokenType, NumericExpressionAstNode> = kmid(
+const parenthesized: Parser<TokenKind, NumericExpressionAstNode> = kmid(
   str("("),
   numericExpression,
   str(")"),
@@ -268,7 +268,7 @@ const simpleNumericExpression = alt_sc(
   literal,
 );
 
-const factor: Parser<TokenType, NumericExpressionAstNode> = alt_sc(
+const factor: Parser<TokenKind, NumericExpressionAstNode> = alt_sc(
   simpleNumericExpression,
   ambiguouslyTypedExpression,
 );

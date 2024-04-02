@@ -1,6 +1,6 @@
 import { TokenPosition } from "typescript-parsec";
 import { AstNode, TokenAstNode } from "../ast.ts";
-import { TokenType } from "../lexer.ts";
+import { TokenKind } from "../lexer.ts";
 import { InternalError } from "./error.ts";
 import { Option } from "./monad/index.ts";
 import { indentLines, prefixIndentLines, toMultiline } from "./string.ts";
@@ -84,7 +84,7 @@ export function createSnippet(
 function peelToTokenNode(
   node: AstNode,
   direction: "left" | "right",
-): TokenAstNode<TokenType> {
+): TokenAstNode<TokenKind> {
   if ("child" in node) {
     return peelToTokenNode(node.child, direction);
   }

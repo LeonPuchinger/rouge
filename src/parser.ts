@@ -14,12 +14,12 @@ import { booleanExpression } from "./features/boolean_expression.ts";
 import { symbolExpression } from "./features/expression.ts";
 import { numericExpression } from "./features/numeric_expression.ts";
 import * as interpreter from "./interpreter.ts";
-import { TokenType } from "./lexer.ts";
+import { TokenKind } from "./lexer.ts";
 import { InternalError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { toMultiline } from "./util/string.ts";
 
-const breakingWhitespace = tok(TokenType.breaking_whitespace);
+const breakingWhitespace = tok(TokenKind.breaking_whitespace);
 
 const expression = apply(
   alt_sc(
@@ -40,7 +40,7 @@ const expression = apply(
 
 const assignment = apply(
   seq(
-    tok(TokenType.ident),
+    tok(TokenKind.ident),
     str("="),
     expression,
   ),
@@ -88,7 +88,7 @@ export const start = statements;
  * @param tokenStream A linked list of tokens to parse
  * @returns An abstract syntax tree that has not been semantically analyzed yet
  */
-export function parse(tokenStream: Token<TokenType>): ast.AST {
+export function parse(tokenStream: Token<TokenKind>): ast.AST {
   const parseResult = expectEOF(start.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
