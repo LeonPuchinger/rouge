@@ -13,7 +13,7 @@ import * as ast from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import {
-  createNumericSymbolValue,
+  NumericSymbolValue,
   PrimitiveSymbolType,
   SymbolValue,
 } from "../symbol.ts";
@@ -56,7 +56,7 @@ function analyzeNumericLiteral(): AnalysisFindings {
 function evaluateNumericLiteral(
   node: NumericLiteralAstNode,
 ): SymbolValue<number> {
-  return createNumericSymbolValue(node.value);
+  return new NumericSymbolValue(node.value);
 }
 
 /* Unary Expression */
@@ -164,7 +164,7 @@ function evaluateBinaryExpression(
           return 0;
       }
     })
-    .map((result) => createNumericSymbolValue(result))
+    .map((result) => new NumericSymbolValue(result))
     .unwrap();
 }
 

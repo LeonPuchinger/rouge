@@ -16,7 +16,7 @@ import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import * as interpreter from "../interpreter.ts";
 import { TokenType } from "../lexer.ts";
 import {
-  createBooleanSymbolValue,
+  BooleanSymbolValue,
   PrimitiveSymbolType,
   SymbolValue,
 } from "../symbol.ts";
@@ -59,7 +59,7 @@ function analyzeBooleanLiteralAstNode(): AnalysisFindings {
 function evaluateBooleanLiteralAstNode(
   node: BooleanLiteralAstNode,
 ): SymbolValue<boolean> {
-  return createBooleanSymbolValue(node.value);
+  return new BooleanSymbolValue(node.value);
 }
 
 /* Negation */
@@ -92,7 +92,7 @@ function analyzeBooleanNegationAstNode() {
 function evaluateBooleanNegationAstNode(
   node: BooleanNegationAstNode,
 ): SymbolValue<boolean> {
-  return createBooleanSymbolValue(!node.child.evaluate().value);
+  return new BooleanSymbolValue(!node.child.evaluate().value);
 }
 
 /* Binary Boolean Expression */
@@ -204,7 +204,7 @@ function evaluateBinaryExpression(
           return false;
       }
     })
-    .map((result) => createBooleanSymbolValue(result))
+    .map((result) => new BooleanSymbolValue(result))
     .unwrap();
 }
 

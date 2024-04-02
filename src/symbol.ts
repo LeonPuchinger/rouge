@@ -108,52 +108,56 @@ export interface SymbolValue<T = unknown> {
   typeCompatibleWith(other: SymbolValue<unknown>): boolean;
 }
 
-export function createBooleanSymbolValue(value: boolean): SymbolValue<boolean> {
-  return {
-    valueKind: new PrimitiveSymbolType("boolean"),
-    value: value,
-    map(fn: (value: boolean) => boolean): SymbolValue<boolean> {
-      return createBooleanSymbolValue(fn(value));
-    },
-    typeCompatibleWith(other) {
-      return other.typeCompatibleWith(this);
-    },
-  };
+export class BooleanSymbolValue implements SymbolValue<boolean> {
+  valueKind: SymbolType = new PrimitiveSymbolType("boolean");
+
+  constructor(public value: boolean) {}
+
+  map(fn: (value: boolean) => boolean): SymbolValue<boolean> {
+    return new BooleanSymbolValue(fn(this.value));
+  }
+
+  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
+    return other.typeCompatibleWith(this);
+  }
 }
 
-export function createNumericSymbolValue(value: number): SymbolValue<number> {
-  return {
-    valueKind: new PrimitiveSymbolType("number"),
-    value: value,
-    map(fn: (value: number) => number): SymbolValue<number> {
-      return createNumericSymbolValue(fn(value));
-    },
-    typeCompatibleWith(other) {
-      return other.typeCompatibleWith(this);
-    },
-  };
+export class NumericSymbolValue implements SymbolValue<number> {
+  valueKind: SymbolType = new PrimitiveSymbolType("number");
+
+  constructor(public value: number) {}
+
+  map(fn: (value: number) => number): SymbolValue<number> {
+    return new NumericSymbolValue(fn(this.value));
+  }
+  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
+    return other.typeCompatibleWith(this);
+  }
 }
 
-export function createFunctionSymbolValue(
-  value: StatementsAstNode,
-  params: SymbolType[],
-  returnType: Option<SymbolType>,
-): SymbolValue<StatementsAstNode> {
-  return {
-    valueKind: new FunctionSymbolType({
-      parameters: params,
+export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
+  valueKind: SymbolType;
+
+  constructor(
+    public value: StatementsAstNode,
+    parameterTypes: SymbolType[],
+    returnType: Option<SymbolType>,
+  ) {
+    this.valueKind = new FunctionSymbolType({
+      parameters: parameterTypes,
       returnType: returnType,
-    }),
-    value: value,
-    map(
-      fn: (value: StatementsAstNode) => StatementsAstNode,
-    ): SymbolValue<StatementsAstNode> {
-      return createFunctionSymbolValue(fn(value), params, returnType);
-    },
-    typeCompatibleWith(other) {
-      return other.typeCompatibleWith(this);
-    },
-  };
+    });
+  }
+
+  map(
+    fn: (value: StatementsAstNode) => StatementsAstNode,
+  ): SymbolValue<StatementsAstNode> {
+    return { ...this, value: fn(this.value) };
+  }
+
+  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
+    return other.typeCompatibleWith(this);
+  }
 }
 
 // Symbol Table

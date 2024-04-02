@@ -16,8 +16,8 @@ import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenType } from "../lexer.ts";
 import { statements } from "../parser.ts";
 import {
-  createFunctionSymbolValue,
   FunctionSymbolType,
+  FunctionSymbolValue,
   resolveType,
   StaticSymbol,
   SymbolType,
@@ -84,7 +84,7 @@ class FunctionAstNode implements EvaluableAstNode {
   evaluate(): SymbolValue<Function> {
     const params = this.parameters.map((v) => v.resolveType());
     const returnType = this.returnType.map((token) => resolveType(token.text));
-    return createFunctionSymbolValue(this.statements, params, returnType);
+    return new FunctionSymbolValue(this.statements, params, returnType);
   }
 
   analyze(): AnalysisFindings {
