@@ -8,7 +8,7 @@ import { SymbolType, SymbolValue } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 
-/* Identifier expression */
+/* AST Nodes */
 
 export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
   token: Token<TokenType>;
@@ -59,6 +59,8 @@ export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
       );
   }
 }
+
+/* PARSER */
 
 export const symbolExpression = apply(
   tok(TokenType.ident),
