@@ -22,11 +22,6 @@ export function resolveType(input: string): SymbolType {
 
 // Symbol
 
-interface SymbolParams {
-  node?: AstNode;
-  value: SymbolValue<unknown>;
-}
-
 interface Symbol {
   node: Option<AstNode>;
 }
@@ -35,7 +30,7 @@ export class RuntimeSymbol implements Symbol {
   node: Option<AstNode>;
   value: SymbolValue<unknown>;
 
-  constructor(params: SymbolParams) {
+  constructor(params: { node?: AstNode; value: SymbolValue }) {
     this.node = Some(params.node);
     this.value = params.value;
   }
@@ -45,9 +40,7 @@ export class StaticSymbol implements Symbol {
   node: Option<AstNode>;
   valueKind: SymbolType;
 
-  constructor(
-    params: Omit<SymbolParams, "value"> & { valueKind: SymbolType },
-  ) {
+  constructor(params: { node?: AstNode; valueKind: SymbolType }) {
     this.node = Some(params.node);
     this.valueKind = params.valueKind;
   }
@@ -108,7 +101,7 @@ export class FunctionSymbolType implements SymbolType {
 
 // Symbol Value
 
-export interface SymbolValue<T> {
+export interface SymbolValue<T = unknown> {
   valueKind: SymbolType;
   value: T;
   map(fn: (value: T) => T): SymbolValue<T>;
