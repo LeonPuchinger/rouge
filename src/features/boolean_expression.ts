@@ -12,17 +12,20 @@ import {
 } from "typescript-parsec";
 import * as analysis from "../analysis.ts";
 import * as ast from "../ast.ts";
+import { ValueAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import * as interpreter from "../interpreter.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   BooleanSymbolValue,
   PrimitiveSymbolType,
+  SymbolType,
   SymbolValue,
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
+import { Attributes } from "../util/type.ts";
 import { symbolExpression } from "./expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
 
@@ -30,36 +33,26 @@ import { numericExpression } from "./numeric_expression.ts";
 
 /* Boolean literal */
 
-type BooleanLiteralAstNode =
-  & ast.ValueAstNode<boolean>
-  & BooleanExpressionAstNode;
+class BooleanLiteralAstNode
+  implements ValueAstNode<boolean>, BooleanExpressionAstNode {
+  value!: boolean;
+  token!: Token<TokenKind>;
 
-function createBooleanLiteralAstNode(params: {
-  value: boolean;
-  token: Token<TokenKind>;
-}): BooleanLiteralAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateBooleanLiteralAstNode(this);
-    },
-    analyze() {
-      return analyzeBooleanLiteralAstNode();
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("boolean");
-    },
-  };
-}
+  constructor(params: Attributes<BooleanLiteralAstNode>) {
+    Object.assign(this, params);
+  }
 
-function analyzeBooleanLiteralAstNode(): AnalysisFindings {
-  return AnalysisFindings.empty();
-}
+  analyze(): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
 
-function evaluateBooleanLiteralAstNode(
-  node: BooleanLiteralAstNode,
-): SymbolValue<boolean> {
-  return new BooleanSymbolValue(node.value);
+  evaluate(): SymbolValue<boolean> {
+    return new BooleanSymbolValue(this.value);
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("boolean");
+  }
 }
 
 /* Negation */
@@ -220,7 +213,7 @@ export const booleanExpression = rule<TokenKind, BooleanExpressionAstNode>();
 const literal = apply(
   tok(TokenKind.boolean_literal),
   (token) =>
-    createBooleanLiteralAstNode({
+    new BooleanLiteralAstNode({
       token: token,
       value: token.text === "true",
     }),
