@@ -30,8 +30,8 @@ export interface InterpretableAstNode {
 }
 
 export interface EvaluableAstNode<R = SymbolValue<unknown>, A = SymbolType> {
-  evaluate(): R;
   analyze(): AnalysisFindings;
+  evaluate(): R;
   resolveType(): A;
 }
 
