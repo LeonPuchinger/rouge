@@ -12,7 +12,7 @@ import {
 } from "typescript-parsec";
 import * as analysis from "../analysis.ts";
 import * as ast from "../ast.ts";
-import { ValueAstNode } from "../ast.ts";
+import { ValueAstNode, WrapperAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import * as interpreter from "../interpreter.ts";
 import { TokenKind } from "../lexer.ts";
@@ -57,35 +57,27 @@ class BooleanLiteralAstNode
 
 /* Negation */
 
-type BooleanNegationAstNode =
-  & ast.WrapperAstNode<BooleanExpressionAstNode>
-  & BooleanExpressionAstNode;
+class BooleanNegationAstNode
+  implements
+    WrapperAstNode<BooleanExpressionAstNode>,
+    BooleanExpressionAstNode {
+  child!: BooleanExpressionAstNode;
 
-function createBooleanNegationAstNode(params: {
-  child: BooleanExpressionAstNode;
-}): BooleanNegationAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateBooleanNegationAstNode(this);
-    },
-    analyze() {
-      return analyzeBooleanNegationAstNode();
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("boolean");
-    },
-  };
-}
+  constructor(params: Attributes<BooleanNegationAstNode>) {
+    Object.assign(this, params);
+  }
 
-function analyzeBooleanNegationAstNode() {
-  return AnalysisFindings.empty();
-}
+  analyze(): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
 
-function evaluateBooleanNegationAstNode(
-  node: BooleanNegationAstNode,
-): SymbolValue<boolean> {
-  return new BooleanSymbolValue(!node.child.evaluate().value);
+  evaluate(): SymbolValue<boolean> {
+    return new BooleanSymbolValue(!this.child.evaluate().value);
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("boolean");
+  }
 }
 
 /* Binary Boolean Expression */
@@ -225,7 +217,7 @@ const negation: Parser<TokenKind, BooleanExpressionAstNode> = apply(
     booleanExpression,
   ),
   (expression) =>
-    createBooleanNegationAstNode({
+    new BooleanNegationAstNode({
       child: expression,
     }),
 );
