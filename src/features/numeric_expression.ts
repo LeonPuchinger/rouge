@@ -10,53 +10,46 @@ import {
   Token,
 } from "typescript-parsec";
 import * as ast from "../ast.ts";
+import { ValueAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   NumericSymbolValue,
   PrimitiveSymbolType,
+  SymbolType,
   SymbolValue,
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
 import { Wrapper } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import { operation_chain_sc } from "../util/parser.ts";
+import { Attributes } from "../util/type.ts";
 import { symbolExpression } from "./expression.ts";
 
 /* AST NODES */
 
 /* Numeric literal */
 
-type NumericLiteralAstNode =
-  & ast.ValueAstNode<number>
-  & NumericExpressionAstNode;
+class NumericLiteralAstNode
+  implements ValueAstNode<number>, NumericExpressionAstNode {
+  value!: number;
+  token!: Token<TokenKind>;
 
-function createNumericLiteralAstNode(params: {
-  value: number;
-  token: Token<TokenKind>;
-}): NumericLiteralAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateNumericLiteral(this);
-    },
-    analyze() {
-      return analyzeNumericLiteral();
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("number");
-    },
-  };
-}
+  constructor(params: Attributes<NumericLiteralAstNode>) {
+    Object.assign(this, params);
+  }
 
-function analyzeNumericLiteral(): AnalysisFindings {
-  return AnalysisFindings.empty();
-}
+  analyze(): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
 
-function evaluateNumericLiteral(
-  node: NumericLiteralAstNode,
-): SymbolValue<number> {
-  return new NumericSymbolValue(node.value);
+  evaluate(): SymbolValue<number> {
+    return new NumericSymbolValue(this.value);
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("number");
+  }
 }
 
 /* Unary Expression */
@@ -228,7 +221,7 @@ export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 const literal = apply(
   tok(TokenKind.numeric_literal),
   (literal): NumericLiteralAstNode =>
-    createNumericLiteralAstNode({
+    new NumericLiteralAstNode({
       token: literal,
       value: parseFloat(literal.text),
     }),
