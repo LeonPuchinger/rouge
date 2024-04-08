@@ -20,7 +20,6 @@ import { Attributes } from "../util/type.ts";
 
 /* AST NODES */
 
-// TODO: rename, don't abbreviate!
 export class AssignmentAstNode
   implements
     TokenAstNode,
