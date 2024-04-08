@@ -21,7 +21,7 @@ import { Attributes } from "../util/type.ts";
 /* AST NODES */
 
 // TODO: rename, don't abbreviate!
-export class AssignAstNode
+export class AssignmentAstNode
   implements
     TokenAstNode,
     WrapperAstNode<ExpressionAstNode>,
@@ -29,7 +29,7 @@ export class AssignAstNode
   token!: Token<TokenKind>;
   child!: ExpressionAstNode;
 
-  constructor(params: Attributes<AssignAstNode>) {
+  constructor(params: Attributes<AssignmentAstNode>) {
     Object.assign(this, params);
   }
 
@@ -91,7 +91,7 @@ export const assignment = apply(
     expression,
   ),
   (values) =>
-    new AssignAstNode({
+    new AssignmentAstNode({
       token: values[0],
       child: values[2],
     }),
