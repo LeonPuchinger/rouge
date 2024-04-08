@@ -1,13 +1,7 @@
 import * as ast from "./ast.ts";
-import {
-  InterpreterSymbolTable,
-  RuntimeSymbol,
-  SymbolTable,
-} from "./symbol.ts";
+import { RuntimeSymbol, runtimeTable } from "./symbol.ts";
 // required for extension methods to be usable
 import {} from "./util/array.ts";
-
-export const runtimeTable: InterpreterSymbolTable = new SymbolTable();
 
 export function interpretExpression(
   node: ast.ExpressionAstNode,

@@ -10,12 +10,12 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { analysisTable } from "../analysis.ts";
 import { EvaluableAstNode, StatementsAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { statements } from "../parser.ts";
 import {
+  analysisTable,
   FunctionSymbolType,
   FunctionSymbolValue,
   resolveType,

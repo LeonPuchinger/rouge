@@ -1,10 +1,8 @@
 import * as ast from "./ast.ts";
 import { AnalysisError, AnalysisFindings } from "./finding.ts";
-import { AnalysisSymbolTable, StaticSymbol, SymbolTable } from "./symbol.ts";
+import { analysisTable, StaticSymbol } from "./symbol.ts";
 import { None } from "./util/monad/index.ts";
 import { concatLines } from "./util/string.ts";
-
-export const analysisTable: AnalysisSymbolTable = new SymbolTable();
 
 export function checkAssign(
   node: ast.AssignAstNode,

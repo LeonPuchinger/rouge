@@ -215,3 +215,6 @@ export class SymbolTable<S extends Symbol> {
     current_scope.set(name, symbol);
   }
 }
+
+export const analysisTable: AnalysisSymbolTable = new SymbolTable();
+export const runtimeTable: InterpreterSymbolTable = new SymbolTable();
