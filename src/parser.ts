@@ -3,8 +3,6 @@ import {
   apply,
   expectEOF,
   list_sc,
-  seq,
-  str,
   tok,
   Token,
 } from "typescript-parsec";
@@ -18,10 +16,11 @@ import { TokenKind } from "./lexer.ts";
 import { InternalError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { toMultiline } from "./util/string.ts";
+import { assignment } from "./features/assignment.ts";
 
 const breakingWhitespace = tok(TokenKind.breaking_whitespace);
 
-const expression = apply(
+export const expression = apply(
   alt_sc(
     booleanExpression,
     numericExpression,
@@ -34,24 +33,6 @@ const expression = apply(
     },
     check() {
       return analysis.checkExpression(this);
-    },
-  }),
-);
-
-const assignment = apply(
-  seq(
-    tok(TokenKind.ident),
-    str("="),
-    expression,
-  ),
-  (values): ast.AssignAstNode => ({
-    token: values[0],
-    child: values[2],
-    interpret() {
-      return interpreter.interpretAssign(this);
-    },
-    check() {
-      return analysis.checkAssign(this);
     },
   }),
 );
