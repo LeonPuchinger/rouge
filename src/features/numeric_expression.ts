@@ -10,7 +10,12 @@ import {
   Token,
 } from "typescript-parsec";
 import * as ast from "../ast.ts";
-import { ValueAstNode } from "../ast.ts";
+import {
+  BinaryAstNode,
+  TokenAstNode,
+  ValueAstNode,
+  WrapperAstNode,
+} from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -54,159 +59,133 @@ class NumericLiteralAstNode
 
 /* Unary Expression */
 
-type UnaryNumericExpressionAstNode =
-  & ast.WrapperAstNode<NumericExpressionAstNode>
-  & ast.TokenAstNode
-  & NumericExpressionAstNode;
+class UnaryNumericExpressionAstNode
+  implements
+    WrapperAstNode<NumericExpressionAstNode>,
+    TokenAstNode,
+    NumericExpressionAstNode {
+  child!: NumericExpressionAstNode;
+  token!: Token<TokenKind>;
 
-function createUnaryNumericExpressionAstNode(params: {
-  child: NumericExpressionAstNode;
-  token: Token<TokenKind>;
-}): UnaryNumericExpressionAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateUnaryExpression(this);
-    },
-    analyze() {
-      return analyzeUnaryExpression();
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("number");
-    },
-  };
-}
-
-function analyzeUnaryExpression() {
-  return AnalysisFindings.empty();
-}
-
-function evaluateUnaryExpression(
-  node: UnaryNumericExpressionAstNode,
-): SymbolValue<number> {
-  if (!["+", "-"].includes(node.token.text)) {
-    throw new InternalError(
-      `The interpreter recieved instructions to perform the following unknown operation on a number: ${node.token.text}`,
-      "This should have either been caught during static analysis or be prevented by the parser.",
-    );
+  constructor(params: Attributes<UnaryNumericExpressionAstNode>) {
+    Object.assign(this, params);
   }
-  node.child;
-  return node.child.evaluate()
-    .map((result) => {
-      if (node.token.text === "-") {
-        return -result;
-      }
-      return result;
-    });
+
+  analyze(): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
+
+  evaluate(): SymbolValue<number> {
+    if (!["+", "-"].includes(this.token.text)) {
+      throw new InternalError(
+        `The interpreter recieved instructions to perform the following unknown operation on a number: ${this.token.text}`,
+        "This should have either been caught during static analysis or be prevented by the parser.",
+      );
+    }
+    this.child;
+    return this.child.evaluate()
+      .map((result) => {
+        if (this.token.text === "-") {
+          return -result;
+        }
+        return result;
+      });
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("number");
+  }
 }
 
 /* Binary expression */
 
-type BinaryNumericExpressionAstNode =
-  & ast.BinaryAstNode<NumericExpressionAstNode, NumericExpressionAstNode>
-  & ast.TokenAstNode
-  & NumericExpressionAstNode;
+class BinaryNumericExpressionAstNode
+  implements
+    BinaryAstNode<NumericExpressionAstNode, NumericExpressionAstNode>,
+    TokenAstNode,
+    NumericExpressionAstNode {
+  lhs!: NumericExpressionAstNode;
+  rhs!: NumericExpressionAstNode;
+  token!: Token<TokenKind>;
 
-function createBinaryNumericExpressionAstNode(params: {
-  lhs: NumericExpressionAstNode;
-  rhs: NumericExpressionAstNode;
-  token: Token<TokenKind>;
-}): BinaryNumericExpressionAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateBinaryExpression(this);
-    },
-    analyze() {
-      return analyzeBinaryExpression();
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("number");
-    },
-  };
-}
-
-function analyzeBinaryExpression() {
-  return AnalysisFindings.empty();
-}
-
-function evaluateBinaryExpression(
-  node: BinaryNumericExpressionAstNode,
-): SymbolValue<number> {
-  if (!["+", "-", "*", "/", "%"].includes(node.token.text)) {
-    throw new InternalError(
-      `The interpreter recieved instructions to perform the following unknown operation on two numbers: ${node.token.text}`,
-      "This should have either been caught during static analysis or be prevented by the parser.",
-    );
+  constructor(params: Attributes<BinaryNumericExpressionAstNode>) {
+    Object.assign(this, params);
   }
-  return new Wrapper([node.lhs.evaluate(), node.rhs.evaluate()])
-    .map(([left, right]) => {
-      switch (node.token.text) {
-        case "+":
-          return left.value + right.value;
-        case "-":
-          return left.value - right.value;
-        case "*":
-          return left.value * right.value;
-        case "/":
-          return left.value / right.value;
-        case "%":
-          return left.value % right.value;
-        default:
-          // this never happens, TS simply does not get that the symbol of operations has been checked previously.
-          return 0;
-      }
-    })
-    .map((result) => new NumericSymbolValue(result))
-    .unwrap();
+
+  analyze(): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
+
+  evaluate(): SymbolValue<number> {
+    if (!["+", "-", "*", "/", "%"].includes(this.token.text)) {
+      throw new InternalError(
+        `The interpreter recieved instructions to perform the following unknown operation on two numbers: ${this.token.text}`,
+        "This should have either been caught during static analysis or be prevented by the parser.",
+      );
+    }
+    return new Wrapper([this.lhs.evaluate(), this.rhs.evaluate()])
+      .map(([left, right]) => {
+        switch (this.token.text) {
+          case "+":
+            return left.value + right.value;
+          case "-":
+            return left.value - right.value;
+          case "*":
+            return left.value * right.value;
+          case "/":
+            return left.value / right.value;
+          case "%":
+            return left.value % right.value;
+          default:
+            // this never happens, TS simply does not get that the symbol of operations has been checked previously.
+            return 0;
+        }
+      })
+      .map((result) => new NumericSymbolValue(result))
+      .unwrap();
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("number");
+  }
 }
 
 /* Ambiguously typed expression */
 
-type AmbiguouslyTypedExpressionAstNode =
-  & ast.WrapperAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>>
-  & ast.TokenAstNode
-  & NumericExpressionAstNode;
+class AmbiguouslyTypedExpressionAstNode
+  implements
+    WrapperAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>>,
+    TokenAstNode,
+    NumericExpressionAstNode {
+  child!: ast.EvaluableAstNode<SymbolValue<unknown>, SymbolType>;
+  token!: Token<TokenKind>;
 
-function createAmbiguouslyTypedExpressionAstNode(params: {
-  child: ast.EvaluableAstNode<SymbolValue<unknown>>;
-  token: Token<TokenKind>;
-}): AmbiguouslyTypedExpressionAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateAmbiguouslyTypedExpression(this);
-    },
-    analyze() {
-      return analyzeAmbiguouslyTypedExpression(this);
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("number");
-    },
-  };
-}
-
-function analyzeAmbiguouslyTypedExpression(
-  node: AmbiguouslyTypedExpressionAstNode,
-): AnalysisFindings {
-  const analysisResult = node.child.analyze();
-  if (!node.child.resolveType().isPrimitive("number")) {
-    analysisResult.errors.push(AnalysisError({
-      message:
-        "You tried to use a numeric operation on something that is not a number.",
-      beginHighlight: node,
-      endHighlight: None(),
-      messageHighlight: `"${node.token.text}" can not be used as a number.`,
-    }));
+  constructor(params: Attributes<AmbiguouslyTypedExpressionAstNode>) {
+    Object.assign(this, params);
   }
-  return analysisResult;
-}
 
-function evaluateAmbiguouslyTypedExpression(
-  node: AmbiguouslyTypedExpressionAstNode,
-): SymbolValue<number> {
-  // Type safety has been assured by static analysis
-  return node.child.evaluate() as SymbolValue<number>;
+  analyze(): AnalysisFindings {
+    const analysisResult = this.child.analyze();
+    if (!this.child.resolveType().isPrimitive("number")) {
+      analysisResult.errors.push(AnalysisError({
+        message:
+          "You tried to use a numeric operation on something that is not a number.",
+        beginHighlight: this,
+        endHighlight: None(),
+        messageHighlight: `"${this.token.text}" can not be used as a number.`,
+      }));
+    }
+    return analysisResult;
+  }
+
+  evaluate(): SymbolValue<number> {
+    // Type safety has been assured by static analysis
+    return this.child.evaluate() as SymbolValue<number>;
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("number");
+  }
 }
 
 /* Numeric expression */
@@ -233,7 +212,7 @@ const unaryOperation = apply(
     numericExpression,
   ),
   (components): UnaryNumericExpressionAstNode =>
-    createUnaryNumericExpressionAstNode({
+    new UnaryNumericExpressionAstNode({
       token: components[0],
       child: components[1],
     }),
@@ -249,7 +228,7 @@ const ambiguouslyTypedExpression = apply(
   // TODO: add `invocation` as an alternative
   symbolExpression,
   (node): AmbiguouslyTypedExpressionAstNode =>
-    createAmbiguouslyTypedExpressionAstNode({
+    new AmbiguouslyTypedExpressionAstNode({
       child: node,
       token: node.token,
     }),
@@ -271,7 +250,7 @@ const product = (params: { allow_unary: boolean } = { allow_unary: false }) =>
     factor,
     alt_sc(str("*"), str("/")),
     (first, op, second: NumericExpressionAstNode) =>
-      createBinaryNumericExpressionAstNode({
+      new BinaryNumericExpressionAstNode({
         lhs: first,
         rhs: second,
         token: op,
@@ -283,7 +262,7 @@ const sum = operation_chain_sc(
   product({ allow_unary: true }),
   alt_sc(str("+"), str("-")),
   (first, op, second: NumericExpressionAstNode) =>
-    createBinaryNumericExpressionAstNode({
+    new BinaryNumericExpressionAstNode({
       lhs: first,
       rhs: second,
       token: op,
