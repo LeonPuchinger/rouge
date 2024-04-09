@@ -3,7 +3,6 @@ import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { updateEnvironment } from "./util/environment.ts";
 
-// TODO: pick back up
 export function run(source: string): AnalysisFindings {
   updateEnvironment({ source: source });
   const tokenStream = tokenize(source);
