@@ -29,7 +29,7 @@ import { Wrapper } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import { operation_chain_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
-import { symbolExpression } from "./expression.ts";
+import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
 
