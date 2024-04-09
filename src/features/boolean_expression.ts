@@ -228,15 +228,10 @@ const booleanlessExpression = apply(
     numericExpression,
     symbolExpression,
   ),
-  (expression: ast.EvaluableAstNode): ExpressionAstNode => ({
-    ...expression,
-    interpret() {
-      this.evaluate();
-    },
-    check() {
-      return this.analyze();
-    },
-  }),
+  (expression: ast.EvaluableAstNode) =>
+    new ExpressionAstNode({
+      child: expression,
+    }),
 );
 
 const unaryBooleanExpression = alt_sc(
