@@ -5,8 +5,6 @@ import { expression } from "../parser.ts";
 import { assignment } from "./assignment.ts";
 import { AnalysisFindings } from "../finding.ts";
 
-const breakingWhitespace = tok(TokenKind.breaking_whitespace);
-
 const statement: Parser<TokenKind, ast.StatementAstNode> = alt_sc(
   assignment,
   expression,
@@ -15,7 +13,7 @@ const statement: Parser<TokenKind, ast.StatementAstNode> = alt_sc(
 export const statements = apply(
   list_sc(
     statement,
-    breakingWhitespace,
+    tok(TokenKind.breaking_whitespace),
   ),
   (statements): ast.StatementsAstNode => ({
     children: statements,
