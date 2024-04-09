@@ -1,14 +1,10 @@
 import { alt_sc, apply, list_sc, tok } from "typescript-parsec";
-import {
-  ExpressionAstNode,
-  InterpretableAstNode,
-  NaryAstNode,
-} from "../ast.ts";
+import { InterpretableAstNode, NaryAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
-import { expression } from "./expression.ts";
+import { expression, ExpressionAstNode } from "./expression.ts";
 
 /* AST NODES */
 

@@ -1,10 +1,5 @@
 import { apply, str, tok, Token } from "typescript-parsec";
-import {
-  ExpressionAstNode,
-  InterpretableAstNode,
-  TokenAstNode,
-  WrapperAstNode,
-} from "../ast.ts";
+import { InterpretableAstNode, TokenAstNode, WrapperAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -17,7 +12,7 @@ import { None } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { concatLines } from "../util/string.ts";
 import { Attributes } from "../util/type.ts";
-import { expression } from "./expression.ts";
+import { expression, ExpressionAstNode } from "./expression.ts";
 
 /* AST NODES */
 

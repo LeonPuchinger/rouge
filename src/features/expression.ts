@@ -1,5 +1,9 @@
 import { alt_sc, apply, tok, Token } from "typescript-parsec";
-import { EvaluableAstNode, ExpressionAstNode, TokenAstNode } from "../ast.ts";
+import {
+  EvaluableAstNode,
+  InterpretableAstNode,
+  TokenAstNode,
+} from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -64,6 +68,10 @@ export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
       );
   }
 }
+
+export type ExpressionAstNode =
+  & EvaluableAstNode<SymbolValue<unknown>>
+  & InterpretableAstNode;
 
 /* PARSER */
 
