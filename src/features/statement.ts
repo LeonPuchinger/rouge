@@ -39,7 +39,7 @@ export class StatementsAstNode
 
 /* PARSERS */
 
-const statement: Parser<TokenKind, StatementAstNode> = alt_sc(
+const statement = alt_sc(
   assignment,
   expression,
 );
