@@ -10,7 +10,6 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import * as analysis from "../analysis.ts";
 import * as ast from "../ast.ts";
 import {
   BinaryAstNode,
@@ -20,7 +19,6 @@ import {
   WrapperAstNode,
 } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
-import * as interpreter from "../interpreter.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   BooleanSymbolValue,
@@ -32,7 +30,7 @@ import { InternalError } from "../util/error.ts";
 import { None, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
-import { symbolExpression } from "./expression.ts";
+import { ExpressionAstNode, symbolExpression } from "./expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
 
 /* AST NODES */
@@ -229,13 +227,13 @@ const booleanlessExpression = apply(
     numericExpression,
     symbolExpression,
   ),
-  (expression: ast.EvaluableAstNode): ast.ExpressionAstNode => ({
+  (expression: ast.EvaluableAstNode): ExpressionAstNode => ({
     ...expression,
     interpret() {
-      return interpreter.interpretExpression(this);
+      this.evaluate();
     },
     check() {
-      return analysis.checkExpression(this);
+      return this.analyze();
     },
   }),
 );
