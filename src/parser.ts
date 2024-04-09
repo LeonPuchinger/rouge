@@ -28,6 +28,9 @@ export const expression = apply(
   }),
 );
 
+/**
+ * Top level production/entry point to the parser
+ */
 export const start = statements;
 
 /**
