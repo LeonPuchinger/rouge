@@ -10,10 +10,9 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { EvaluableAstNode, StatementsAstNode } from "../ast.ts";
+import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { statements } from "../parser.ts";
 import {
   analysisTable,
   FunctionSymbolType,
@@ -26,6 +25,7 @@ import {
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
+import { statements, StatementsAstNode } from "./statement.ts";
 
 /* DATA TYPES */
 

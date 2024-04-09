@@ -1,4 +1,5 @@
-import { AstNode, StatementsAstNode } from "./ast.ts";
+import { AstNode } from "./ast.ts";
+import { StatementsAstNode } from "./features/statement.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { Attributes } from "./util/type.ts";

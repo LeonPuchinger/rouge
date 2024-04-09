@@ -1,9 +1,36 @@
 import { alt_sc, apply, list_sc, Parser, tok } from "typescript-parsec";
 import * as ast from "../ast.ts";
+import { InterpretableAstNode, NaryAstNode, StatementAstNode } from "../ast.ts";
+import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { expression } from "../parser.ts";
 import { assignment } from "./assignment.ts";
-import { AnalysisFindings } from "../finding.ts";
+import { Attributes } from "../util/type.ts";
+
+/* AST NODES */
+
+export class StatementsAstNode
+  implements NaryAstNode<StatementAstNode>, InterpretableAstNode {
+  children!: StatementAstNode[];
+
+  constructor(params: Attributes<StatementsAstNode>) {
+    Object.assign(this, params);
+  }
+
+  interpret(): void {
+    this.children.forEach((child) => {
+      child.interpret();
+    });
+  }
+
+  check(): AnalysisFindings {
+    return this.children
+      .map((statement) => statement.check())
+      .reduce((previous, current) => AnalysisFindings.merge(previous, current));
+  }
+}
+
+/* PARSERS */
 
 const statement: Parser<TokenKind, ast.StatementAstNode> = alt_sc(
   assignment,
@@ -15,19 +42,5 @@ export const statements = apply(
     statement,
     tok(TokenKind.breaking_whitespace),
   ),
-  (statements): ast.StatementsAstNode => ({
-    children: statements,
-    interpret() {
-      this.children.forEach((child) => {
-        child.interpret();
-      });
-    },
-    check() {
-      return this.children
-        .map((statement) => statement.check())
-        .reduce((previous, current) =>
-          AnalysisFindings.merge(previous, current)
-        );
-    },
-  }),
+  (statements) => new StatementsAstNode({ children: statements }),
 );

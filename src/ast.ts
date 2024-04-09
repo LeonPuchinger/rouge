@@ -1,5 +1,6 @@
 import { Token } from "typescript-parsec";
 import { AssignmentAstNode } from "./features/assignment.ts";
+import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
 import { SymbolType, SymbolValue } from "./symbol.ts";
@@ -27,6 +28,7 @@ export interface WrapperAstNode<T extends AstNode> {
 
 export interface InterpretableAstNode {
   interpret(): void;
+  // TODO: rename to analyze as there is no difference anymore
   check(): AnalysisFindings;
 }
 
@@ -51,8 +53,5 @@ export type ExpressionAstNode =
 export type StatementAstNode =
   | ExpressionAstNode
   | AssignmentAstNode;
-export type StatementsAstNode =
-  & NaryAstNode<StatementAstNode>
-  & InterpretableAstNode;
 
 export type AST = StatementsAstNode;
