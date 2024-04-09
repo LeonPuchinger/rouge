@@ -1,4 +1,4 @@
-import { apply, seq, str, tok, Token } from "typescript-parsec";
+import { apply, str, tok, Token } from "typescript-parsec";
 import {
   ExpressionAstNode,
   InterpretableAstNode,
@@ -15,6 +15,7 @@ import {
   StaticSymbol,
 } from "../symbol.ts";
 import { None } from "../util/monad/index.ts";
+import { kouter } from "../util/parser.ts";
 import { concatLines } from "../util/string.ts";
 import { Attributes } from "../util/type.ts";
 
@@ -42,6 +43,7 @@ export class AssignmentAstNode
       }),
     );
   }
+
   check(): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const ident = this.token.text;
@@ -82,16 +84,15 @@ export class AssignmentAstNode
 
 /* PARSER */
 
-// TODO: use `kouter`
 export const assignment = apply(
-  seq(
+  kouter(
     tok(TokenKind.ident),
     str("="),
     expression,
   ),
-  (values) =>
+  ([token, expression]) =>
     new AssignmentAstNode({
-      token: values[0],
-      child: values[2],
+      token: token,
+      child: expression,
     }),
 );
