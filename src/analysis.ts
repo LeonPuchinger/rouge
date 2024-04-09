@@ -7,12 +7,5 @@ export function checkExpression(
   return node.analyze();
 }
 
-export function checkStatements(
-  node: ast.StatementsAstNode,
-): AnalysisFindings {
-  return node.children
-    .map((statement) => statement.check())
-    .reduce((previous, current) => AnalysisFindings.merge(previous, current));
-}
-
+// TODO: move to an appropriate file
 export const analyze = (node: ast.AST) => node.check();

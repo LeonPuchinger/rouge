@@ -1,11 +1,4 @@
-import {
-  alt_sc,
-  apply,
-  expectEOF,
-  list_sc,
-  tok,
-  Token,
-} from "typescript-parsec";
+import { alt_sc, apply, expectEOF, Token } from "typescript-parsec";
 import * as analysis from "./analysis.ts";
 import * as ast from "./ast.ts";
 import { booleanExpression } from "./features/boolean_expression.ts";
@@ -16,9 +9,7 @@ import { TokenKind } from "./lexer.ts";
 import { InternalError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { toMultiline } from "./util/string.ts";
-import { assignment } from "./features/assignment.ts";
-
-const breakingWhitespace = tok(TokenKind.breaking_whitespace);
+import { statements } from "./features/statement.ts";
 
 export const expression = apply(
   alt_sc(
@@ -33,30 +24,6 @@ export const expression = apply(
     },
     check() {
       return analysis.checkExpression(this);
-    },
-  }),
-);
-
-const statement = apply(
-  alt_sc(
-    assignment,
-    expression,
-  ),
-  (statement): ast.StatementAstNode => statement,
-);
-
-export const statements = apply(
-  list_sc(
-    statement,
-    breakingWhitespace,
-  ),
-  (statements): ast.StatementsAstNode => ({
-    children: statements,
-    interpret() {
-      return interpreter.interpretStatements(this);
-    },
-    check() {
-      return analysis.checkStatements(this);
     },
   }),
 );

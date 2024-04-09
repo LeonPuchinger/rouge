@@ -8,12 +8,5 @@ export function interpretExpression(
   node.evaluate();
 }
 
-export function interpretStatements(
-  node: ast.StatementsAstNode,
-): void {
-  node.children.forEach((child) => {
-    child.interpret();
-  });
-}
-
+// TODO: move to an appropriate file
 export const interpret = (node: ast.AST) => node.interpret();
