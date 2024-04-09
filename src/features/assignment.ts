@@ -7,7 +7,6 @@ import {
 } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { expression } from "../parser.ts";
 import {
   analysisTable,
   RuntimeSymbol,
@@ -18,6 +17,7 @@ import { None } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { concatLines } from "../util/string.ts";
 import { Attributes } from "../util/type.ts";
+import { expression } from "./expression.ts";
 
 /* AST NODES */
 

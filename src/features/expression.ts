@@ -1,5 +1,5 @@
-import { apply, tok, Token } from "typescript-parsec";
-import { EvaluableAstNode, TokenAstNode } from "../ast.ts";
+import { alt_sc, apply, tok, Token } from "typescript-parsec";
+import { EvaluableAstNode, ExpressionAstNode, TokenAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -10,6 +10,8 @@ import {
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
+import { booleanExpression } from "./boolean_expression.ts";
+import { numericExpression } from "./numeric_expression.ts";
 
 /* AST Nodes */
 
@@ -68,4 +70,21 @@ export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
 export const symbolExpression = apply(
   tok(TokenKind.ident),
   (identifier) => new SymbolExpressionAstNode(identifier),
+);
+
+export const expression = apply(
+  alt_sc(
+    booleanExpression,
+    numericExpression,
+    symbolExpression,
+  ),
+  (expression: EvaluableAstNode): ExpressionAstNode => ({
+    ...expression,
+    interpret() {
+      this.evaluate();
+    },
+    check() {
+      return this.analyze();
+    },
+  }),
 );

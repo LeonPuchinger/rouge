@@ -1,32 +1,10 @@
-import { alt_sc, apply, expectEOF, Token } from "typescript-parsec";
-import * as analysis from "./analysis.ts";
+import { expectEOF, Token } from "typescript-parsec";
 import * as ast from "./ast.ts";
-import { booleanExpression } from "./features/boolean_expression.ts";
-import { symbolExpression } from "./features/expression.ts";
-import { numericExpression } from "./features/numeric_expression.ts";
-import * as interpreter from "./interpreter.ts";
+import { statements } from "./features/statement.ts";
 import { TokenKind } from "./lexer.ts";
 import { InternalError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { toMultiline } from "./util/string.ts";
-import { statements } from "./features/statement.ts";
-
-export const expression = apply(
-  alt_sc(
-    booleanExpression,
-    numericExpression,
-    symbolExpression,
-  ),
-  (expression: ast.EvaluableAstNode): ast.ExpressionAstNode => ({
-    ...expression,
-    interpret() {
-      return interpreter.interpretExpression(this);
-    },
-    check() {
-      return analysis.checkExpression(this);
-    },
-  }),
-);
 
 /**
  * Top level production/entry point to the parser

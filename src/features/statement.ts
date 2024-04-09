@@ -6,9 +6,9 @@ import {
 } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { expression } from "../parser.ts";
 import { Attributes } from "../util/type.ts";
-import { AssignmentAstNode, assignment } from "./assignment.ts";
+import { assignment, AssignmentAstNode } from "./assignment.ts";
+import { expression } from "./expression.ts";
 
 /* AST NODES */
 
