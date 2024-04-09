@@ -1,5 +1,5 @@
 import { expectEOF, Token } from "typescript-parsec";
-import * as ast from "./ast.ts";
+import { AST } from "./ast.ts";
 import { statements } from "./features/statement.ts";
 import { TokenKind } from "./lexer.ts";
 import { InternalError } from "./util/error.ts";
@@ -17,7 +17,7 @@ export const start = statements;
  * @param tokenStream A linked list of tokens to parse
  * @returns An abstract syntax tree that has not been semantically analyzed yet
  */
-export function parse(tokenStream: Token<TokenKind>): ast.AST {
+export function parse(tokenStream: Token<TokenKind>): AST {
   const parseResult = expectEOF(start.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
