@@ -1,13 +1,20 @@
 import { alt_sc, apply, list_sc, Parser, tok } from "typescript-parsec";
-import * as ast from "../ast.ts";
-import { InterpretableAstNode, NaryAstNode, StatementAstNode } from "../ast.ts";
+import {
+  ExpressionAstNode,
+  InterpretableAstNode,
+  NaryAstNode,
+} from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { expression } from "../parser.ts";
-import { assignment } from "./assignment.ts";
 import { Attributes } from "../util/type.ts";
+import { assignment, AssignmentAstNode } from "./assignment.ts";
 
 /* AST NODES */
+
+export type StatementAstNode =
+  | ExpressionAstNode
+  | AssignmentAstNode;
 
 export class StatementsAstNode
   implements NaryAstNode<StatementAstNode>, InterpretableAstNode {
@@ -32,7 +39,7 @@ export class StatementsAstNode
 
 /* PARSERS */
 
-const statement: Parser<TokenKind, ast.StatementAstNode> = alt_sc(
+const statement: Parser<TokenKind, StatementAstNode> = alt_sc(
   assignment,
   expression,
 );

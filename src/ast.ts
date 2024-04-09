@@ -1,5 +1,4 @@
 import { Token } from "typescript-parsec";
-import { AssignmentAstNode } from "./features/assignment.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
@@ -50,8 +49,5 @@ export type AstNode =
 export type ExpressionAstNode =
   & EvaluableAstNode<SymbolValue<unknown>>
   & InterpretableAstNode;
-export type StatementAstNode =
-  | ExpressionAstNode
-  | AssignmentAstNode;
 
 export type AST = StatementsAstNode;
