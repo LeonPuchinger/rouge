@@ -2,7 +2,6 @@ import {
   alt_sc,
   apply,
   kmid,
-  kright,
   Parser,
   rule,
   seq,
@@ -58,6 +57,10 @@ class BooleanLiteralAstNode
   resolveType(): SymbolType {
     return new PrimitiveSymbolType("boolean");
   }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.token, this.token];
+  }
 }
 
 /* Negation */
@@ -66,6 +69,7 @@ class BooleanNegationAstNode
   implements
     WrapperAstNode<BooleanExpressionAstNode>,
     BooleanExpressionAstNode {
+  negationToken!: Token<TokenKind>;
   child!: BooleanExpressionAstNode;
 
   constructor(params: Attributes<BooleanNegationAstNode>) {
@@ -82,6 +86,10 @@ class BooleanNegationAstNode
 
   resolveType(): SymbolType {
     return new PrimitiveSymbolType("boolean");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.negationToken, this.child.tokenRange()[1]];
   }
 }
 
@@ -192,6 +200,10 @@ class BinaryBooleanExpressionAstNode
   resolveType(): SymbolType {
     return new PrimitiveSymbolType("boolean");
   }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.lhs.tokenRange()[0], this.rhs.tokenRange()[1]];
+  }
 }
 
 /* Boolean Expression */
@@ -213,12 +225,13 @@ const literal = apply(
 );
 
 const negation: Parser<TokenKind, BooleanExpressionAstNode> = apply(
-  kright(
+  seq(
     str("!"),
     booleanExpression,
   ),
-  (expression) =>
+  ([token, expression]) =>
     new BooleanNegationAstNode({
+      negationToken: token,
       child: expression,
     }),
 );

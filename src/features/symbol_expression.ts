@@ -64,6 +64,10 @@ export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
         ),
       );
   }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.token, this.token];
+  }
 }
 
 /* PARSER */

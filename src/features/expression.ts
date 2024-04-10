@@ -1,4 +1,4 @@
-import { alt_sc, apply } from "typescript-parsec";
+import { Token, alt_sc, apply } from "typescript-parsec";
 import {
   EvaluableAstNode,
   InterpretableAstNode,
@@ -10,6 +10,7 @@ import { Attributes } from "../util/type.ts";
 import { booleanExpression } from "./boolean_expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
 import { symbolExpression } from "./symbol_expression.ts";
+import { TokenKind } from "../lexer.ts";
 
 /* AST Nodes */
 
@@ -32,12 +33,16 @@ export class ExpressionAstNode
     return this.child.evaluate();
   }
 
+  interpret(): void {
+    this.child.evaluate();
+  }
+
   resolveType(): SymbolType {
     return this.child.resolveType();
   }
 
-  interpret(): void {
-    this.child.evaluate();
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return this.child.tokenRange();
   }
 }
 

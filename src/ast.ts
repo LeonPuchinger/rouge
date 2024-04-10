@@ -6,7 +6,7 @@ import { SymbolType, SymbolValue } from "./symbol.ts";
 
 export interface AstNode {
   analyze(): AnalysisFindings;
-  //tokenRange(): [Token<TokenKind>, Token<TokenKind>];
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>];
 }
 
 export interface EvaluableAstNode<R = SymbolValue<unknown>> extends AstNode {

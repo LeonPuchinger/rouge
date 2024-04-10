@@ -1,5 +1,5 @@
 import { apply, str, tok, Token } from "typescript-parsec";
-import { InterpretableAstNode, TokenAstNode, WrapperAstNode } from "../ast.ts";
+import { InterpretableAstNode, WrapperAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -18,7 +18,6 @@ import { expression, ExpressionAstNode } from "./expression.ts";
 
 export class AssignmentAstNode
   implements
-    TokenAstNode,
     WrapperAstNode<ExpressionAstNode>,
     InterpretableAstNode {
   token!: Token<TokenKind>;
@@ -26,17 +25,6 @@ export class AssignmentAstNode
 
   constructor(params: Attributes<AssignmentAstNode>) {
     Object.assign(this, params);
-  }
-
-  interpret(): void {
-    const ident = this.token.text;
-    runtimeTable.setSymbol(
-      ident,
-      new RuntimeSymbol({
-        node: this.child,
-        value: this.child.evaluate(),
-      }),
-    );
   }
 
   analyze(): AnalysisFindings {
@@ -73,6 +61,21 @@ export class AssignmentAstNode
         );
       });
     return findings;
+  }
+
+  interpret(): void {
+    const ident = this.token.text;
+    runtimeTable.setSymbol(
+      ident,
+      new RuntimeSymbol({
+        node: this.child,
+        value: this.child.evaluate(),
+      }),
+    );
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.token, this.child.tokenRange()[1]]
   }
 }
 

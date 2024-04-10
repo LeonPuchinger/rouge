@@ -33,6 +33,7 @@ type Function = StatementsAstNode;
 
 /* AST NODES */
 
+// TODO: implement evaluable AST node partially (w/out evaluate)
 class ParameterAstNode {
   name!: Token<TokenKind>;
   type!: Token<TokenKind>;
@@ -41,6 +42,7 @@ class ParameterAstNode {
     Object.assign(this, params);
   }
 
+  // TODO: rename
   check(): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const existingSymbol = analysisTable.findSymbol(this.name.text);
@@ -76,6 +78,8 @@ class FunctionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   returnType!: Option<Token<TokenKind>>;
   statements!: StatementsAstNode;
+  functionKeywordToken!: Token<TokenKind>;
+  closingBraceToken!: Token<TokenKind>;
 
   constructor(params: Attributes<FunctionAstNode>) {
     Object.assign(this, params);
@@ -120,6 +124,10 @@ class FunctionAstNode implements EvaluableAstNode {
       returnType: returnType,
     });
   }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.functionKeywordToken, this.closingBraceToken];
+  }
 }
 
 /* PARSER */
@@ -151,8 +159,8 @@ const returnType = apply(
 );
 
 export const functionDefinition = apply(
-  kright(
-    str("function"),
+  seq(
+    str<TokenKind>("function"),
     seq(
       kmid(
         str("("),
@@ -163,17 +171,21 @@ export const functionDefinition = apply(
         seq(str("-"), str(">")),
         returnType,
       ),
-      kmid(
-        str("{"),
+      seq(
+        str<TokenKind>("{"),
         statements,
-        str("}"),
+        str<TokenKind>("}"),
       ),
     ),
   ),
-  ([parameters, returnType, statements]) =>
+  ([
+    functionKeyword,
+    [parameters, returnType, [_, statements, closingBrace]]]) =>
     new FunctionAstNode({
       parameters: parameters,
       returnType: returnType,
       statements: statements,
+      functionKeywordToken: functionKeyword,
+      closingBraceToken: closingBrace,
     }),
 );

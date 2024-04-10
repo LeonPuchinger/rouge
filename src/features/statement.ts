@@ -1,10 +1,11 @@
-import { alt_sc, apply, list_sc, tok } from "typescript-parsec";
+import { alt_sc, apply, list_sc, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode, NaryAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
+import { InternalError } from "../util/error.ts";
 
 /* AST NODES */
 
@@ -30,6 +31,19 @@ export class StatementsAstNode
     return this.children
       .map((statement) => statement.analyze())
       .reduce((previous, current) => AnalysisFindings.merge(previous, current));
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    if (this.children.length <= 0) {
+      throw new InternalError(
+        "Tried to request the token range for a StatementsAstNode which had no children.",
+        "StatementsAstNodes have to have at least one child in order to generate a token range.",
+      );
+    }
+    return [
+      this.children[0].tokenRange()[0],
+      this.children.slice(-1)[0].tokenRange()[1],
+    ];
   }
 }
 

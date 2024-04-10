@@ -55,6 +55,10 @@ class NumericLiteralAstNode
   resolveType(): SymbolType {
     return new PrimitiveSymbolType("number");
   }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.token, this.token];
+  }
 }
 
 /* Unary Expression */
@@ -94,6 +98,10 @@ class UnaryNumericExpressionAstNode
 
   resolveType(): SymbolType {
     return new PrimitiveSymbolType("number");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.token, this.child.tokenRange()[1]];
   }
 }
 
@@ -148,6 +156,10 @@ class BinaryNumericExpressionAstNode
   resolveType(): SymbolType {
     return new PrimitiveSymbolType("number");
   }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.lhs.tokenRange()[0], this.rhs.tokenRange()[1]];
+  }
 }
 
 /* Ambiguously typed expression */
@@ -185,6 +197,10 @@ class AmbiguouslyTypedExpressionAstNode
 
   resolveType(): SymbolType {
     return new PrimitiveSymbolType("number");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return this.child.tokenRange();
   }
 }
 
@@ -227,7 +243,7 @@ const parenthesized: Parser<TokenKind, NumericExpressionAstNode> = kmid(
 const ambiguouslyTypedExpression = apply(
   // TODO: add `invocation` as an alternative
   symbolExpression,
-  (node): AmbiguouslyTypedExpressionAstNode =>
+  (node) =>
     new AmbiguouslyTypedExpressionAstNode({
       child: node,
       token: node.token,
