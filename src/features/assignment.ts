@@ -40,12 +40,11 @@ export class AssignmentAstNode
   }
 
   check(): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
-    const ident = this.token.text;
-    AnalysisFindings.merge(findings, this.child.analyze());
+    const findings = this.child.analyze();
     if (findings.isErroneous()) {
       return findings;
     }
+    const ident = this.token.text;
     const expressionType = this.child.resolveType();
     analysisTable.findSymbol(ident)
       .then((existing) => {

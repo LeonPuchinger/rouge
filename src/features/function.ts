@@ -89,10 +89,13 @@ class FunctionAstNode implements EvaluableAstNode {
 
   analyze(): AnalysisFindings {
     analysisTable.pushScope();
-    const findings = AnalysisFindings.empty();
-    this.parameters.map((parameter) =>
-      AnalysisFindings.merge(findings, parameter.check())
-    );
+    let findings = AnalysisFindings.empty();
+    findings = this.parameters
+      .map((parameter) => parameter.check())
+      .reduce(
+        (previous, current) => AnalysisFindings.merge(previous, current),
+        findings,
+      );
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );

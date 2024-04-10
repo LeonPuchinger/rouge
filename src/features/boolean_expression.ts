@@ -101,7 +101,13 @@ class BinaryBooleanExpressionAstNode
   }
 
   analyze(): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    const findings = AnalysisFindings.merge(
+      this.lhs.analyze(),
+      this.rhs.analyze(),
+    );
+    if (findings.isErroneous()) {
+      return findings;
+    }
     const operator = this.token.text;
     const leftType = this.lhs.resolveType();
     const rightType = this.rhs.resolveType();

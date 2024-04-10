@@ -116,13 +116,17 @@ export class AnalysisFindings {
   }
 
   /**
-   * Create a new instance that contains the warnings and errors from two other instances.
+   * Create a new instance that contains the warnings and errors from multiple other instances.
    */
-  static merge(a: AnalysisFindings, b: AnalysisFindings): AnalysisFindings {
-    return new AnalysisFindings({
-      warnings: [...a.warnings, ...b.warnings],
-      errors: [...a.errors, ...b.errors],
-    });
+  static merge(...findings: AnalysisFindings[]): AnalysisFindings {
+    return findings.reduce(
+      (previous, current) =>
+        new AnalysisFindings({
+          errors: [...previous.errors, ...current.errors],
+          warnings: [...previous.errors, ...current.errors],
+        }),
+      new AnalysisFindings({ errors: [], warnings: [] }),
+    );
   }
 
   isErroneous() {
