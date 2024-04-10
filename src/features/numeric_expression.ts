@@ -9,9 +9,9 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import * as ast from "../ast.ts";
 import {
   BinaryAstNode,
+  EvaluableAstNode,
   TokenAstNode,
   ValueAstNode,
   WrapperAstNode,
@@ -166,10 +166,10 @@ class BinaryNumericExpressionAstNode
 
 class AmbiguouslyTypedExpressionAstNode
   implements
-    WrapperAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>>,
+    WrapperAstNode<EvaluableAstNode<SymbolValue<unknown>>>,
     TokenAstNode,
     NumericExpressionAstNode {
-  child!: ast.EvaluableAstNode<SymbolValue<unknown>>;
+  child!: EvaluableAstNode<SymbolValue<unknown>>;
   token!: Token<TokenKind>;
 
   constructor(params: Attributes<AmbiguouslyTypedExpressionAstNode>) {
@@ -206,7 +206,7 @@ class AmbiguouslyTypedExpressionAstNode
 
 /* Numeric expression */
 
-type NumericExpressionAstNode = ast.EvaluableAstNode<SymbolValue<number>>;
+type NumericExpressionAstNode = EvaluableAstNode<SymbolValue<number>>;
 
 /* PARSER */
 

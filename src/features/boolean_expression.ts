@@ -9,7 +9,6 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import * as ast from "../ast.ts";
 import {
   BinaryAstNode,
   EvaluableAstNode,
@@ -100,8 +99,8 @@ class BinaryBooleanExpressionAstNode
     BinaryAstNode<EvaluableAstNode, EvaluableAstNode>,
     TokenAstNode,
     BooleanExpressionAstNode {
-  lhs!: ast.EvaluableAstNode<SymbolValue<unknown>>;
-  rhs!: ast.EvaluableAstNode<SymbolValue<unknown>>;
+  lhs!: EvaluableAstNode<SymbolValue<unknown>>;
+  rhs!: EvaluableAstNode<SymbolValue<unknown>>;
   token!: Token<TokenKind>;
 
   constructor(params: Attributes<BinaryBooleanExpressionAstNode>) {
@@ -208,7 +207,7 @@ class BinaryBooleanExpressionAstNode
 
 /* Boolean Expression */
 
-type BooleanExpressionAstNode = ast.EvaluableAstNode<SymbolValue<boolean>>;
+type BooleanExpressionAstNode = EvaluableAstNode<SymbolValue<boolean>>;
 
 /* PARSER */
 
@@ -247,7 +246,7 @@ const booleanlessExpression = apply(
     numericExpression,
     symbolExpression,
   ),
-  (expression: ast.EvaluableAstNode) =>
+  (expression: EvaluableAstNode) =>
     new ExpressionAstNode({
       child: expression,
     }),
@@ -259,7 +258,7 @@ const unaryBooleanExpression = alt_sc(
   literal,
 );
 
-const booleanOperand: Parser<TokenKind, ast.EvaluableAstNode> = alt_sc(
+const booleanOperand: Parser<TokenKind, EvaluableAstNode> = alt_sc(
   unaryBooleanExpression,
   booleanlessExpression,
 );
@@ -286,7 +285,7 @@ const binaryBooleanExpression = apply(
   ),
   ([initial, operations]) => {
     function buildTree(
-      remainder: [Token<TokenKind>, ast.EvaluableAstNode][],
+      remainder: [Token<TokenKind>, EvaluableAstNode][],
     ): [Token<TokenKind>, BooleanExpressionAstNode] {
       if (remainder.length === 2) {
         // The recursion ends at 2 so we can always return a boolean expression.
