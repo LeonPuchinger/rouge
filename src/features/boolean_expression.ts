@@ -92,8 +92,8 @@ class BinaryBooleanExpressionAstNode
     BinaryAstNode<EvaluableAstNode, EvaluableAstNode>,
     TokenAstNode,
     BooleanExpressionAstNode {
-  lhs!: ast.EvaluableAstNode<SymbolValue<unknown>, SymbolType>;
-  rhs!: ast.EvaluableAstNode<SymbolValue<unknown>, SymbolType>;
+  lhs!: ast.EvaluableAstNode<SymbolValue<unknown>>;
+  rhs!: ast.EvaluableAstNode<SymbolValue<unknown>>;
   token!: Token<TokenKind>;
 
   constructor(params: Attributes<BinaryBooleanExpressionAstNode>) {

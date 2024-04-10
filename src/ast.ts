@@ -4,6 +4,11 @@ import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
 import { SymbolType, SymbolValue } from "./symbol.ts";
 
+export interface ANode {
+  analyze(): AnalysisFindings;
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>];
+}
+
 export interface BinaryAstNode<L extends AstNode, R extends AstNode> {
   lhs: L;
   rhs: R;
@@ -31,10 +36,10 @@ export interface InterpretableAstNode {
   check(): AnalysisFindings;
 }
 
-export interface EvaluableAstNode<R = SymbolValue<unknown>, A = SymbolType> {
+export interface EvaluableAstNode<R = SymbolValue<unknown>> {
   analyze(): AnalysisFindings;
   evaluate(): R;
-  resolveType(): A;
+  resolveType(): SymbolType;
 }
 
 export type AstNode =

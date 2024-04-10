@@ -157,7 +157,7 @@ class AmbiguouslyTypedExpressionAstNode
     WrapperAstNode<ast.EvaluableAstNode<SymbolValue<unknown>>>,
     TokenAstNode,
     NumericExpressionAstNode {
-  child!: ast.EvaluableAstNode<SymbolValue<unknown>, SymbolType>;
+  child!: ast.EvaluableAstNode<SymbolValue<unknown>>;
   token!: Token<TokenKind>;
 
   constructor(params: Attributes<AmbiguouslyTypedExpressionAstNode>) {
