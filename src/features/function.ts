@@ -33,8 +33,7 @@ type Function = StatementsAstNode;
 
 /* AST NODES */
 
-// TODO: implement evaluable AST node partially (w/out evaluate)
-class ParameterAstNode {
+class ParameterAstNode implements Partial<EvaluableAstNode> {
   name!: Token<TokenKind>;
   type!: Token<TokenKind>;
 
@@ -42,8 +41,7 @@ class ParameterAstNode {
     Object.assign(this, params);
   }
 
-  // TODO: rename
-  check(): AnalysisFindings {
+  analyze(): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const existingSymbol = analysisTable.findSymbol(this.name.text);
     if (existingSymbol.kind === "some") {
@@ -52,7 +50,7 @@ class ParameterAstNode {
           "Function parameter names have to be unique. Parameters can not share names with other variables.",
         messageHighlight:
           `A variable with the name "${this.name.text}" already exists. Please choose a different name.`,
-        beginHighlight: { token: this.name },
+        beginHighlight: this,
         endHighlight: None(),
       }));
     }
@@ -62,7 +60,7 @@ class ParameterAstNode {
       findings.errors.push(AnalysisError({
         message:
           "Function parameters can only be primitive for now. This will change in the future.",
-        beginHighlight: { token: this.type },
+        beginHighlight: this,
         endHighlight: None(),
       }));
     }
@@ -71,6 +69,10 @@ class ParameterAstNode {
 
   resolveType(): SymbolType {
     return resolveType(this.type.text);
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.name, this.type];
   }
 }
 
@@ -95,7 +97,7 @@ class FunctionAstNode implements EvaluableAstNode {
     analysisTable.pushScope();
     let findings = AnalysisFindings.empty();
     findings = this.parameters
-      .map((parameter) => parameter.check())
+      .map((parameter) => parameter.analyze())
       .reduce(
         (previous, current) => AnalysisFindings.merge(previous, current),
         findings,
@@ -180,7 +182,8 @@ export const functionDefinition = apply(
   ),
   ([
     functionKeyword,
-    [parameters, returnType, [_, statements, closingBrace]]]) =>
+    [parameters, returnType, [_, statements, closingBrace]],
+  ]) =>
     new FunctionAstNode({
       parameters: parameters,
       returnType: returnType,

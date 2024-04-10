@@ -1,4 +1,4 @@
-import { TokenAstNode, ValueAstNode } from "./ast.ts";
+import { AstNode } from "./ast.ts";
 import { accessEnvironment } from "./util/environment.ts";
 import { Option, Some } from "./util/monad/index.ts";
 import { createSnippet } from "./util/snippet.ts";
@@ -41,12 +41,12 @@ interface AnalysisFindingParams {
   /**
    * The AST node where the snippet begins.
    */
-  beginHighlight: TokenAstNode;
+  beginHighlight: AstNode;
 
   /**
    * The AST node where the snippet should end. The end of the line if None.
    */
-  endHighlight: Option<ValueAstNode<unknown>>;
+  endHighlight: Option<AstNode>;
 
   /**
    * A message to attach to the highlighted section of code.
@@ -75,8 +75,8 @@ function createAnalysisFinding(
         `${kind.toUpperCase()}: ${params.message}`,
         createSnippet(
           accessEnvironment("source"),
-          params.beginHighlight.token.pos,
-          params.endHighlight.map((node) => node.token.pos),
+          params.beginHighlight.tokenRange()[0].pos,
+          params.endHighlight.map((node) => node.tokenRange()[1].pos),
           3,
           Some(params.messageHighlight),
         ),
