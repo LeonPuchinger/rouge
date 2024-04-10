@@ -1,7 +1,4 @@
 import { TokenPosition } from "typescript-parsec";
-import { AstNode, TokenAstNode } from "../ast.ts";
-import { TokenKind } from "../lexer.ts";
-import { InternalError } from "./error.ts";
 import { Option } from "./monad/index.ts";
 import { indentLines, prefixIndentLines, toMultiline } from "./string.ts";
 
@@ -80,37 +77,3 @@ export function createSnippet(
     ),
   );
 }
-
-function peelToTokenNode(
-  node: AstNode,
-  direction: "left" | "right",
-): TokenAstNode<TokenKind> {
-  if ("child" in node) {
-    return peelToTokenNode(node.child, direction);
-  }
-  if ("lhs" in node && direction === "left") {
-    return peelToTokenNode(node.lhs, direction);
-  }
-  if ("rhs" in node && direction === "right") {
-    return peelToTokenNode(node.rhs, direction);
-  }
-  if ("children" in node && node.children.length > 0) {
-    if (direction === "left") {
-      return peelToTokenNode(node.children[0], direction);
-    }
-    return peelToTokenNode(node.children[node.children.length - 1], direction);
-  }
-  if ("token" in node) {
-    return node;
-  }
-  throw new InternalError(
-    "Failed to peel an AST node to a TokenAstNode.",
-    `No TokenAstNode could be found while peeling in the ${direction} direction.`,
-  );
-}
-
-export const peelToLeftmostTokenNode = (node: AstNode) =>
-  peelToTokenNode(node, "left");
-
-export const peelToRightmostTokenNode = (node: AstNode) =>
-  peelToTokenNode(node, "right");
