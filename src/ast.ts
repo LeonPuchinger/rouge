@@ -4,9 +4,18 @@ import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
 import { SymbolType, SymbolValue } from "./symbol.ts";
 
-export interface ANode {
+export interface AstNode {
   analyze(): AnalysisFindings;
-  tokenRange(): [Token<TokenKind>, Token<TokenKind>];
+  //tokenRange(): [Token<TokenKind>, Token<TokenKind>];
+}
+
+export interface EvaluableAstNode<R = SymbolValue<unknown>> extends AstNode {
+  evaluate(): R;
+  resolveType(): SymbolType;
+}
+
+export interface InterpretableAstNode extends AstNode {
+  interpret(): void;
 }
 
 export interface BinaryAstNode<L extends AstNode, R extends AstNode> {
@@ -29,25 +38,5 @@ export interface ValueAstNode<V> extends TokenAstNode {
 export interface WrapperAstNode<T extends AstNode> {
   child: T;
 }
-
-export interface InterpretableAstNode {
-  interpret(): void;
-  analyze(): AnalysisFindings;
-}
-
-export interface EvaluableAstNode<R = SymbolValue<unknown>> {
-  analyze(): AnalysisFindings;
-  evaluate(): R;
-  resolveType(): SymbolType;
-}
-
-export type AstNode =
-  | BinaryAstNode<AstNode, AstNode>
-  | NaryAstNode<AstNode>
-  | TokenAstNode
-  | ValueAstNode<unknown>
-  | WrapperAstNode<AstNode>
-  | InterpretableAstNode
-  | EvaluableAstNode<unknown>;
 
 export type AST = StatementsAstNode;
