@@ -141,6 +141,7 @@ class BinaryNumericExpressionAstNode
           case "*":
             return left.value * right.value;
           case "/":
+            // TODO: check for division by zero
             return left.value / right.value;
           case "%":
             return left.value % right.value;
