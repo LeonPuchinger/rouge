@@ -77,7 +77,7 @@ class BooleanNegationAstNode
   }
 
   evaluate(): SymbolValue<boolean> {
-    return new BooleanSymbolValue(!this.child.evaluate().value);
+    return this.child.evaluate().map((value) => !value);
   }
 
   resolveType(): SymbolType {
