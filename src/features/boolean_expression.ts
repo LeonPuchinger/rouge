@@ -12,9 +12,8 @@ import {
 import {
   BinaryAstNode,
   EvaluableAstNode,
-  TokenAstNode,
   ValueAstNode,
-  WrapperAstNode,
+  WrapperAstNode
 } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -97,11 +96,10 @@ class BooleanNegationAstNode
 class BinaryBooleanExpressionAstNode
   implements
     BinaryAstNode<EvaluableAstNode, EvaluableAstNode>,
-    TokenAstNode,
     BooleanExpressionAstNode {
   lhs!: EvaluableAstNode<SymbolValue<unknown>>;
   rhs!: EvaluableAstNode<SymbolValue<unknown>>;
-  token!: Token<TokenKind>;
+  operatorToken!: Token<TokenKind>;
 
   constructor(params: Attributes<BinaryBooleanExpressionAstNode>) {
     Object.assign(this, params);
@@ -115,7 +113,7 @@ class BinaryBooleanExpressionAstNode
     if (findings.isErroneous()) {
       return findings;
     }
-    const operator = this.token.text;
+    const operator = this.operatorToken.text;
     const leftType = this.lhs.resolveType();
     const rightType = this.rhs.resolveType();
     if (
@@ -157,17 +155,17 @@ class BinaryBooleanExpressionAstNode
   evaluate(): SymbolValue<boolean> {
     if (
       !["==", "!=", ">=", ">", "<=", "<", "&&", "||", "^"]
-        .includes(this.token.text)
+        .includes(this.operatorToken.text)
     ) {
       throw new InternalError(
-        `The interpreter recieved instructions to perform the following unknown operation on two booleans: ${this.token.text}`,
+        `The interpreter recieved instructions to perform the following unknown operation on two booleans: ${this.operatorToken.text}`,
         "This should have either been caught during static analysis or be prevented by the parser.",
       );
     }
     return new Wrapper([this.lhs.evaluate(), this.rhs.evaluate()])
       .map(([left, right]) => {
         // values can safely be type-casted because their type has been checked during analysis
-        switch (this.token.text) {
+        switch (this.operatorToken.text) {
           case "==":
             return left.value == right.value;
           case "!=":
@@ -300,7 +298,7 @@ const binaryBooleanExpression = apply(
           new BinaryBooleanExpressionAstNode({
             lhs: firstExpression,
             rhs: secondExpression,
-            token: secondOperator,
+            operatorToken: secondOperator,
           }),
         ];
       }
@@ -312,7 +310,7 @@ const binaryBooleanExpression = apply(
         new BinaryBooleanExpressionAstNode({
           lhs: currentExpression,
           rhs: nextExpression,
-          token: nextOperator,
+          operatorToken: nextOperator,
         }),
       ];
     }
@@ -322,7 +320,7 @@ const binaryBooleanExpression = apply(
       return new BinaryBooleanExpressionAstNode({
         lhs: initial,
         rhs: expression,
-        token: operator,
+        operatorToken: operator,
       });
     }
     // start recursion
@@ -330,7 +328,7 @@ const binaryBooleanExpression = apply(
     return new BinaryBooleanExpressionAstNode({
       lhs: initial,
       rhs: right,
-      token: operator,
+      operatorToken: operator,
     });
   },
 );

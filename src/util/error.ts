@@ -1,7 +1,7 @@
-import { TokenAstNode } from "../ast.ts";
-import { accessEnvironment } from "./environment.ts";
-import { Option, Some } from "./monad/index.ts";
-import { createSnippet } from "./snippet.ts";
+//import { TokenAstNode } from "../ast.ts";
+//import { accessEnvironment } from "./environment.ts";
+//import { Option, Some } from "./monad/index.ts";
+//import { createSnippet } from "./snippet.ts";
 import { concatLines, toMultiline } from "./string.ts";
 
 export function Panic(reason: string): Error {
@@ -60,6 +60,7 @@ export class InternalError extends Error implements AppError {
   }
 }
 
+
 /**
  * A type of error that is the result of the users input.
  * The message contains a snippet of the affected input as well as
@@ -71,6 +72,7 @@ export class InternalError extends Error implements AppError {
  * @param endHighlight The AST node where the snippet should end. The end of the line if None.
  * @param messageHighlight A message to attach to the highlighted section of code.
  */
+/*
 export function InterpreterError( // TODO: revamp with dataclass
   message: string,
   beginHighlight: TokenAstNode<unknown>,
@@ -92,3 +94,4 @@ export function InterpreterError( // TODO: revamp with dataclass
     },
   };
 }
+ */

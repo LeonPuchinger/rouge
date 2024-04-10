@@ -27,11 +27,7 @@ export interface NaryAstNode<T extends AstNode> {
   children: T[];
 }
 
-export interface TokenAstNode<T = TokenKind> {
-  token: Token<T>;
-}
-
-export interface ValueAstNode<V> extends TokenAstNode {
+export interface ValueAstNode<V> {
   value: V;
 }
 

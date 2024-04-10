@@ -12,7 +12,6 @@ import {
 import {
   BinaryAstNode,
   EvaluableAstNode,
-  TokenAstNode,
   ValueAstNode,
   WrapperAstNode,
 } from "../ast.ts";
@@ -66,10 +65,9 @@ class NumericLiteralAstNode
 class UnaryNumericExpressionAstNode
   implements
     WrapperAstNode<NumericExpressionAstNode>,
-    TokenAstNode,
     NumericExpressionAstNode {
   child!: NumericExpressionAstNode;
-  token!: Token<TokenKind>;
+  operatorToken!: Token<TokenKind>;
 
   constructor(params: Attributes<UnaryNumericExpressionAstNode>) {
     Object.assign(this, params);
@@ -80,16 +78,16 @@ class UnaryNumericExpressionAstNode
   }
 
   evaluate(): SymbolValue<number> {
-    if (!["+", "-"].includes(this.token.text)) {
+    if (!["+", "-"].includes(this.operatorToken.text)) {
       throw new InternalError(
-        `The interpreter recieved instructions to perform the following unknown operation on a number: ${this.token.text}`,
+        `The interpreter recieved instructions to perform the following unknown operation on a number: ${this.operatorToken.text}`,
         "This should have either been caught during static analysis or be prevented by the parser.",
       );
     }
     this.child;
     return this.child.evaluate()
       .map((result) => {
-        if (this.token.text === "-") {
+        if (this.operatorToken.text === "-") {
           return -result;
         }
         return result;
@@ -101,7 +99,7 @@ class UnaryNumericExpressionAstNode
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.token, this.child.tokenRange()[1]];
+    return [this.operatorToken, this.child.tokenRange()[1]];
   }
 }
 
@@ -110,11 +108,10 @@ class UnaryNumericExpressionAstNode
 class BinaryNumericExpressionAstNode
   implements
     BinaryAstNode<NumericExpressionAstNode, NumericExpressionAstNode>,
-    TokenAstNode,
     NumericExpressionAstNode {
   lhs!: NumericExpressionAstNode;
   rhs!: NumericExpressionAstNode;
-  token!: Token<TokenKind>;
+  operatorToken!: Token<TokenKind>;
 
   constructor(params: Attributes<BinaryNumericExpressionAstNode>) {
     Object.assign(this, params);
@@ -125,15 +122,15 @@ class BinaryNumericExpressionAstNode
   }
 
   evaluate(): SymbolValue<number> {
-    if (!["+", "-", "*", "/", "%"].includes(this.token.text)) {
+    if (!["+", "-", "*", "/", "%"].includes(this.operatorToken.text)) {
       throw new InternalError(
-        `The interpreter recieved instructions to perform the following unknown operation on two numbers: ${this.token.text}`,
+        `The interpreter recieved instructions to perform the following unknown operation on two numbers: ${this.operatorToken.text}`,
         "This should have either been caught during static analysis or be prevented by the parser.",
       );
     }
     return new Wrapper([this.lhs.evaluate(), this.rhs.evaluate()])
       .map(([left, right]) => {
-        switch (this.token.text) {
+        switch (this.operatorToken.text) {
           case "+":
             return left.value + right.value;
           case "-":
@@ -168,7 +165,6 @@ class BinaryNumericExpressionAstNode
 class AmbiguouslyTypedExpressionAstNode
   implements
     WrapperAstNode<EvaluableAstNode<SymbolValue<unknown>>>,
-    TokenAstNode,
     NumericExpressionAstNode {
   child!: EvaluableAstNode<SymbolValue<unknown>>;
   token!: Token<TokenKind>;
@@ -230,7 +226,7 @@ const unaryOperation = apply(
   ),
   (components): UnaryNumericExpressionAstNode =>
     new UnaryNumericExpressionAstNode({
-      token: components[0],
+      operatorToken: components[0],
       child: components[1],
     }),
 );
@@ -247,7 +243,7 @@ const ambiguouslyTypedExpression = apply(
   (node) =>
     new AmbiguouslyTypedExpressionAstNode({
       child: node,
-      token: node.token,
+      token: node.identifierToken,
     }),
 );
 
@@ -270,7 +266,7 @@ const product = (params: { allow_unary: boolean } = { allow_unary: false }) =>
       new BinaryNumericExpressionAstNode({
         lhs: first,
         rhs: second,
-        token: op,
+        operatorToken: op,
       }),
     params.allow_unary ? 0 : 1,
   );
@@ -282,7 +278,7 @@ const sum = operation_chain_sc(
     new BinaryNumericExpressionAstNode({
       lhs: first,
       rhs: second,
-      token: op,
+      operatorToken: op,
     }),
 );
 

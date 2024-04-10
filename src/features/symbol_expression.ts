@@ -1,30 +1,27 @@
 import { apply, tok, Token } from "typescript-parsec";
-import {
-    EvaluableAstNode,
-    TokenAstNode
-} from "../ast.ts";
+import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
-    analysisTable,
-    runtimeTable,
-    SymbolType,
-    SymbolValue,
+  analysisTable,
+  runtimeTable,
+  SymbolType,
+  SymbolValue,
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 
 /* AST Nodes */
 
-export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
-  token: Token<TokenKind>;
+export class SymbolExpressionAstNode implements EvaluableAstNode {
+  identifierToken: Token<TokenKind>;
 
   constructor(identifier: Token<TokenKind>) {
-    this.token = identifier;
+    this.identifierToken = identifier;
   }
 
   evaluate(): SymbolValue<unknown> {
-    const ident = this.token.text;
+    const ident = this.identifierToken.text;
     return runtimeTable
       .findSymbol(ident)
       .map((symbol) => symbol.value)
@@ -37,7 +34,7 @@ export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    const ident = this.token.text;
+    const ident = this.identifierToken.text;
     const findings = AnalysisFindings.empty();
     analysisTable.findSymbol(ident).onNone(() => {
       findings.errors.push(
@@ -55,7 +52,7 @@ export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
 
   resolveType(): SymbolType {
     return analysisTable
-      .findSymbol(this.token.text)
+      .findSymbol(this.identifierToken.text)
       .map((symbol) => symbol.valueKind)
       .unwrapOrThrow(
         new InternalError(
@@ -66,7 +63,7 @@ export class SymbolExpressionAstNode implements TokenAstNode, EvaluableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.token, this.token];
+    return [this.identifierToken, this.identifierToken];
   }
 }
 
