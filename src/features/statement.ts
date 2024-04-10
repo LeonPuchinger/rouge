@@ -7,7 +7,7 @@ import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
-import { } from "../util/array.ts";
+import {} from "../util/array.ts";
 
 /* AST NODES */
 
