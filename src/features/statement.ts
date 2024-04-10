@@ -26,9 +26,9 @@ export class StatementsAstNode
     });
   }
 
-  check(): AnalysisFindings {
+  analyze(): AnalysisFindings {
     return this.children
-      .map((statement) => statement.check())
+      .map((statement) => statement.analyze())
       .reduce((previous, current) => AnalysisFindings.merge(previous, current));
   }
 }

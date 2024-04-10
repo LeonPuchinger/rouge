@@ -39,10 +39,6 @@ export class ExpressionAstNode
   interpret(): void {
     this.child.evaluate();
   }
-
-  check(): AnalysisFindings {
-    return this.child.analyze();
-  }
 }
 
 /* PARSER */

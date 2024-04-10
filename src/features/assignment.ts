@@ -39,7 +39,7 @@ export class AssignmentAstNode
     );
   }
 
-  check(): AnalysisFindings {
+  analyze(): AnalysisFindings {
     const findings = this.child.analyze();
     if (findings.isErroneous()) {
       return findings;

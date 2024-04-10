@@ -32,8 +32,7 @@ export interface WrapperAstNode<T extends AstNode> {
 
 export interface InterpretableAstNode {
   interpret(): void;
-  // TODO: rename to analyze as there is no difference anymore
-  check(): AnalysisFindings;
+  analyze(): AnalysisFindings;
 }
 
 export interface EvaluableAstNode<R = SymbolValue<unknown>> {
