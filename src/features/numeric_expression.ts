@@ -24,6 +24,7 @@ import {
   SymbolValue,
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
+import { memoize } from "../util/memoize.ts";
 import { Wrapper } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import { operation_chain_sc } from "../util/parser.ts";
@@ -47,6 +48,8 @@ class NumericLiteralAstNode
     return AnalysisFindings.empty();
   }
 
+  // example usage
+  @memoize
   evaluate(): SymbolValue<number> {
     return new NumericSymbolValue(this.value);
   }
