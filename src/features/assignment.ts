@@ -1,5 +1,5 @@
 import { apply, str, tok, Token } from "typescript-parsec";
-import { InterpretableAstNode, WrapperAstNode } from "../ast.ts";
+import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -16,10 +16,7 @@ import { expression, ExpressionAstNode } from "./expression.ts";
 
 /* AST NODES */
 
-export class AssignmentAstNode
-  implements
-    WrapperAstNode<ExpressionAstNode>,
-    InterpretableAstNode {
+export class AssignmentAstNode implements InterpretableAstNode {
   token!: Token<TokenKind>;
   child!: ExpressionAstNode;
 
@@ -75,7 +72,7 @@ export class AssignmentAstNode
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.token, this.child.tokenRange()[1]]
+    return [this.token, this.child.tokenRange()[1]];
   }
 }
 

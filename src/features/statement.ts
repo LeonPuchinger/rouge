@@ -1,5 +1,5 @@
 import { alt_sc, apply, list_sc, tok, Token } from "typescript-parsec";
-import { InterpretableAstNode, NaryAstNode } from "../ast.ts";
+import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { InternalError } from "../util/error.ts";
@@ -15,8 +15,7 @@ export type StatementAstNode =
   | ExpressionAstNode
   | AssignmentAstNode;
 
-export class StatementsAstNode
-  implements NaryAstNode<StatementAstNode>, InterpretableAstNode {
+export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
 
   constructor(params: Attributes<StatementsAstNode>) {

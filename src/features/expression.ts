@@ -1,24 +1,17 @@
-import { Token, alt_sc, apply } from "typescript-parsec";
-import {
-  EvaluableAstNode,
-  InterpretableAstNode,
-  WrapperAstNode,
-} from "../ast.ts";
+import { alt_sc, apply, Token } from "typescript-parsec";
+import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
+import { TokenKind } from "../lexer.ts";
 import { SymbolType, SymbolValue } from "../symbol.ts";
 import { Attributes } from "../util/type.ts";
 import { booleanExpression } from "./boolean_expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
 import { symbolExpression } from "./symbol_expression.ts";
-import { TokenKind } from "../lexer.ts";
 
 /* AST Nodes */
 
 export class ExpressionAstNode
-  implements
-    WrapperAstNode<EvaluableAstNode>,
-    EvaluableAstNode,
-    InterpretableAstNode {
+  implements EvaluableAstNode, InterpretableAstNode {
   child!: EvaluableAstNode;
 
   constructor(params: Attributes<ExpressionAstNode>) {

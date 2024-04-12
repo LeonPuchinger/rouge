@@ -9,7 +9,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { BinaryAstNode, EvaluableAstNode, WrapperAstNode } from "../ast.ts";
+import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -57,10 +57,7 @@ class NumericLiteralAstNode implements NumericExpressionAstNode {
 
 /* Unary Expression */
 
-class UnaryNumericExpressionAstNode
-  implements
-    WrapperAstNode<NumericExpressionAstNode>,
-    NumericExpressionAstNode {
+class UnaryNumericExpressionAstNode implements NumericExpressionAstNode {
   child!: NumericExpressionAstNode;
   operatorToken!: Token<TokenKind>;
 
@@ -100,10 +97,7 @@ class UnaryNumericExpressionAstNode
 
 /* Binary expression */
 
-class BinaryNumericExpressionAstNode
-  implements
-    BinaryAstNode<NumericExpressionAstNode, NumericExpressionAstNode>,
-    NumericExpressionAstNode {
+class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
   lhs!: NumericExpressionAstNode;
   rhs!: NumericExpressionAstNode;
   operatorToken!: Token<TokenKind>;
@@ -157,10 +151,7 @@ class BinaryNumericExpressionAstNode
 
 /* Ambiguously typed expression */
 
-class AmbiguouslyTypedExpressionAstNode
-  implements
-    WrapperAstNode<EvaluableAstNode<SymbolValue<unknown>>>,
-    NumericExpressionAstNode {
+class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
   child!: EvaluableAstNode<SymbolValue<unknown>>;
   token!: Token<TokenKind>;
 

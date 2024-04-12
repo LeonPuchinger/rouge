@@ -18,17 +18,4 @@ export interface InterpretableAstNode extends AstNode {
   interpret(): void;
 }
 
-export interface BinaryAstNode<L extends AstNode, R extends AstNode> {
-  lhs: L;
-  rhs: R;
-}
-
-export interface NaryAstNode<T extends AstNode> {
-  children: T[];
-}
-
-export interface WrapperAstNode<T extends AstNode> {
-  child: T;
-}
-
 export type AST = StatementsAstNode;

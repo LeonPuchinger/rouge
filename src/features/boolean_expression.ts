@@ -9,7 +9,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { BinaryAstNode, EvaluableAstNode, WrapperAstNode } from "../ast.ts";
+import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -58,10 +58,7 @@ class BooleanLiteralAstNode implements BooleanExpressionAstNode {
 
 /* Negation */
 
-class BooleanNegationAstNode
-  implements
-    WrapperAstNode<BooleanExpressionAstNode>,
-    BooleanExpressionAstNode {
+class BooleanNegationAstNode implements BooleanExpressionAstNode {
   negationToken!: Token<TokenKind>;
   child!: BooleanExpressionAstNode;
 
@@ -88,10 +85,7 @@ class BooleanNegationAstNode
 
 /* Binary Boolean Expression */
 
-class BinaryBooleanExpressionAstNode
-  implements
-    BinaryAstNode<EvaluableAstNode, EvaluableAstNode>,
-    BooleanExpressionAstNode {
+class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
   lhs!: EvaluableAstNode<SymbolValue<unknown>>;
   rhs!: EvaluableAstNode<SymbolValue<unknown>>;
   operatorToken!: Token<TokenKind>;
