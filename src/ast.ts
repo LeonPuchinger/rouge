@@ -27,10 +27,6 @@ export interface NaryAstNode<T extends AstNode> {
   children: T[];
 }
 
-export interface ValueAstNode<V> {
-  value: V;
-}
-
 export interface WrapperAstNode<T extends AstNode> {
   child: T;
 }

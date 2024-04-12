@@ -9,12 +9,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import {
-  BinaryAstNode,
-  EvaluableAstNode,
-  ValueAstNode,
-  WrapperAstNode
-} from "../ast.ts";
+import { BinaryAstNode, EvaluableAstNode, WrapperAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -24,6 +19,7 @@ import {
   SymbolValue,
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
+import { memoize } from "../util/memoize.ts";
 import { None, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
@@ -35,9 +31,7 @@ import { symbolExpression } from "./symbol_expression.ts";
 
 /* Boolean literal */
 
-class BooleanLiteralAstNode
-  implements ValueAstNode<boolean>, BooleanExpressionAstNode {
-  value!: boolean;
+class BooleanLiteralAstNode implements BooleanExpressionAstNode {
   token!: Token<TokenKind>;
 
   constructor(params: Attributes<BooleanLiteralAstNode>) {
@@ -48,8 +42,9 @@ class BooleanLiteralAstNode
     return AnalysisFindings.empty();
   }
 
+  @memoize
   evaluate(): SymbolValue<boolean> {
-    return new BooleanSymbolValue(this.value);
+    return new BooleanSymbolValue(this.token.text === "true");
   }
 
   resolveType(): SymbolType {
@@ -214,11 +209,7 @@ export const booleanExpression = rule<TokenKind, BooleanExpressionAstNode>();
 
 const literal = apply(
   tok(TokenKind.boolean_literal),
-  (token) =>
-    new BooleanLiteralAstNode({
-      token: token,
-      value: token.text === "true",
-    }),
+  (token) => new BooleanLiteralAstNode({ token: token }),
 );
 
 const negation: Parser<TokenKind, BooleanExpressionAstNode> = apply(

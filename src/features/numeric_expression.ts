@@ -9,12 +9,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import {
-  BinaryAstNode,
-  EvaluableAstNode,
-  ValueAstNode,
-  WrapperAstNode,
-} from "../ast.ts";
+import { BinaryAstNode, EvaluableAstNode, WrapperAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -35,9 +30,7 @@ import { symbolExpression } from "./symbol_expression.ts";
 
 /* Numeric literal */
 
-class NumericLiteralAstNode
-  implements ValueAstNode<number>, NumericExpressionAstNode {
-  value!: number;
+class NumericLiteralAstNode implements NumericExpressionAstNode {
   token!: Token<TokenKind>;
 
   constructor(params: Attributes<NumericLiteralAstNode>) {
@@ -48,10 +41,9 @@ class NumericLiteralAstNode
     return AnalysisFindings.empty();
   }
 
-  // example usage
   @memoize
   evaluate(): SymbolValue<number> {
-    return new NumericSymbolValue(this.value);
+    return new NumericSymbolValue(parseFloat(this.token.text));
   }
 
   resolveType(): SymbolType {
@@ -216,10 +208,7 @@ export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 const literal = apply(
   tok(TokenKind.numeric_literal),
   (literal): NumericLiteralAstNode =>
-    new NumericLiteralAstNode({
-      token: literal,
-      value: parseFloat(literal.text),
-    }),
+    new NumericLiteralAstNode({ token: literal }),
 );
 
 const unaryOperation = apply(
