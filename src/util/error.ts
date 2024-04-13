@@ -2,7 +2,12 @@
 //import { accessEnvironment } from "./environment.ts";
 //import { Option, Some } from "./monad/index.ts";
 //import { createSnippet } from "./snippet.ts";
+import { AstNode } from "../ast.ts";
+import { accessEnvironment } from "./environment.ts";
+import { Option, Some } from "./monad/index.ts";
+import { createSnippet } from "./snippet.ts";
 import { concatLines, toMultiline } from "./string.ts";
+import { Attributes } from "./type.ts";
 
 export function Panic(reason: string): Error {
   return new Error(`PANIC: ${reason}.`);
@@ -60,38 +65,39 @@ export class InternalError extends Error implements AppError {
   }
 }
 
-
 /**
- * A type of error that is the result of the users input.
+ * A type of error that is the result of the users input and represents expected behavior.
  * The message contains a snippet of the affected input as well as
  * a header message and an optional message attached to the affected area.
  * The snippet contains three lines of padding around the highlighted snippet.
- *
- * @param message Header text to display at the top of the error message.
- * @param beginHighlight The AST node where the snippet begins.
- * @param endHighlight The AST node where the snippet should end. The end of the line if None.
- * @param messageHighlight A message to attach to the highlighted section of code.
  */
-/*
-export function InterpreterError( // TODO: revamp with dataclass
-  message: string,
-  beginHighlight: TokenAstNode<unknown>,
-  endHighlight: Option<TokenAstNode<unknown>>,
-  messageHighlight?: string,
-): AppError {
-  return {
-    toString() {
-      return toMultiline(
-        message,
-        createSnippet(
-          accessEnvironment("source"),
-          beginHighlight.token.pos,
-          endHighlight.map((node) => node.token.pos),
-          3,
-          Some(messageHighlight),
-        ),
-      );
-    },
-  };
+export class RuntimeError extends Error implements AppError {
+  message!: string;
+  beginHighlight!: AstNode;
+  endHighlight!: Option<AstNode>;
+  messageHighlight!: string;
+
+  /**
+   * @param message Header text to display at the top of the error message.
+   * @param beginHighlight The AST node where the snippet begins.
+   * @param endHighlight The AST node where the snippet should end. The end of the line if None.
+   * @param messageHighlight A message to attach to the highlighted section of code.
+   */
+  constructor(params: Attributes<RuntimeError>) {
+    super(params.message);
+    Object.assign(this, params);
+  }
+
+  toString() {
+    return toMultiline(
+      this.message,
+      createSnippet(
+        accessEnvironment("source"),
+        this.beginHighlight.tokenRange()[0].pos,
+        this.endHighlight.map((node) => node.tokenRange()[1].pos),
+        3,
+        Some(this.messageHighlight),
+      ),
+    );
+  }
 }
- */
