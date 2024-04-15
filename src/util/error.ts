@@ -9,10 +9,6 @@ import { createSnippet } from "./snippet.ts";
 import { concatLines, toMultiline } from "./string.ts";
 import { Attributes } from "./type.ts";
 
-export function Panic(reason: string): Error {
-  return new Error(`PANIC: ${reason}.`);
-}
-
 /**
  * Panics when the given boolean equals to `false`
  *
@@ -24,7 +20,7 @@ export function assert(
   message: string,
 ) {
   if (!test) {
-    throw Panic(`assertion failed: ${message}`);
+    throw new InternalError(`assertion failed: ${message}`);
   }
 }
 

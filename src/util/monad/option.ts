@@ -1,4 +1,4 @@
-import { Panic } from "../error.ts";
+import { InternalError } from "../error.ts";
 import { Err, Ok, Result } from "./index.ts";
 
 export interface Option<T> {
@@ -85,7 +85,7 @@ export function None<T>(): Option<T> {
     },
 
     unwrap(): T {
-      throw Panic("Unwrap called on None object");
+      throw new InternalError("Unwrap called on None object");
     },
 
     unwrapOr(defaultValue: T): T {

@@ -1,4 +1,4 @@
-import { Panic } from "../error.ts";
+import { InternalError } from "../error.ts";
 import { None, Option, Some } from "./index.ts";
 
 export interface Result<T, E> {
@@ -43,7 +43,7 @@ export function Ok<T, E>(value: T): Result<T, E> {
     },
 
     unwrapError(): E {
-      throw Panic("unwrapError called on Result");
+      throw new InternalError("unwrapError called on Ok");
     },
 
     unwrapOr(_defaultValue: T): T {
@@ -103,7 +103,7 @@ export function Err<T, E>(value: E): Result<T, E> {
     },
 
     unwrap(): T {
-      throw Panic("unwrap called on Err");
+      throw new InternalError("unwrap called on Err");
     },
 
     unwrapError(): E {
