@@ -1,7 +1,3 @@
-//import { TokenAstNode } from "../ast.ts";
-//import { accessEnvironment } from "./environment.ts";
-//import { Option, Some } from "./monad/index.ts";
-//import { createSnippet } from "./snippet.ts";
 import { AstNode } from "../ast.ts";
 import { accessEnvironment } from "./environment.ts";
 import { Option, Some } from "./monad/index.ts";
