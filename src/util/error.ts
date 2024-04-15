@@ -83,7 +83,9 @@ export class RuntimeError extends Error implements AppError {
    * @param endHighlight The AST node where the snippet should end. The end of the line if None.
    * @param messageHighlight A message to attach to the highlighted section of code.
    */
-  constructor(params: Attributes<RuntimeError>) {
+  constructor(
+    params: Omit<Attributes<RuntimeError>, "cause" | "name" | "stack">,
+  ) {
     super(params.message);
     Object.assign(this, params);
   }
