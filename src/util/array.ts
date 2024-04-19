@@ -21,6 +21,18 @@ declare global {
       condition: (result: U) => boolean,
       defaultValue: U,
     ): U;
+
+    /**
+     * Returns the first element in the array.
+     * In case the array is empty, return `undefined`.
+     */
+    first(): T;
+
+    /**
+     * Returns the last element in the array.
+     * In case the array is empty, return `undefined`.
+     */
+    last(): T;
   }
 }
 
@@ -36,4 +48,12 @@ Array.prototype.mapUntil = function <T, U>(
     }
   }
   return defaultValue;
+};
+
+Array.prototype.first = function <T>(): T {
+  return this.at(0);
+};
+
+Array.prototype.last = function <T>(): T {
+  return this.slice(-1).at(0);
 };

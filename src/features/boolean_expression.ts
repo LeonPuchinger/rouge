@@ -2,7 +2,6 @@ import {
   alt_sc,
   apply,
   kmid,
-  kright,
   Parser,
   rule,
   seq,
@@ -10,234 +9,216 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import * as analysis from "../analysis.ts";
-import * as ast from "../ast.ts";
+import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
-import * as interpreter from "../interpreter.ts";
-import { TokenType } from "../lexer.ts";
+import { TokenKind } from "../lexer.ts";
 import {
-  createBooleanSymbolValue,
+  BooleanSymbolValue,
   PrimitiveSymbolType,
+  SymbolType,
   SymbolValue,
 } from "../symbol.ts";
 import { InternalError } from "../util/error.ts";
+import { memoize } from "../util/memoize.ts";
 import { None, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
-import { symbolExpression } from "./expression.ts";
+import { Attributes } from "../util/type.ts";
+import { ExpressionAstNode } from "./expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
+import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
 
 /* Boolean literal */
 
-type BooleanLiteralAstNode =
-  & ast.ValueAstNode<boolean>
-  & BooleanExpressionAstNode;
+class BooleanLiteralAstNode implements BooleanExpressionAstNode {
+  token!: Token<TokenKind>;
 
-function createBooleanLiteralAstNode(params: {
-  value: boolean;
-  token: Token<TokenType>;
-}): BooleanLiteralAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateBooleanLiteralAstNode(this);
-    },
-    analyze() {
-      return analyzeBooleanLiteralAstNode();
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("boolean");
-    },
-  };
-}
+  constructor(params: Attributes<BooleanLiteralAstNode>) {
+    Object.assign(this, params);
+  }
 
-function analyzeBooleanLiteralAstNode(): AnalysisFindings {
-  return AnalysisFindings.empty();
-}
+  analyze(): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
 
-function evaluateBooleanLiteralAstNode(
-  node: BooleanLiteralAstNode,
-): SymbolValue<boolean> {
-  return createBooleanSymbolValue(node.value);
+  @memoize
+  evaluate(): SymbolValue<boolean> {
+    return new BooleanSymbolValue(this.token.text === "true");
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("boolean");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.token, this.token];
+  }
 }
 
 /* Negation */
 
-type BooleanNegationAstNode =
-  & ast.WrapperAstNode<BooleanExpressionAstNode>
-  & BooleanExpressionAstNode;
+class BooleanNegationAstNode implements BooleanExpressionAstNode {
+  negationToken!: Token<TokenKind>;
+  child!: BooleanExpressionAstNode;
 
-function createBooleanNegationAstNode(params: {
-  child: BooleanExpressionAstNode;
-}): BooleanNegationAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateBooleanNegationAstNode(this);
-    },
-    analyze() {
-      return analyzeBooleanNegationAstNode();
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("boolean");
-    },
-  };
-}
+  constructor(params: Attributes<BooleanNegationAstNode>) {
+    Object.assign(this, params);
+  }
 
-function analyzeBooleanNegationAstNode() {
-  return AnalysisFindings.empty();
-}
+  analyze(): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
 
-function evaluateBooleanNegationAstNode(
-  node: BooleanNegationAstNode,
-): SymbolValue<boolean> {
-  return createBooleanSymbolValue(!node.child.evaluate().value);
+  evaluate(): SymbolValue<boolean> {
+    return this.child.evaluate().map((value) => !value);
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("boolean");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.negationToken, this.child.tokenRange()[1]];
+  }
 }
 
 /* Binary Boolean Expression */
 
-type BinaryBooleanExpressionAstNode =
-  & ast.BinaryAstNode<ast.EvaluableAstNode, ast.EvaluableAstNode>
-  & ast.TokenAstNode
-  & BooleanExpressionAstNode;
+class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
+  lhs!: EvaluableAstNode<SymbolValue<unknown>>;
+  rhs!: EvaluableAstNode<SymbolValue<unknown>>;
+  operatorToken!: Token<TokenKind>;
 
-function createBinaryBooleanExpressionAstNode(params: {
-  lhs: ast.EvaluableAstNode;
-  rhs: ast.EvaluableAstNode;
-  token: Token<TokenType>;
-}): BinaryBooleanExpressionAstNode {
-  return {
-    ...params,
-    evaluate() {
-      return evaluateBinaryExpression(this);
-    },
-    analyze() {
-      return analyzeBinaryExpression(this);
-    },
-    resolveType() {
-      return new PrimitiveSymbolType("boolean");
-    },
-  };
-}
+  constructor(params: Attributes<BinaryBooleanExpressionAstNode>) {
+    Object.assign(this, params);
+  }
 
-function analyzeBinaryExpression(
-  node: BinaryBooleanExpressionAstNode,
-): AnalysisFindings {
-  const findings = AnalysisFindings.empty();
-  const operator = node.token.text;
-  const leftType = node.lhs.resolveType();
-  const rightType = node.rhs.resolveType();
-  if (
-    ["==", "!="].includes(operator) &&
-    !leftType.typeCompatibleWith(rightType)
-  ) {
-    findings.errors.push(AnalysisError({
-      message:
-        "You tried to compare two values that don't have the same type. That is not possible.",
-      beginHighlight: node,
-      endHighlight: None(),
-    }));
-  }
-  if (
-    [">", ">=", "<", "<="].includes(operator) &&
-    (!leftType.isPrimitive("number") || !rightType.isPrimitive("number"))
-  ) {
-    findings.errors.push(AnalysisError({
-      message:
-        'The "greater/smaller than" operator can only be used on numbers.',
-      beginHighlight: node,
-      endHighlight: None(),
-    }));
-  }
-  if (
-    ["&&", "||", "^"].includes(operator) &&
-    (!leftType.isPrimitive("boolean") || !rightType.isPrimitive("boolean"))
-  ) {
-    findings.errors.push(AnalysisError({
-      message:
-        "You tried to use a boolean combination operators on something that is not a boolean.",
-      beginHighlight: node,
-      endHighlight: None(),
-    }));
-  }
-  return findings;
-}
-
-function evaluateBinaryExpression(
-  node: BinaryBooleanExpressionAstNode,
-): SymbolValue<boolean> {
-  if (
-    !["==", "!=", ">=", ">", "<=", "<", "&&", "||", "^"]
-      .includes(node.token.text)
-  ) {
-    throw new InternalError(
-      `The interpreter recieved instructions to perform the following unknown operation on two booleans: ${node.token.text}`,
-      "This should have either been caught during static analysis or be prevented by the parser.",
+  analyze(): AnalysisFindings {
+    const findings = AnalysisFindings.merge(
+      this.lhs.analyze(),
+      this.rhs.analyze(),
     );
+    if (findings.isErroneous()) {
+      return findings;
+    }
+    const operator = this.operatorToken.text;
+    const leftType = this.lhs.resolveType();
+    const rightType = this.rhs.resolveType();
+    if (
+      ["==", "!="].includes(operator) &&
+      !leftType.typeCompatibleWith(rightType)
+    ) {
+      findings.errors.push(AnalysisError({
+        message:
+          "You tried to compare two values that don't have the same type. That is not possible.",
+        beginHighlight: this,
+        endHighlight: None(),
+      }));
+    }
+    if (
+      [">", ">=", "<", "<="].includes(operator) &&
+      (!leftType.isPrimitive("number") || !rightType.isPrimitive("number"))
+    ) {
+      findings.errors.push(AnalysisError({
+        message:
+          'The "greater/smaller than" operator can only be used on numbers.',
+        beginHighlight: this,
+        endHighlight: None(),
+      }));
+    }
+    if (
+      ["&&", "||", "^"].includes(operator) &&
+      (!leftType.isPrimitive("boolean") || !rightType.isPrimitive("boolean"))
+    ) {
+      findings.errors.push(AnalysisError({
+        message:
+          "You tried to use a boolean combination operators on something that is not a boolean.",
+        beginHighlight: this,
+        endHighlight: None(),
+      }));
+    }
+    return findings;
   }
-  return new Wrapper([node.lhs.evaluate(), node.rhs.evaluate()])
-    .map(([left, right]) => {
-      // values can safely be type-casted because their type has been checked during analysis
-      switch (node.token.text) {
-        case "==":
-          return left.value == right.value;
-        case "!=":
-          return left.value != right.value;
-        case ">=":
-          return (left.value as number) >= (right.value as number);
-        case ">":
-          return (left.value as number) > (right.value as number);
-        case "<=":
-          return (left.value as number) <= (right.value as number);
-        case "<":
-          return (left.value as number) < (right.value as number);
-        case "&&":
-          return (left.value as boolean) && (right.value as boolean);
-        case "||":
-          return (left.value as boolean) || (right.value as boolean);
-        case "^":
-          return ((left.value as boolean) || (right.value as boolean)) &&
-            !((left.value as boolean) && (right.value as boolean));
-        default:
-          // this never happens, TS simply does not get that the symbol of operations has been checked previously.
-          return false;
-      }
-    })
-    .map((result) => createBooleanSymbolValue(result))
-    .unwrap();
+
+  evaluate(): SymbolValue<boolean> {
+    if (
+      !["==", "!=", ">=", ">", "<=", "<", "&&", "||", "^"]
+        .includes(this.operatorToken.text)
+    ) {
+      throw new InternalError(
+        `The interpreter recieved instructions to perform the following unknown operation on two booleans: ${this.operatorToken.text}`,
+        "This should have either been caught during static analysis or be prevented by the parser.",
+      );
+    }
+    return new Wrapper([this.lhs.evaluate(), this.rhs.evaluate()])
+      .map(([left, right]) => {
+        // values can safely be type-casted because their type has been checked during analysis
+        switch (this.operatorToken.text) {
+          case "==":
+            return left.value == right.value;
+          case "!=":
+            return left.value != right.value;
+          case ">=":
+            return (left.value as number) >= (right.value as number);
+          case ">":
+            return (left.value as number) > (right.value as number);
+          case "<=":
+            return (left.value as number) <= (right.value as number);
+          case "<":
+            return (left.value as number) < (right.value as number);
+          case "&&":
+            return (left.value as boolean) && (right.value as boolean);
+          case "||":
+            return (left.value as boolean) || (right.value as boolean);
+          case "^":
+            return ((left.value as boolean) || (right.value as boolean)) &&
+              !((left.value as boolean) && (right.value as boolean));
+          default:
+            // this never happens, TS simply does not get that the symbol of operations has been checked previously.
+            return false;
+        }
+      })
+      .map((result) => new BooleanSymbolValue(result))
+      .unwrap();
+  }
+
+  resolveType(): SymbolType {
+    return new PrimitiveSymbolType("boolean");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.lhs.tokenRange()[0], this.rhs.tokenRange()[1]];
+  }
 }
 
 /* Boolean Expression */
 
-type BooleanExpressionAstNode = ast.EvaluableAstNode<SymbolValue<boolean>>;
+type BooleanExpressionAstNode = EvaluableAstNode<SymbolValue<boolean>>;
 
 /* PARSER */
 
 // Forward declaration of exported top-level rule
-export const booleanExpression = rule<TokenType, BooleanExpressionAstNode>();
+export const booleanExpression = rule<TokenKind, BooleanExpressionAstNode>();
 
 const literal = apply(
-  tok(TokenType.boolean_literal),
-  (token) =>
-    createBooleanLiteralAstNode({
-      token: token,
-      value: token.text === "true",
-    }),
+  tok(TokenKind.boolean_literal),
+  (token) => new BooleanLiteralAstNode({ token: token }),
 );
 
-const negation: Parser<TokenType, BooleanExpressionAstNode> = apply(
-  kright(
+const negation: Parser<TokenKind, BooleanExpressionAstNode> = apply(
+  seq(
     str("!"),
     booleanExpression,
   ),
-  (expression) =>
-    createBooleanNegationAstNode({
+  ([token, expression]) =>
+    new BooleanNegationAstNode({
+      negationToken: token,
       child: expression,
     }),
 );
 
-const parenthesized: Parser<TokenType, BooleanExpressionAstNode> = kmid(
+const parenthesized: Parser<TokenKind, BooleanExpressionAstNode> = kmid(
   str("("),
   booleanExpression,
   str(")"),
@@ -248,15 +229,10 @@ const booleanlessExpression = apply(
     numericExpression,
     symbolExpression,
   ),
-  (expression): ast.ExpressionAstNode => ({
-    ...expression,
-    interpret() {
-      return interpreter.interpretExpression(this);
-    },
-    check() {
-      return analysis.checkExpression(this);
-    },
-  }),
+  (expression: EvaluableAstNode) =>
+    new ExpressionAstNode({
+      child: expression,
+    }),
 );
 
 const unaryBooleanExpression = alt_sc(
@@ -265,7 +241,7 @@ const unaryBooleanExpression = alt_sc(
   literal,
 );
 
-const booleanOperand: Parser<TokenType, ast.EvaluableAstNode> = alt_sc(
+const booleanOperand: Parser<TokenKind, EvaluableAstNode> = alt_sc(
   unaryBooleanExpression,
   booleanlessExpression,
 );
@@ -292,8 +268,8 @@ const binaryBooleanExpression = apply(
   ),
   ([initial, operations]) => {
     function buildTree(
-      remainder: [Token<TokenType>, ast.EvaluableAstNode][],
-    ): [Token<TokenType>, BooleanExpressionAstNode] {
+      remainder: [Token<TokenKind>, EvaluableAstNode][],
+    ): [Token<TokenKind>, BooleanExpressionAstNode] {
       if (remainder.length === 2) {
         // The recursion ends at 2 so we can always return a boolean expression.
         // If the recursion were to end at 1, the last step could return a generic expression
@@ -304,10 +280,10 @@ const binaryBooleanExpression = apply(
         const [secondOperator, secondExpression] = second;
         return [
           firstOperator,
-          createBinaryBooleanExpressionAstNode({
+          new BinaryBooleanExpressionAstNode({
             lhs: firstExpression,
             rhs: secondExpression,
-            token: secondOperator,
+            operatorToken: secondOperator,
           }),
         ];
       }
@@ -316,28 +292,28 @@ const binaryBooleanExpression = apply(
       const [nextOperator, nextExpression] = buildTree(remainder.slice(1));
       return [
         currentOperator,
-        createBinaryBooleanExpressionAstNode({
+        new BinaryBooleanExpressionAstNode({
           lhs: currentExpression,
           rhs: nextExpression,
-          token: nextOperator,
+          operatorToken: nextOperator,
         }),
       ];
     }
     // if the expression only consists of a single operation, don't initiate a recursion.
     if (operations.length === 1) {
       const [operator, expression] = operations[0];
-      return createBinaryBooleanExpressionAstNode({
+      return new BinaryBooleanExpressionAstNode({
         lhs: initial,
         rhs: expression,
-        token: operator,
+        operatorToken: operator,
       });
     }
     // start recursion
     const [operator, right] = buildTree(operations);
-    return createBinaryBooleanExpressionAstNode({
+    return new BinaryBooleanExpressionAstNode({
       lhs: initial,
       rhs: right,
-      token: operator,
+      operatorToken: operator,
     });
   },
 );

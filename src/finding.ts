@@ -1,4 +1,4 @@
-import { TokenAstNode, ValueAstNode } from "./ast.ts";
+import { AstNode } from "./ast.ts";
 import { accessEnvironment } from "./util/environment.ts";
 import { Option, Some } from "./util/monad/index.ts";
 import { createSnippet } from "./util/snippet.ts";
@@ -32,6 +32,7 @@ export interface AnalysisFinding {
   toString(): string;
 }
 
+// TODO: allow same parameters as with `RuntimeError` (separate include & highlight token ranges)
 interface AnalysisFindingParams {
   /**
    * Header text to display at the top of the error message.
@@ -41,12 +42,12 @@ interface AnalysisFindingParams {
   /**
    * The AST node where the snippet begins.
    */
-  beginHighlight: TokenAstNode;
+  beginHighlight: AstNode;
 
   /**
    * The AST node where the snippet should end. The end of the line if None.
    */
-  endHighlight: Option<ValueAstNode<unknown>>;
+  endHighlight: Option<AstNode>;
 
   /**
    * A message to attach to the highlighted section of code.
@@ -72,11 +73,13 @@ function createAnalysisFinding(
     kind: kind,
     toString() {
       return toMultiline(
-        `${kind.toUpperCase()}: ${params.message}`,
+        params.message,
         createSnippet(
           accessEnvironment("source"),
-          params.beginHighlight.token.pos,
-          params.endHighlight.map((node) => node.token.pos),
+          params.beginHighlight.tokenRange()[0].pos,
+          params.endHighlight.map((node) => node.tokenRange()[1].pos),
+          Some(params.beginHighlight.tokenRange()[0].pos),
+          params.endHighlight.map((node) => node.tokenRange()[1].pos),
           3,
           Some(params.messageHighlight),
         ),
@@ -116,13 +119,17 @@ export class AnalysisFindings {
   }
 
   /**
-   * Create a new instance that contains the warnings and errors from two other instances.
+   * Create a new instance that contains the warnings and errors from multiple other instances.
    */
-  static merge(a: AnalysisFindings, b: AnalysisFindings): AnalysisFindings {
-    return new AnalysisFindings({
-      warnings: [...a.warnings, ...b.warnings],
-      errors: [...a.errors, ...b.errors],
-    });
+  static merge(...findings: AnalysisFindings[]): AnalysisFindings {
+    return findings.reduce(
+      (previous, current) =>
+        new AnalysisFindings({
+          errors: [...previous.errors, ...current.errors],
+          warnings: [...previous.warnings, ...current.warnings],
+        }),
+      new AnalysisFindings({ errors: [], warnings: [] }),
+    );
   }
 
   isErroneous() {

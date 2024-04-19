@@ -10,14 +10,13 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { analysisTable } from "../analysis.ts";
-import { EvaluableAstNode, StatementsAstNode } from "../ast.ts";
+import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
-import { TokenType } from "../lexer.ts";
-import { statements } from "../parser.ts";
+import { TokenKind } from "../lexer.ts";
 import {
-  createFunctionSymbolValue,
+  analysisTable,
   FunctionSymbolType,
+  FunctionSymbolValue,
   resolveType,
   StaticSymbol,
   SymbolType,
@@ -26,6 +25,7 @@ import {
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
+import { statements, StatementsAstNode } from "./statement.ts";
 
 /* DATA TYPES */
 
@@ -33,15 +33,15 @@ type Function = StatementsAstNode;
 
 /* AST NODES */
 
-class ParameterAstNode {
-  name!: Token<TokenType>;
-  type!: Token<TokenType>;
+class ParameterAstNode implements Partial<EvaluableAstNode> {
+  name!: Token<TokenKind>;
+  type!: Token<TokenKind>;
 
   constructor(params: Attributes<ParameterAstNode>) {
     Object.assign(this, params);
   }
 
-  check(): AnalysisFindings {
+  analyze(): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const existingSymbol = analysisTable.findSymbol(this.name.text);
     if (existingSymbol.kind === "some") {
@@ -50,7 +50,7 @@ class ParameterAstNode {
           "Function parameter names have to be unique. Parameters can not share names with other variables.",
         messageHighlight:
           `A variable with the name "${this.name.text}" already exists. Please choose a different name.`,
-        beginHighlight: { token: this.name },
+        beginHighlight: this,
         endHighlight: None(),
       }));
     }
@@ -60,7 +60,7 @@ class ParameterAstNode {
       findings.errors.push(AnalysisError({
         message:
           "Function parameters can only be primitive for now. This will change in the future.",
-        beginHighlight: { token: this.type },
+        beginHighlight: this,
         endHighlight: None(),
       }));
     }
@@ -70,12 +70,18 @@ class ParameterAstNode {
   resolveType(): SymbolType {
     return resolveType(this.type.text);
   }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.name, this.type];
+  }
 }
 
 class FunctionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
-  returnType!: Option<Token<TokenType>>;
+  returnType!: Option<Token<TokenKind>>;
   statements!: StatementsAstNode;
+  functionKeywordToken!: Token<TokenKind>;
+  closingBraceToken!: Token<TokenKind>;
 
   constructor(params: Attributes<FunctionAstNode>) {
     Object.assign(this, params);
@@ -84,22 +90,25 @@ class FunctionAstNode implements EvaluableAstNode {
   evaluate(): SymbolValue<Function> {
     const params = this.parameters.map((v) => v.resolveType());
     const returnType = this.returnType.map((token) => resolveType(token.text));
-    return createFunctionSymbolValue(this.statements, params, returnType);
+    return new FunctionSymbolValue(this.statements, params, returnType);
   }
 
   analyze(): AnalysisFindings {
     analysisTable.pushScope();
-    const findings = AnalysisFindings.empty();
-    this.parameters.map((parameter) =>
-      AnalysisFindings.merge(findings, parameter.check())
-    );
+    let findings = AnalysisFindings.empty();
+    findings = this.parameters
+      .map((parameter) => parameter.analyze())
+      .reduce(
+        (previous, current) => AnalysisFindings.merge(previous, current),
+        findings,
+      );
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
     for (const index in this.parameters) {
       analysisTable.setSymbol(
         this.parameters[index].name.text,
-        new StaticSymbol({ valueKind: parameterTypes[index] }),
+        new StaticSymbol({ valueType: parameterTypes[index] }),
       );
     }
     // TODO: introduce return statements and check with return type
@@ -117,15 +126,19 @@ class FunctionAstNode implements EvaluableAstNode {
       returnType: returnType,
     });
   }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.functionKeywordToken, this.closingBraceToken];
+  }
 }
 
 /* PARSER */
 
 export const parameter = apply(
   kouter(
-    tok(TokenType.ident),
+    tok(TokenKind.ident),
     str(":"),
-    tok(TokenType.ident),
+    tok(TokenKind.ident),
   ),
   ([ident, type]) =>
     new ParameterAstNode({
@@ -143,13 +156,13 @@ const parameters = apply(
 );
 
 const returnType = apply(
-  opt_sc(tok(TokenType.ident)),
+  opt_sc(tok(TokenKind.ident)),
   (token) => Some(token),
 );
 
 export const functionDefinition = apply(
-  kright(
-    str("function"),
+  seq(
+    str<TokenKind>("function"),
     seq(
       kmid(
         str("("),
@@ -160,17 +173,22 @@ export const functionDefinition = apply(
         seq(str("-"), str(">")),
         returnType,
       ),
-      kmid(
-        str("{"),
+      seq(
+        str<TokenKind>("{"),
         statements,
-        str("}"),
+        str<TokenKind>("}"),
       ),
     ),
   ),
-  ([parameters, returnType, statements]) =>
+  ([
+    functionKeyword,
+    [parameters, returnType, [_, statements, closingBrace]],
+  ]) =>
     new FunctionAstNode({
       parameters: parameters,
       returnType: returnType,
       statements: statements,
+      functionKeywordToken: functionKeyword,
+      closingBraceToken: closingBrace,
     }),
 );
