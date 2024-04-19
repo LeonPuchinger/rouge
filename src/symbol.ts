@@ -2,7 +2,7 @@ import { AstNode } from "./ast.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
-import { Attributes } from "./util/type.ts";
+import { Attributes, WithOptionalAttributes } from "./util/type.ts";
 
 /* ~~~~~~ TEMPORARY ~~~~~~ */
 
@@ -28,22 +28,22 @@ interface Symbol {
 }
 
 export class RuntimeSymbol implements Symbol {
-  node: Option<AstNode>;
-  value: SymbolValue<unknown>;
+  node!: Option<AstNode>;
+  value!: SymbolValue<unknown>;
 
-  constructor(params: { node?: AstNode; value: SymbolValue }) {
+  constructor(params: WithOptionalAttributes<RuntimeSymbol>) {
+    Object.assign(this, params);
     this.node = Some(params.node);
-    this.value = params.value;
   }
 }
 
 export class StaticSymbol implements Symbol {
-  node: Option<AstNode>;
-  valueType: SymbolType;
+  node!: Option<AstNode>;
+  valueType!: SymbolType;
 
-  constructor(params: { node?: AstNode; valueType: SymbolType }) {
+  constructor(params: WithOptionalAttributes<StaticSymbol>) {
+    Object.assign(this, params);
     this.node = Some(params.node);
-    this.valueType = params.valueType;
   }
 }
 
