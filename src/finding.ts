@@ -126,7 +126,7 @@ export class AnalysisFindings {
       (previous, current) =>
         new AnalysisFindings({
           errors: [...previous.errors, ...current.errors],
-          warnings: [...previous.errors, ...current.errors],
+          warnings: [...previous.warnings, ...current.warnings],
         }),
       new AnalysisFindings({ errors: [], warnings: [] }),
     );
