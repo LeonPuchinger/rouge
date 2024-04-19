@@ -3,7 +3,7 @@ import { accessEnvironment } from "./environment.ts";
 import { Option, Some } from "./monad/index.ts";
 import { createSnippet } from "./snippet.ts";
 import { concatLines, toMultiline } from "./string.ts";
-import { Attributes } from "./type.ts";
+import { WithOptionalAttributes } from "./type.ts";
 
 /**
  * Panics when the given boolean equals to `false`
@@ -59,38 +59,50 @@ export class InternalError extends Error implements AppError {
 
 /**
  * A type of error that is the result of the users input and represents expected behavior.
- * The message contains a snippet of the affected input as well as
- * a header message and an optional message attached to the affected area.
- * The snippet contains three lines of padding around the highlighted snippet.
+ * The message contains a snippet of the affected input source code as well as a header message.
+ * Additionally, a segment within the affected area can be highlighted with another message.
+ * The snippet contains three lines of padding around the affected area of source code.
  */
 export class RuntimeError extends Error implements AppError {
+  include!: [AstNode, AstNode] | [AstNode];
   message!: string;
-  beginHighlight!: AstNode;
-  endHighlight!: Option<AstNode>;
-  messageHighlight!: string;
+  highlight: Option<[AstNode, AstNode] | [AstNode]>;
+  highlightMessage: Option<string>;
 
   /**
+   * @param include The range of AST nodes that mark the affected area (can be just one AST node wide).
    * @param message Header text to display at the top of the error message.
-   * @param beginHighlight The AST node where the snippet begins.
-   * @param endHighlight The AST node where the snippet should end. The end of the line if None.
-   * @param messageHighlight A message to attach to the highlighted section of code.
+   * @param highlight The range of AST nodes that mark the highlighted area (can be just one AST node wide).
+   * @param highlightMessage A message attached to the highlighted section of code.
    */
   constructor(
-    params: Omit<Attributes<RuntimeError>, "cause" | "name" | "stack">,
+    params: Omit<
+      WithOptionalAttributes<RuntimeError>,
+      "cause" | "name" | "stack"
+    >,
   ) {
     super(params.message);
     Object.assign(this, params);
+    this.highlight = Some(params.highlight);
+    this.highlightMessage = Some(params.highlightMessage);
   }
 
-  toString() {
+  toString(): string {
     return toMultiline(
       this.message,
       createSnippet(
         accessEnvironment("source"),
-        this.beginHighlight.tokenRange()[0].pos,
-        this.endHighlight.map((node) => node.tokenRange()[1].pos),
+        this.include[0].tokenRange()[0].pos,
+        Some(this.include.at(1))
+          .map((node) => node.tokenRange()[1].pos),
+        this.highlight
+          .map((range) => range[0])
+          .map((node) => node.tokenRange()[0].pos),
+        this.highlight
+          .map((range) => range.at(1))
+          .map((node) => node.tokenRange()[1].pos),
         3,
-        Some(this.messageHighlight),
+        this.highlightMessage,
       ),
     );
   }

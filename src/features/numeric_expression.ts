@@ -18,7 +18,7 @@ import {
   SymbolType,
   SymbolValue,
 } from "../symbol.ts";
-import { InternalError } from "../util/error.ts";
+import { InternalError, RuntimeError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
 import { Wrapper } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
@@ -107,7 +107,9 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
   }
 
   analyze(): AnalysisFindings {
-    return AnalysisFindings.empty();
+    // TODO: check for division by zero
+    const findings = AnalysisFindings.empty();
+    return findings;
   }
 
   evaluate(): SymbolValue<number> {
@@ -127,7 +129,15 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
           case "*":
             return left.value * right.value;
           case "/":
-            // TODO: check for division by zero
+            if (right.value === 0) {
+              throw new RuntimeError({
+                message: "Division by zero is not possible.",
+                include: [this.lhs, this.rhs],
+                highlight: [this.rhs],
+                highlightMessage:
+                  "Check whether this side of the expression is zero before performing the calculation.",
+              });
+            }
             return left.value / right.value;
           case "%":
             return left.value % right.value;

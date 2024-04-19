@@ -32,6 +32,7 @@ export interface AnalysisFinding {
   toString(): string;
 }
 
+// TODO: allow same parameters as with `RuntimeError` (separate include & highlight token ranges)
 interface AnalysisFindingParams {
   /**
    * Header text to display at the top of the error message.
@@ -76,6 +77,8 @@ function createAnalysisFinding(
         createSnippet(
           accessEnvironment("source"),
           params.beginHighlight.tokenRange()[0].pos,
+          params.endHighlight.map((node) => node.tokenRange()[1].pos),
+          Some(params.beginHighlight.tokenRange()[0].pos),
           params.endHighlight.map((node) => node.tokenRange()[1].pos),
           3,
           Some(params.messageHighlight),
