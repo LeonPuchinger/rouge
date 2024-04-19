@@ -39,11 +39,11 @@ export class RuntimeSymbol implements Symbol {
 
 export class StaticSymbol implements Symbol {
   node: Option<AstNode>;
-  valueKind: SymbolType;
+  valueType: SymbolType;
 
-  constructor(params: { node?: AstNode; valueKind: SymbolType }) {
+  constructor(params: { node?: AstNode; valueType: SymbolType }) {
     this.node = Some(params.node);
-    this.valueKind = params.valueKind;
+    this.valueType = params.valueType;
   }
 }
 
@@ -103,14 +103,14 @@ export class FunctionSymbolType implements SymbolType {
 // Symbol Value
 
 export interface SymbolValue<T = unknown> {
-  valueKind: SymbolType;
+  valueType: SymbolType;
   value: T;
   map(fn: (value: T) => T): SymbolValue<T>;
   typeCompatibleWith(other: SymbolValue<unknown>): boolean;
 }
 
 export class BooleanSymbolValue implements SymbolValue<boolean> {
-  valueKind: SymbolType = new PrimitiveSymbolType("boolean");
+  valueType: SymbolType = new PrimitiveSymbolType("boolean");
 
   constructor(public value: boolean) {}
 
@@ -124,7 +124,7 @@ export class BooleanSymbolValue implements SymbolValue<boolean> {
 }
 
 export class NumericSymbolValue implements SymbolValue<number> {
-  valueKind: SymbolType = new PrimitiveSymbolType("number");
+  valueType: SymbolType = new PrimitiveSymbolType("number");
 
   constructor(public value: number) {}
 
@@ -137,14 +137,14 @@ export class NumericSymbolValue implements SymbolValue<number> {
 }
 
 export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
-  valueKind: SymbolType;
+  valueType: SymbolType;
 
   constructor(
     public value: StatementsAstNode,
     parameterTypes: SymbolType[],
     returnType: Option<SymbolType>,
   ) {
-    this.valueKind = new FunctionSymbolType({
+    this.valueType = new FunctionSymbolType({
       parameters: parameterTypes,
       returnType: returnType,
     });

@@ -33,7 +33,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
     const expressionType = this.child.resolveType();
     analysisTable.findSymbol(ident)
       .then((existing) => {
-        if (existing.valueKind.typeCompatibleWith(expressionType)) {
+        if (existing.valueType.typeCompatibleWith(expressionType)) {
           return;
         }
         findings.errors.push(
@@ -53,7 +53,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
         analysisTable.setSymbol(
           ident,
           new StaticSymbol({
-            valueKind: expressionType,
+            valueType: expressionType,
           }),
         );
       });

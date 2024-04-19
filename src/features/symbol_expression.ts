@@ -53,7 +53,7 @@ export class SymbolExpressionAstNode implements EvaluableAstNode {
   resolveType(): SymbolType {
     return analysisTable
       .findSymbol(this.identifierToken.text)
-      .map((symbol) => symbol.valueKind)
+      .map((symbol) => symbol.valueType)
       .unwrapOrThrow(
         new InternalError(
           "Unable to resolve a symbol in the symbol table.",

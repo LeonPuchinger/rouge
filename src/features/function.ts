@@ -108,7 +108,7 @@ class FunctionAstNode implements EvaluableAstNode {
     for (const index in this.parameters) {
       analysisTable.setSymbol(
         this.parameters[index].name.text,
-        new StaticSymbol({ valueKind: parameterTypes[index] }),
+        new StaticSymbol({ valueType: parameterTypes[index] }),
       );
     }
     // TODO: introduce return statements and check with return type
