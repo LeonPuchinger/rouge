@@ -26,9 +26,9 @@ export function memoize(
   descriptor: TypedPropertyDescriptor<(...args: any[]) => any>,
 ): any {
   const originalMethod = descriptor.value!;
-  let cache: Option<any> = None();
   // set wrapper function
   descriptor.value = function (...args: any[]): any {
+    let cache: Option<any> = None();
     if (cache.kind === "none") {
       const result = originalMethod.apply(this, args);
       cache = Some(result);
