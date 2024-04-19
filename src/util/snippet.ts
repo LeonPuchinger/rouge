@@ -24,6 +24,12 @@ function createAnnotationMarker(
   const indentSize = firstPosition.columnBegin - 1;
   const markerEnd = nextPosition.unwrapOr(firstPosition).columnEnd - 1;
   const markerSize = markerEnd - indentSize;
+  if (markerSize < 0) {
+    throw new InternalError(
+      "The marker size could not be determined.",
+      "This is likely due to the fact that the first and next positions have been passed in the wrong order.",
+    );
+  }
   return toMultiline(
     `${" ".repeat(indentSize + offset)}${"~".repeat(markerSize)}`,
     message.unwrap(),

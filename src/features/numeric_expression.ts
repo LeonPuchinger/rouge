@@ -20,7 +20,7 @@ import {
 } from "../symbol.ts";
 import { InternalError, RuntimeError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
-import { Wrapper } from "../util/monad/index.ts";
+import { Some, Wrapper } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import { operation_chain_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
@@ -107,8 +107,19 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
   }
 
   analyze(): AnalysisFindings {
-    // TODO: check for division by zero
     const findings = AnalysisFindings.empty();
+    if (this.rhs instanceof NumericLiteralAstNode) {
+      const divisorValue = (this.rhs as NumericLiteralAstNode).evaluate();
+      if (divisorValue.value === 0) {
+        findings.errors.push(AnalysisError({
+          message: "Cannot divide by zero.",
+          beginHighlight: this.rhs,
+          endHighlight: Some(this.rhs),
+          messageHighlight:
+            "Check whether this side of the expression is zero before performing the calculation.",
+        }));
+      }
+    }
     return findings;
   }
 
