@@ -5,6 +5,7 @@ export interface Option<T> {
   kind: "some" | "none";
   map<U>(fn: (value: T) => U | undefined): Option<U>;
   orErr<E>(err: E): Result<T, E>;
+  or(alternative: Option<T>): Option<T>;
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
   unwrapOrThrow(error: Error): T;
@@ -29,6 +30,10 @@ export function Some<T>(value: T | undefined): Option<T> {
 
     orErr<E>(_err: E): Result<T, E> {
       return Ok(value);
+    },
+
+    or(_alternative: Option<T>): Option<T> {
+      return this;
     },
 
     unwrap(): T {
@@ -82,6 +87,10 @@ export function None<T>(): Option<T> {
 
     orErr<E>(err: E): Result<T, E> {
       return Err(err);
+    },
+
+    or(alternative: Option<T>): Option<T> {
+      return alternative;
     },
 
     unwrap(): T {

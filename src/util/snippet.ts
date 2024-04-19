@@ -68,6 +68,7 @@ export function createSnippet(
       "Only an AST node to end a highlighted segment in a snippet was passed, however, none to start it.",
     );
   }
+  highlightTo = highlightTo.or(highlightFrom);
   const highlightPositions = highlightFrom.zip(highlightTo);
   const highlightDesired = highlightPositions.map((_) => true).unwrapOr(false);
   const highlightWithinSnippet = highlightPositions
@@ -104,6 +105,9 @@ export function createSnippet(
       highlightTo,
       1,
     );
+  }
+  if (!highlightDesired) {
+    highlightFromLine += 1;
   }
   // generate snippet
   const indentSeparator = "|";
