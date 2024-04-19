@@ -73,7 +73,7 @@ function createAnalysisFinding(
     kind: kind,
     toString() {
       return toMultiline(
-        `${kind.toUpperCase()}: ${params.message}`,
+        params.message,
         createSnippet(
           accessEnvironment("source"),
           params.beginHighlight.tokenRange()[0].pos,
