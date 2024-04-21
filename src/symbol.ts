@@ -177,8 +177,11 @@ export class SymbolTable<S extends Symbol> {
 
   popScope() {
     this.scopes.pop();
-    if (this.scopes.length == 0) {
-      // panic & log error
+    if (this.scopes.length === 0) {
+      throw new InternalError(
+        "The outermost scope of the symbol table has been popped.",
+        "The symbol table always needs to consist of at least one scope.",
+      );
     }
   }
 
@@ -201,8 +204,8 @@ export class SymbolTable<S extends Symbol> {
   }
 
   findSymbol(name: string): Option<S> {
-    for (const current_scope of this.scopes.toReversed()) {
-      const symbol = this.findSymbolInScope(name, current_scope);
+    for (const currentScope of this.scopes.toReversed()) {
+      const symbol = this.findSymbolInScope(name, currentScope);
       if (symbol.kind === "none") {
         continue;
       }
@@ -212,8 +215,8 @@ export class SymbolTable<S extends Symbol> {
   }
 
   setSymbol(name: string, symbol: S) {
-    const current_scope = this.scopes[this.scopes.length - 1];
-    current_scope.set(name, symbol);
+    const currentScope = this.scopes[this.scopes.length - 1];
+    currentScope.set(name, symbol);
   }
 }
 
