@@ -53,3 +53,5 @@ export class TypeTable {
     currentScope.set(name, symbolType);
   }
 }
+
+export const typeTable = new TypeTable();
