@@ -15,13 +15,12 @@ import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   analysisTable,
-  FunctionSymbolType,
   FunctionSymbolValue,
   resolveType,
   StaticSymbol,
-  SymbolType,
   SymbolValue,
 } from "../symbol.ts";
+import { FunctionSymbolType, SymbolType } from "../type.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";

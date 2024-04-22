@@ -12,12 +12,8 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  BooleanSymbolValue,
-  PrimitiveSymbolType,
-  SymbolType,
-  SymbolValue,
-} from "../symbol.ts";
+import { BooleanSymbolValue, SymbolValue } from "../symbol.ts";
+import { PrimitiveSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
 import { None, Wrapper } from "../util/monad/index.ts";
