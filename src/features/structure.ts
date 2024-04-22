@@ -11,7 +11,7 @@ const field = seq(
 
 const fields = list_sc(
   field,
-  tok(TokenKind.breaking_whitespace),
+  str(","),
 );
 
 export const structureDefinition = seq(
