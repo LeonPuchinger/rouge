@@ -53,6 +53,49 @@ export class FunctionSymbolType implements SymbolType {
   }
 }
 
+/**
+ * Represents a user defined type that is made up of other types.
+ * The individual types that make up the type as a whole are referred to as fields.
+ * Each field consists of a name and a type.
+ * Two instances of `CompositeSymbolType` are type compatible in case they contain
+ * the same amount of field, the fields have the same names,
+ * and the types for each field are type compatible themselves.
+ */
+export class CompositeSymbolType implements SymbolType {
+  fields!: Map<string, SymbolType>;
+
+  /**
+   * @param fields The key-value pairs of name and type that make up this user defined type.
+   */
+  constructor(params: Attributes<CompositeSymbolType>) {
+    Object.assign(this, params);
+  }
+
+  typeCompatibleWith(other: SymbolType): boolean {
+    if (!(other instanceof CompositeSymbolType)) {
+      return false;
+    }
+    const thisKeys = Array.from(this.fields.keys());
+    const otherKeys = Array.from(other.fields.keys());
+    if (thisKeys.length !== otherKeys.length) {
+      return false;
+    }
+    for (const key of thisKeys) {
+      if (!other.fields.has(key)) {
+        return false;
+      }
+      if (other.fields.get(key)?.typeCompatibleWith(this.fields.get(key)!)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
+    return false;
+  }
+}
+
 type Scope = Map<string, SymbolType>;
 
 // TODO: register primitives (e.g. in constructor)
