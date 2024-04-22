@@ -20,7 +20,8 @@ import {
   StaticSymbol,
   SymbolValue,
 } from "../symbol.ts";
-import { FunctionSymbolType, SymbolType } from "../type.ts";
+import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
+import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
@@ -53,12 +54,10 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
         endHighlight: None(),
       }));
     }
-    // TODO: check with TypeTable in the future (user defined types)
-    // In the meantime, primitive types are checked manually
-    if (!["boolean", "number", "string"].includes(this.type.text)) {
+    if (typeTable.findType(this.type.text).kind === "none") {
       findings.errors.push(AnalysisError({
-        message:
-          "Function parameters can only be primitive for now. This will change in the future.",
+        message: `The type called "${this.type.text}" could not be found.`,
+        // TODO: Find a way to only highlight the type, e.g. through a dummy AST node created on the spot
         beginHighlight: this,
         endHighlight: None(),
       }));
@@ -67,7 +66,8 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   }
 
   resolveType(): SymbolType {
-    return resolveType(this.type.text);
+    const parameterType = typeTable.findType(this.type.text);
+    return parameterType.unwrapOrThrow(UnresolvableSymbolTypeError());
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

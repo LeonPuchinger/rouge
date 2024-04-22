@@ -57,6 +57,15 @@ export class InternalError extends Error implements AppError {
   }
 }
 
+// shorthand internal error types:
+
+export function UnresolvableSymbolTypeError(): InternalError {
+  return new InternalError(
+    "A symbol type could not be resolved which should have been discovered during static analysis.",
+    "It is likely, that static analysis has not been performed before resolving the type.",
+  );
+}
+
 /**
  * A type of error that is the result of the users input and represents expected behavior.
  * The message contains a snippet of the affected input source code as well as a header message.

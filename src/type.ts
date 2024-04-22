@@ -98,7 +98,6 @@ export class CompositeSymbolType implements SymbolType {
 
 type Scope = Map<string, SymbolType>;
 
-// TODO: register primitives (e.g. in constructor)
 export class TypeTable {
   private scopes: Scope[] = [new Map()];
 
@@ -149,3 +148,5 @@ export class TypeTable {
 }
 
 export const typeTable = new TypeTable();
+typeTable.setType("number", new PrimitiveSymbolType("number"));
+typeTable.setType("boolean", new PrimitiveSymbolType("boolean"));
