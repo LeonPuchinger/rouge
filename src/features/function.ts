@@ -16,7 +16,6 @@ import { TokenKind } from "../lexer.ts";
 import {
   analysisTable,
   FunctionSymbolValue,
-  resolveType,
   StaticSymbol,
   SymbolValue,
 } from "../symbol.ts";
@@ -88,7 +87,8 @@ class FunctionAstNode implements EvaluableAstNode {
 
   evaluate(): SymbolValue<Function> {
     const params = this.parameters.map((v) => v.resolveType());
-    const returnType = this.returnType.map((token) => resolveType(token.text));
+    const returnType = this.returnType
+      .flatMap((token) => typeTable.findType(token.text));
     return new FunctionSymbolValue(this.statements, params, returnType);
   }
 
@@ -119,7 +119,8 @@ class FunctionAstNode implements EvaluableAstNode {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
-    const returnType = this.returnType.map((token) => resolveType(token.text));
+    const returnType = this.returnType
+      .flatMap((token) => typeTable.findType(token.text));
     return new FunctionSymbolType({
       parameters: parameterTypes,
       returnType: returnType,

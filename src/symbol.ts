@@ -5,23 +5,6 @@ import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { WithOptionalAttributes } from "./util/type.ts";
 
-/* ~~~~~~ TEMPORARY ~~~~~~ */
-
-// TODO: replace with TypeTable
-
-export function resolveType(input: string): SymbolType {
-  if (["boolean", "number"].includes(input)) {
-    // @ts-ignore type check has been performed in the if statement above
-    return new PrimitiveSymbolType(input);
-  }
-  throw new InternalError(
-    "unable to resolve type.",
-    `Unknown input: "${input}".`,
-  );
-}
-
-/* ~~~~~~ TEMPORARY ~~~~~~ */
-
 // Symbol
 
 interface Symbol {
