@@ -1,9 +1,10 @@
 import { apply, list_sc, seq, str, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
-import { AnalysisFindings } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { CompositeSymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
+import { None } from "../util/monad/option.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 
@@ -20,7 +21,35 @@ class StructureAstNode implements InterpretableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    throw new Error("Method not implemented.");
+    const findings = AnalysisFindings.empty();
+    typeTable.findType(this.name.text)
+      .then(() => {
+        findings.errors.push(AnalysisError({
+          message: "Names for structures have to be unique.",
+          // TODO: Find a way to only highlight the name, e.g. through a dummy AST node created on the spot
+          beginHighlight: this,
+          endHighlight: None(),
+          messageHighlight:
+            `A structure by the name "${this.name.text}" already exists.`,
+        }));
+      });
+    for (const field of this.fields) {
+      const fieldType = typeTable.findType(field[1].text);
+      fieldType.onNone(() => {
+        findings.errors.push(AnalysisError({
+          message:
+            `The field called "${this.name.text}" has a type that does not exist.`,
+          // TODO: Find a way to only highlight the type, e.g. through a dummy AST node created on the spot
+          beginHighlight: this,
+          endHighlight: None(),
+          messageHighlight: `The type called "${
+            field[0].text
+          }" could not be found.`,
+        }));
+      });
+    }
+    // TODO: check whether field names are unique within the structure
+    return findings;
   }
 
   interpret(): void {
