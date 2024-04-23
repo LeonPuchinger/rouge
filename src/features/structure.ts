@@ -55,9 +55,10 @@ class StructureAstNode implements InterpretableAstNode {
   interpret(): void {
     const structureType = new CompositeSymbolType({ fields: new Map() });
     for (const field of this.fields) {
+      const fieldName = field[0].text;
       const fieldType = typeTable.findType(field[1].text);
       structureType.fields.set(
-        field[0].text,
+        fieldName,
         fieldType.unwrapOrThrow(UnresolvableSymbolTypeError()),
       );
     }
