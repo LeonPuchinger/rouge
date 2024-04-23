@@ -1,9 +1,23 @@
-import { kmid, list_sc, seq, str, tok } from "typescript-parsec";
+import { apply, kmid, list_sc, seq, str, tok, Token } from "typescript-parsec";
 import { TokenKind } from "../lexer.ts";
+import { kouter } from "../util/parser.ts";
+import { Attributes } from "../util/type.ts";
 
-/* PARSERS */
+/* AST NODES */
 
-const field = seq(
+class StructureAstNode {
+  keyword!: Token<TokenKind>;
+  name!: Token<TokenKind>;
+  fields!: [Token<TokenKind>, Token<TokenKind>][];
+
+  constructor(params: Attributes<StructureAstNode>) {
+    Object.assign(this, params);
+  }
+}
+
+/* PARSER */
+
+const field = kouter(
   tok(TokenKind.ident),
   str(":"),
   tok(TokenKind.ident),
@@ -14,12 +28,20 @@ const fields = list_sc(
   str(","),
 );
 
-export const structureDefinition = seq(
-  str("structure"),
-  tok(TokenKind.ident),
-  kmid(
-    str("{"),
-    fields,
-    str("}"),
+export const structureDefinition = apply(
+  seq(
+    str<TokenKind>("structure"),
+    tok(TokenKind.ident),
+    kmid(
+      str("{"),
+      fields,
+      str("}"),
+    ),
   ),
+  ([keyword, typeName, fields]) =>
+    new StructureAstNode({
+      keyword: keyword,
+      name: typeName,
+      fields: fields,
+    }),
 );
