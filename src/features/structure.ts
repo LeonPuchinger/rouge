@@ -33,6 +33,7 @@ class StructureAstNode implements InterpretableAstNode {
             `A structure by the name "${this.name.text}" already exists.`,
         }));
       });
+    const fieldNames: string[] = [];
     for (const field of this.fields) {
       const fieldType = typeTable.findType(field[1].text);
       fieldType.onNone(() => {
@@ -47,8 +48,18 @@ class StructureAstNode implements InterpretableAstNode {
           }" could not be found.`,
         }));
       });
+      const fieldName = field[0].text;
+      if (fieldNames.includes(fieldName)) {
+        findings.errors.push(AnalysisError({
+          message: "Fields inside of a structure have to have a unique name.",
+          beginHighlight: this,
+          endHighlight: None(),
+          messageHighlight:
+            `The field called "${this.name.text}" exists at least twice in the structure.`,
+        }));
+      }
+      fieldNames.push(fieldName);
     }
-    // TODO: check whether field names are unique within the structure
     return findings;
   }
 
