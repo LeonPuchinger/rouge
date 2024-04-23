@@ -2,6 +2,8 @@ import { apply, list_sc, seq, str, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { CompositeSymbolType, typeTable } from "../type.ts";
+import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 
@@ -17,12 +19,20 @@ class StructureAstNode implements InterpretableAstNode {
     Object.assign(this, params);
   }
 
-  interpret(): void {
+  analyze(): AnalysisFindings {
     throw new Error("Method not implemented.");
   }
 
-  analyze(): AnalysisFindings {
-    throw new Error("Method not implemented.");
+  interpret(): void {
+    const structureType = new CompositeSymbolType({ fields: new Map() });
+    for (const field of this.fields) {
+      const fieldType = typeTable.findType(field[1].text);
+      structureType.fields.set(
+        field[0].text,
+        fieldType.unwrapOrThrow(UnresolvableSymbolTypeError()),
+      );
+    }
+    typeTable.setType(this.name.text, structureType);
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
