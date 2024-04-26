@@ -1,7 +1,10 @@
 import {
+  alt,
   apply,
+  kleft,
   kright,
   list_sc,
+  opt,
   seq,
   str,
   tok,
@@ -97,9 +100,17 @@ const field = kouter(
   tok(TokenKind.ident),
 );
 
-const fields = list_sc(
-  field,
+const fieldSeparator = alt(
   surround_with_breaking_whitespace(str(",")),
+  tok(TokenKind.breaking_whitespace),
+);
+
+const fields = kleft(
+  list_sc(
+    field,
+    fieldSeparator,
+  ),
+  opt(str(",")),
 );
 
 export const structureDefinition = apply(
