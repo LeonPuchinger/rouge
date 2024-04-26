@@ -1,7 +1,12 @@
-import { TokenPosition } from "typescript-parsec";
+import { Token, TokenPosition } from "typescript-parsec";
+import { AstNode } from "../ast.ts";
+import { AnalysisFindings } from "../finding.ts";
+import { TokenKind } from "../lexer.ts";
+import { accessEnvironment } from "./environment.ts";
 import { InternalError } from "./error.ts";
 import { Option } from "./monad/index.ts";
 import { indentLines, prefixIndentLines, toMultiline } from "./string.ts";
+import { Attributes } from "./type.ts";
 
 /**
  * Create a marker that highlights a section of code in a snippet.
@@ -133,4 +138,62 @@ export function createSnippet(
       indentWidth,
     ),
   );
+}
+
+/**
+ * An AST node that has never been emitted by the parser.
+ * This AST node is supposed to be created on the spot when an AST node is required
+ * but there is only access to a `Token` or `TokenPosition`.
+ * Usually this is the case when a snippet needs to be created from a `Token`.
+ * To create an instance of `DummyAstNode`, use the factory methods `fromToken` or `fromTokenPosition`.
+ */
+export class DummyAstNode implements AstNode {
+  tokenFrom!: Token<TokenKind>;
+  tokenTo!: Token<TokenKind>;
+
+  /**
+   * @param tokenFrom Used as the beginning of the token range.
+   * @param tokenTo Used as the end of the token range.
+   */
+  constructor(params: Attributes<DummyAstNode>) {
+    Object.assign(this, params);
+  }
+
+  analyze(): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.tokenFrom, this.tokenTo];
+  }
+
+  /**
+   * Creates a `DummyAstNode` from a single `Token`.
+   * The `Token` is used as both the start as well as the end of the token range.
+   */
+  static fromToken(token: Token<TokenKind>): AstNode {
+    return new DummyAstNode({
+      tokenFrom: token,
+      tokenTo: token,
+    });
+  }
+
+  /**
+   * Creates a `DummyAstNode` from a `TokenPosition`.
+   * Compared to `fromToken`, this factory method needs to create a dummy `Token` as well.
+   * The dummy `Token` represents a token stream with only a single `Token`.
+   * The `TokenType` is set to `undefined`.
+   * The dummy `Token` is used as both the start as well as the end of the token range.
+   */
+  static fromTokenPosition(
+    position: TokenPosition,
+  ): AstNode {
+    const dummyToken = {
+      kind: TokenKind.unspecified,
+      text: accessEnvironment("source"),
+      pos: position,
+      next: undefined,
+    };
+    return DummyAstNode.fromToken(dummyToken);
+  }
 }

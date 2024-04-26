@@ -17,6 +17,7 @@ import { CompositeSymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None } from "../util/monad/option.ts";
 import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
+import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes } from "../util/type.ts";
 
 /* AST NODES */
@@ -37,8 +38,7 @@ export class StructureDefiniitonAstNode implements InterpretableAstNode {
       .then(() => {
         findings.errors.push(AnalysisError({
           message: "Names for structures have to be unique.",
-          // TODO: Find a way to only highlight the name, e.g. through a dummy AST node created on the spot
-          beginHighlight: this,
+          beginHighlight: DummyAstNode.fromToken(this.name),
           endHighlight: None(),
           messageHighlight:
             `A structure by the name "${this.name.text}" already exists.`,
@@ -51,11 +51,10 @@ export class StructureDefiniitonAstNode implements InterpretableAstNode {
         findings.errors.push(AnalysisError({
           message:
             `The field called "${this.name.text}" has a type that does not exist.`,
-          // TODO: Find a way to only highlight the type, e.g. through a dummy AST node created on the spot
-          beginHighlight: this,
+          beginHighlight: DummyAstNode.fromToken(field[1]),
           endHighlight: None(),
           messageHighlight: `The type called "${
-            field[0].text
+            field[1].text
           }" could not be found.`,
         }));
       });
@@ -63,10 +62,10 @@ export class StructureDefiniitonAstNode implements InterpretableAstNode {
       if (fieldNames.includes(fieldName)) {
         findings.errors.push(AnalysisError({
           message: "Fields inside of a structure have to have a unique name.",
-          beginHighlight: this,
+          beginHighlight: DummyAstNode.fromToken(field[0]),
           endHighlight: None(),
           messageHighlight:
-            `The field called "${this.name.text}" exists at least twice in the structure.`,
+            `The field called "${fieldName}" already exists in the structure.`,
         }));
       }
       fieldNames.push(fieldName);
