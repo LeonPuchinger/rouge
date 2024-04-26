@@ -1,4 +1,4 @@
-import { apply, list_sc, seq, str, tok, Token } from "typescript-parsec";
+import { apply, list_sc, opt, seq, str, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -91,20 +91,28 @@ const field = kouter(
 
 const fields = list_sc(
   field,
-  str(","),
+  seq(
+    opt(tok(TokenKind.breaking_whitespace)),
+    str(","),
+    opt(tok(TokenKind.breaking_whitespace)),
+  ),
 );
 
 export const structureDefinition = apply(
   seq(
     str<TokenKind>("structure"),
+    opt(tok(TokenKind.breaking_whitespace)),
     tok(TokenKind.ident),
+    opt(tok(TokenKind.breaking_whitespace)),
     seq(
       str("{"),
+      opt(tok(TokenKind.breaking_whitespace)),
       fields,
+      opt(tok(TokenKind.breaking_whitespace)),
       str("}"),
     ),
   ),
-  ([keyword, typeName, [_, fields, closingBrace]]) =>
+  ([keyword, _a, typeName, _b, [_c, _d, fields, _e, closingBrace]]) =>
     new StructureDefiniitonAstNode({
       keyword: keyword,
       name: typeName,
