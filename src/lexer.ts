@@ -8,6 +8,7 @@ export enum TokenKind {
   boolean_literal,
   keyword,
   ident,
+  standalone_punctuation,
   punctuation,
   unspecified,
 }
@@ -19,7 +20,8 @@ const lexer = buildLexer([
   [true, /^(false|true)/g, TokenKind.boolean_literal],
   [true, /^function|structure|use|if|else|while/g, TokenKind.keyword],
   [true, /^[_A-Za-z]+[\-_0-9A-Za-z]*/g, TokenKind.ident],
-  [true, /^[!@=<>{}()#$%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenKind.punctuation],
+  [true, /^[{}]/g, TokenKind.standalone_punctuation],
+  [true, /^[!@=<>()#$%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenKind.punctuation],
   [true, /^\S/g, TokenKind.unspecified],
 ]);
 
