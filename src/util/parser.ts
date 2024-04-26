@@ -1,4 +1,5 @@
-import { apply, Parser, rep_sc, seq } from "typescript-parsec";
+import { apply, kmid, opt, Parser, rep_sc, seq, tok } from "typescript-parsec";
+import { TokenKind } from "../lexer.ts";
 
 /**
  * Like `rep_sc(p)` from `typescript-parsec`, but consumes p at least once.
@@ -98,5 +99,18 @@ export function operation_chain_sc<
         right,
       );
     },
+  );
+}
+
+/**
+ * Surrounds a parser with two other parsers which can both optionally parse breaking whitespace.
+ */
+export function surround_with_breaking_whitespace<T>(
+  p: Parser<TokenKind, T>,
+): Parser<TokenKind, T> {
+  return kmid(
+    opt(tok(TokenKind.breaking_whitespace)),
+    p,
+    opt(tok(TokenKind.breaking_whitespace)),
   );
 }

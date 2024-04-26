@@ -1,11 +1,19 @@
-import { apply, list_sc, opt, seq, str, tok, Token } from "typescript-parsec";
+import {
+  apply,
+  kright,
+  list_sc,
+  seq,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { CompositeSymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None } from "../util/monad/option.ts";
-import { kouter } from "../util/parser.ts";
+import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 
 /* AST NODES */
@@ -91,28 +99,22 @@ const field = kouter(
 
 const fields = list_sc(
   field,
-  seq(
-    opt(tok(TokenKind.breaking_whitespace)),
-    str(","),
-    opt(tok(TokenKind.breaking_whitespace)),
-  ),
+  surround_with_breaking_whitespace(str(",")),
 );
 
 export const structureDefinition = apply(
   seq(
     str<TokenKind>("structure"),
-    opt(tok(TokenKind.breaking_whitespace)),
-    tok(TokenKind.ident),
-    opt(tok(TokenKind.breaking_whitespace)),
+    surround_with_breaking_whitespace(tok(TokenKind.ident)),
     seq(
-      str("{"),
-      opt(tok(TokenKind.breaking_whitespace)),
-      fields,
-      opt(tok(TokenKind.breaking_whitespace)),
+      kright(
+        str("{"),
+        surround_with_breaking_whitespace(fields),
+      ),
       str("}"),
     ),
   ),
-  ([keyword, _a, typeName, _b, [_c, _d, fields, _e, closingBrace]]) =>
+  ([keyword, typeName, [fields, closingBrace]]) =>
     new StructureDefiniitonAstNode({
       keyword: keyword,
       name: typeName,
