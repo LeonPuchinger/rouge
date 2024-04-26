@@ -1,0 +1,9 @@
+(* IMPORT token.ebnf *)
+
+field = identifier, ":", identifier;
+field_separator =  [ breaking_whitespace ] "," [ breaking_whitespace ] | breaking_whitespace;
+fields = field { field_separator field } [ "," ];
+(* EXPORT*)
+structure_definition =
+    "structure" [ breaking_whitespace ] identifier [ breaking_whitespace ]
+    "{" [ [ breaking_whitespace ] fields [ breaking_whitespace ] ] "}";

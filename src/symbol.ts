@@ -1,25 +1,9 @@
 import { AstNode } from "./ast.ts";
 import { StatementsAstNode } from "./features/statement.ts";
+import { FunctionSymbolType, PrimitiveSymbolType, SymbolType } from "./type.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
-import { Attributes, WithOptionalAttributes } from "./util/type.ts";
-
-/* ~~~~~~ TEMPORARY ~~~~~~ */
-
-// TODO: replace with TypeTable
-
-export function resolveType(input: string): SymbolType {
-  if (["boolean", "number"].includes(input)) {
-    // @ts-ignore type check has been performed in the if statement above
-    return new PrimitiveSymbolType(input);
-  }
-  throw new InternalError(
-    "unable to resolve type.",
-    `Unknown input: "${input}".`,
-  );
-}
-
-/* ~~~~~~ TEMPORARY ~~~~~~ */
+import { WithOptionalAttributes } from "./util/type.ts";
 
 // Symbol
 
@@ -44,59 +28,6 @@ export class StaticSymbol implements Symbol {
   constructor(params: WithOptionalAttributes<StaticSymbol>) {
     Object.assign(this, params);
     this.node = Some(params.node);
-  }
-}
-
-// Symbol Type
-
-export interface SymbolType {
-  typeCompatibleWith(other: SymbolType): boolean;
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
-}
-
-type PrimitiveSymbolTypeKind = "number" | "boolean";
-
-export class PrimitiveSymbolType implements SymbolType {
-  constructor(private kind: PrimitiveSymbolTypeKind) {}
-
-  typeCompatibleWith(other: SymbolType): boolean {
-    return other instanceof PrimitiveSymbolType && other.kind === this.kind;
-  }
-
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
-    return kind === this.kind;
-  }
-}
-
-export class FunctionSymbolType implements SymbolType {
-  parameters!: SymbolType[];
-  returnType!: Option<SymbolType>;
-
-  constructor(params: Attributes<FunctionSymbolType>) {
-    Object.assign(this, params);
-  }
-
-  typeCompatibleWith(other: SymbolType): boolean {
-    if (!(other instanceof FunctionSymbolType)) {
-      return false;
-    }
-    const matchingReturnTypes = other.returnType
-      .zip(this.returnType)
-      .map((returnTypes) => returnTypes[0].typeCompatibleWith(returnTypes[1]))
-      .unwrapOr(false);
-    if (!matchingReturnTypes) {
-      return false;
-    }
-    if (other.parameters.length !== this.parameters.length) {
-      return false;
-    }
-    return other.parameters.every((value, index) =>
-      value.typeCompatibleWith(this.parameters[index])
-    );
-  }
-
-  isPrimitive(): boolean {
-    return false;
   }
 }
 
@@ -177,8 +108,11 @@ export class SymbolTable<S extends Symbol> {
 
   popScope() {
     this.scopes.pop();
-    if (this.scopes.length == 0) {
-      // panic & log error
+    if (this.scopes.length === 0) {
+      throw new InternalError(
+        "The outermost scope of the symbol table has been popped.",
+        "The symbol table always needs to consist of at least one scope.",
+      );
     }
   }
 
@@ -201,8 +135,8 @@ export class SymbolTable<S extends Symbol> {
   }
 
   findSymbol(name: string): Option<S> {
-    for (const current_scope of this.scopes.toReversed()) {
-      const symbol = this.findSymbolInScope(name, current_scope);
+    for (const currentScope of this.scopes.toReversed()) {
+      const symbol = this.findSymbolInScope(name, currentScope);
       if (symbol.kind === "none") {
         continue;
       }
@@ -212,8 +146,8 @@ export class SymbolTable<S extends Symbol> {
   }
 
   setSymbol(name: string, symbol: S) {
-    const current_scope = this.scopes[this.scopes.length - 1];
-    current_scope.set(name, symbol);
+    const currentScope = this.scopes[this.scopes.length - 1];
+    currentScope.set(name, symbol);
   }
 }
 

@@ -1,6 +1,7 @@
 (* it is assumed that any non-breaking whitespace and comments have been removed from the input *)
 
 (* IMPORT expression.ebnf *)
+(* IMPORT structure.ebnf *)
 (* IMPORT token.ebnf *)
 
 variable_name = identifier, [ ":", identifier ];
@@ -11,6 +12,7 @@ loop = "loop", "(", boolean_expression, ")", "{", statements, "}";
 
 statement =
     assignment
+    | structure_definition
     | condition
     | loop
     | expression;

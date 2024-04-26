@@ -8,11 +8,16 @@ import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
 import {} from "../util/array.ts";
+import {
+  StructureDefiniitonAstNode,
+  structureDefinition,
+} from "./structure.ts";
 
 /* AST NODES */
 
 export type StatementAstNode =
   | ExpressionAstNode
+  | StructureDefiniitonAstNode
   | AssignmentAstNode;
 
 export class StatementsAstNode implements InterpretableAstNode {
@@ -52,13 +57,14 @@ export class StatementsAstNode implements InterpretableAstNode {
 
 const statement = alt_sc(
   assignment,
+  structureDefinition,
   expression,
 );
 
 export const statements = apply(
   list_sc(
     statement,
-    tok(TokenKind.breaking_whitespace),
+    tok(TokenKind.breakingWhitespace),
   ),
   (statements) => new StatementsAstNode({ children: statements }),
 );

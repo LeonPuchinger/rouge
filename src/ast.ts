@@ -2,7 +2,8 @@ import { Token } from "typescript-parsec";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
-import { SymbolType, SymbolValue } from "./symbol.ts";
+import { SymbolValue } from "./symbol.ts";
+import { SymbolType } from "./type.ts";
 
 /**
  * The common super type for every AST node in the interpreter.
@@ -37,6 +38,11 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>> extends AstNode {
 
   /**
    * Returns the corresponding `SymbolType` of the evaluated result.
+   * Before this method can be called, it has to be made sure
+   * that `analyze` is called first on the AST node and its result is inspected.
+   * Static analysis should catch any errors in regards to type resolving (e.g. the type does not exist).
+   * Even though implementations of `resolveType` can assume that `analyze` has been called already,
+   * an `InternalError` should still be thrown in case `analyze` has not been called and type resolving fails.
    */
   resolveType(): SymbolType;
 }

@@ -2,12 +2,8 @@ import { apply, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  analysisTable,
-  runtimeTable,
-  SymbolType,
-  SymbolValue,
-} from "../symbol.ts";
+import { analysisTable, runtimeTable, SymbolValue } from "../symbol.ts";
+import { SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 

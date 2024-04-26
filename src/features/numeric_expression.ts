@@ -12,16 +12,11 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  NumericSymbolValue,
-  PrimitiveSymbolType,
-  SymbolType,
-  SymbolValue,
-} from "../symbol.ts";
+import { NumericSymbolValue, SymbolValue } from "../symbol.ts";
+import { PrimitiveSymbolType, SymbolType } from "../type.ts";
 import { InternalError, RuntimeError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
-import { Some, Wrapper } from "../util/monad/index.ts";
-import { None } from "../util/monad/option.ts";
+import { None, Some, Wrapper } from "../util/monad/index.ts";
 import { operation_chain_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { symbolExpression } from "./symbol_expression.ts";
@@ -218,7 +213,7 @@ type NumericExpressionAstNode = EvaluableAstNode<SymbolValue<number>>;
 export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 
 const literal = apply(
-  tok(TokenKind.numeric_literal),
+  tok(TokenKind.numericLiteral),
   (literal): NumericLiteralAstNode =>
     new NumericLiteralAstNode({ token: literal }),
 );

@@ -2,8 +2,9 @@ import { expectEOF, Token } from "typescript-parsec";
 import { AST } from "./ast.ts";
 import { statements } from "./features/statement.ts";
 import { TokenKind } from "./lexer.ts";
-import { InternalError } from "./util/error.ts";
+import { InternalError, RuntimeError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
+import { DummyAstNode } from "./util/snippet.ts";
 import { toMultiline } from "./util/string.ts";
 
 /**
@@ -21,11 +22,12 @@ export function parse(tokenStream: Token<TokenKind>): AST {
   const parseResult = expectEOF(start.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
-    // TODO: replace with different error type that shows a snippet, e.g. InterpreterError
-    throw new InternalError(toMultiline(
-      "Encountered Syntax Error:",
-      parseError.message,
-    ));
+    throw new RuntimeError({
+      message: "Encountered syntax error.",
+      include: [DummyAstNode.fromTokenPosition(parseError.pos!)],
+      highlight: [DummyAstNode.fromTokenPosition(parseError.pos!)],
+      highlightMessage: parseError.message,
+    });
   }
   const numberCandidates = parseResult.candidates.length;
   if (numberCandidates < 1) {

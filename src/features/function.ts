@@ -15,13 +15,12 @@ import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   analysisTable,
-  FunctionSymbolType,
   FunctionSymbolValue,
-  resolveType,
   StaticSymbol,
-  SymbolType,
   SymbolValue,
 } from "../symbol.ts";
+import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
+import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
@@ -54,12 +53,10 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
         endHighlight: None(),
       }));
     }
-    // TODO: check with TypeTable in the future (user defined types)
-    // In the meantime, primitive types are checked manually
-    if (!["boolean", "number", "string"].includes(this.type.text)) {
+    if (typeTable.findType(this.type.text).kind === "none") {
       findings.errors.push(AnalysisError({
-        message:
-          "Function parameters can only be primitive for now. This will change in the future.",
+        message: `The type called "${this.type.text}" could not be found.`,
+        // TODO: Find a way to only highlight the type, e.g. through a dummy AST node created on the spot
         beginHighlight: this,
         endHighlight: None(),
       }));
@@ -68,7 +65,8 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   }
 
   resolveType(): SymbolType {
-    return resolveType(this.type.text);
+    const parameterType = typeTable.findType(this.type.text);
+    return parameterType.unwrapOrThrow(UnresolvableSymbolTypeError());
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -89,7 +87,8 @@ class FunctionAstNode implements EvaluableAstNode {
 
   evaluate(): SymbolValue<Function> {
     const params = this.parameters.map((v) => v.resolveType());
-    const returnType = this.returnType.map((token) => resolveType(token.text));
+    const returnType = this.returnType
+      .flatMap((token) => typeTable.findType(token.text));
     return new FunctionSymbolValue(this.statements, params, returnType);
   }
 
@@ -120,7 +119,8 @@ class FunctionAstNode implements EvaluableAstNode {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
-    const returnType = this.returnType.map((token) => resolveType(token.text));
+    const returnType = this.returnType
+      .flatMap((token) => typeTable.findType(token.text));
     return new FunctionSymbolType({
       parameters: parameterTypes,
       returnType: returnType,
