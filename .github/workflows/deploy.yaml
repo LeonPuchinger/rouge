@@ -1,11 +1,11 @@
 name: Deploy Module to GitHub Packages
 
 on:
-  push:
-    branches:
-      - "main"
+  create:
     tags:
       - "*"
+    branches:
+      - "fix-deploy-only-on-tag-creation"
 
 permissions:
   contents: read
