@@ -2,7 +2,8 @@ import { Token } from "typescript-parsec";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
-import { SymbolType, SymbolValue } from "./symbol.ts";
+import { SymbolValue } from "./symbol.ts";
+import { SymbolType } from "./type.ts";
 
 /**
  * The common super type for every AST node in the interpreter.
