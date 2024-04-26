@@ -64,7 +64,7 @@ const statement = alt_sc(
 export const statements = apply(
   list_sc(
     statement,
-    tok(TokenKind.breaking_whitespace),
+    tok(TokenKind.breakingWhitespace),
   ),
   (statements) => new StatementsAstNode({ children: statements }),
 );

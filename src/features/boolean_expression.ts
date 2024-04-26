@@ -198,7 +198,7 @@ type BooleanExpressionAstNode = EvaluableAstNode<SymbolValue<boolean>>;
 export const booleanExpression = rule<TokenKind, BooleanExpressionAstNode>();
 
 const literal = apply(
-  tok(TokenKind.boolean_literal),
+  tok(TokenKind.booleanLiteral),
   (token) => new BooleanLiteralAstNode({ token: token }),
 );
 

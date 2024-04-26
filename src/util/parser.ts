@@ -109,8 +109,8 @@ export function surround_with_breaking_whitespace<T>(
   p: Parser<TokenKind, T>,
 ): Parser<TokenKind, T> {
   return kmid(
-    opt(tok(TokenKind.breaking_whitespace)),
+    opt(tok(TokenKind.breakingWhitespace)),
     p,
-    opt(tok(TokenKind.breaking_whitespace)),
+    opt(tok(TokenKind.breakingWhitespace)),
   );
 }

@@ -102,7 +102,7 @@ const field = kouter(
 
 const fieldSeparator = alt(
   surround_with_breaking_whitespace(str(",")),
-  tok(TokenKind.breaking_whitespace),
+  tok(TokenKind.breakingWhitespace),
 );
 
 const fields = kleft(

@@ -213,7 +213,7 @@ type NumericExpressionAstNode = EvaluableAstNode<SymbolValue<number>>;
 export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 
 const literal = apply(
-  tok(TokenKind.numeric_literal),
+  tok(TokenKind.numericLiteral),
   (literal): NumericLiteralAstNode =>
     new NumericLiteralAstNode({ token: literal }),
 );
