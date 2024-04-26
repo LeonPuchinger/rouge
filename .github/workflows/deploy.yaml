@@ -5,7 +5,7 @@ on:
     tags:
       - "*"
     branches:
-      - "fix-deploy-only-on-tag-creation"
+      - "main"
 
 permissions:
   contents: read
