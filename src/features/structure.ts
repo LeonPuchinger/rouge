@@ -120,7 +120,7 @@ export const structureDefinition = apply(
     seq(
       kright(
         str("{"),
-        surround_with_breaking_whitespace(fields),
+        opt(surround_with_breaking_whitespace(fields)),
       ),
       str("}"),
     ),
@@ -129,7 +129,7 @@ export const structureDefinition = apply(
     new StructureDefiniitonAstNode({
       keyword: keyword,
       name: typeName,
-      fields: fields,
+      fields: fields ?? [],
       closingBrace: closingBrace,
     }),
 );
