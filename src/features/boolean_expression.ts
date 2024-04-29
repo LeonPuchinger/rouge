@@ -190,7 +190,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
 
 /* Boolean Expression */
 
-type BooleanExpressionAstNode = EvaluableAstNode<SymbolValue<boolean>>;
+export type BooleanExpressionAstNode = EvaluableAstNode<SymbolValue<boolean>>;
 
 /* PARSER */
 
