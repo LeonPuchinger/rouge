@@ -8,6 +8,8 @@ import { Attributes } from "../util/type.ts";
 import { BooleanExpressionAstNode } from "./boolean_expression.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 import { statements, StatementsAstNode } from "./statement.ts";
+import { starts_with_breaking_whitespace } from "../util/parser.ts";
+import { ends_with_breaking_whitespace } from "../util/parser.ts";
 
 /* AST NODES */
 
@@ -60,13 +62,11 @@ class ConditionAstNode implements InterpretableAstNode {
 const elseBranch = kright(
   seq(
     str<TokenKind>("else"),
-    // TODO: surround not required here? could lead to ambiguousness...
-    // introduce new util parsers for begin/end with breaking whitespace.
     surround_with_breaking_whitespace(str("{")),
   ),
   seq(
-    surround_with_breaking_whitespace(statements),
-    str("}"),
+    statements,
+    starts_with_breaking_whitespace(str("}")),
   ),
 );
 
@@ -75,12 +75,12 @@ export const condition = apply(
     str<TokenKind>("if"),
     kmid(
       surround_with_breaking_whitespace(str("(")),
-      surround_with_breaking_whitespace(expression),
+      expression,
       surround_with_breaking_whitespace(str(")")),
     ),
     kright(
-      surround_with_breaking_whitespace(str("{")),
-      surround_with_breaking_whitespace(statements),
+      ends_with_breaking_whitespace(str("{")),
+      statements,
     ),
     surround_with_breaking_whitespace(str("}")),
     opt(elseBranch),
