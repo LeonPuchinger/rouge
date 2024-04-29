@@ -1,4 +1,4 @@
-import { apply, kmid, kright, seq, str, Token } from "typescript-parsec";
+import { apply, kmid, kright, opt, seq, str, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -57,6 +57,19 @@ class ConditionAstNode implements InterpretableAstNode {
 
 /* PARSER */
 
+const elseBranch = kright(
+  seq(
+    str<TokenKind>("else"),
+    // TODO: surround not required here? could lead to ambiguousness...
+    // introduce new util parsers for begin/end with breaking whitespace.
+    surround_with_breaking_whitespace(str("{")),
+  ),
+  seq(
+    surround_with_breaking_whitespace(statements),
+    str("}"),
+  ),
+);
+
 export const condition = apply(
   seq(
     str<TokenKind>("if"),
@@ -70,6 +83,7 @@ export const condition = apply(
       surround_with_breaking_whitespace(statements),
     ),
     surround_with_breaking_whitespace(str("}")),
+    opt(elseBranch),
   ),
   ([ifKeyword, condition, trueStatements, closingBrace]) =>
     new ConditionAstNode({
