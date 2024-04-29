@@ -1,17 +1,17 @@
 import { apply, kmid, seq, str, Token } from "typescript-parsec";
-import { EvaluableAstNode } from "../ast.ts";
-import { AnalysisFindings } from "../finding.ts";
+import { InterpretableAstNode } from "../ast.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { SymbolValue } from "../symbol.ts";
 import { SymbolType } from "../type.ts";
 import { surround_with_breaking_whitespace } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 import { statements, StatementsAstNode } from "./statement.ts";
+import { None } from "../util/monad/option.ts";
 
 /* AST NODES */
 
-class ConditionAstNode implements EvaluableAstNode {
+class ConditionAstNode implements InterpretableAstNode {
   ifKeyword!: Token<TokenKind>;
   condition!: ExpressionAstNode;
   trueStatements!: StatementsAstNode;
@@ -20,15 +20,28 @@ class ConditionAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): SymbolValue<unknown> {
+  analyze(): AnalysisFindings {
+    const findings = this.condition.analyze();
+    if (findings.isErroneous()) {
+      return findings;
+    }
+    const conditionType = this.condition.resolveType();
+    if (!conditionType.isPrimitive("boolean")) {
+      findings.errors.push(AnalysisError({
+        message:
+          "The expression inside of the if statement needs to evaluate to a boolean value.",
+        beginHighlight: this.condition,
+        endHighlight: None(),
+      }));
+    }
+    return findings;
+  }
+
+  interpret(): void {
     throw new Error("Method not implemented.");
   }
 
   resolveType(): SymbolType {
-    throw new Error("Method not implemented.");
-  }
-
-  analyze(): AnalysisFindings {
     throw new Error("Method not implemented.");
   }
 
