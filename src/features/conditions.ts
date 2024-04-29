@@ -21,8 +21,12 @@ class ConditionAstNode implements InterpretableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    const findings = this.condition.analyze();
-    if (findings.isErroneous()) {
+    const conditionFindings = this.condition.analyze();
+    const findings = AnalysisFindings.merge(
+      conditionFindings,
+      this.trueStatements.analyze(),
+    );
+    if (conditionFindings.isErroneous()) {
       return findings;
     }
     const conditionType = this.condition.resolveType();
