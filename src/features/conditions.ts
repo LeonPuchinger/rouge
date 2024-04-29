@@ -1,13 +1,13 @@
-import { apply, kmid, seq, str, Token } from "typescript-parsec";
+import { apply, kmid, kright, seq, str, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { SymbolType } from "../type.ts";
+import { None } from "../util/monad/option.ts";
 import { surround_with_breaking_whitespace } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
+import { BooleanExpressionAstNode } from "./boolean_expression.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 import { statements, StatementsAstNode } from "./statement.ts";
-import { None } from "../util/monad/option.ts";
 
 /* AST NODES */
 
@@ -15,6 +15,7 @@ class ConditionAstNode implements InterpretableAstNode {
   ifKeyword!: Token<TokenKind>;
   condition!: ExpressionAstNode;
   trueStatements!: StatementsAstNode;
+  closingBrace!: Token<TokenKind>;
 
   constructor(params: Attributes<ConditionAstNode>) {
     Object.assign(this, params);
@@ -42,18 +43,15 @@ class ConditionAstNode implements InterpretableAstNode {
   }
 
   interpret(): void {
-    const conditionResult = (this.condition as BooleanExpressionAstNode).evaluate();
+    const conditionResult = (this.condition as BooleanExpressionAstNode)
+      .evaluate();
     if (conditionResult.value) {
       this.trueStatements.interpret();
     }
   }
 
-  resolveType(): SymbolType {
-    throw new Error("Method not implemented.");
-  }
-
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    throw new Error("Method not implemented.");
+    return [this.ifKeyword, this.closingBrace];
   }
 }
 
@@ -67,16 +65,17 @@ export const condition = apply(
       surround_with_breaking_whitespace(expression),
       surround_with_breaking_whitespace(str(")")),
     ),
-    kmid(
+    kright(
       surround_with_breaking_whitespace(str("{")),
       surround_with_breaking_whitespace(statements),
-      surround_with_breaking_whitespace(str("}")),
     ),
+    surround_with_breaking_whitespace(str("}")),
   ),
-  ([ifKeyword, condition, trueStatements]) =>
+  ([ifKeyword, condition, trueStatements, closingBrace]) =>
     new ConditionAstNode({
       ifKeyword: ifKeyword,
       condition: condition,
       trueStatements: trueStatements,
+      closingBrace: closingBrace,
     }),
 );
