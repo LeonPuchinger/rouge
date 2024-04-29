@@ -42,7 +42,10 @@ class ConditionAstNode implements InterpretableAstNode {
   }
 
   interpret(): void {
-    throw new Error("Method not implemented.");
+    const conditionResult = (this.condition as BooleanExpressionAstNode).evaluate();
+    if (conditionResult.value) {
+      this.trueStatements.interpret();
+    }
   }
 
   resolveType(): SymbolType {
