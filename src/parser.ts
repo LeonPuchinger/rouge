@@ -1,5 +1,7 @@
 import { expectEOF, Token } from "typescript-parsec";
 import { AST } from "./ast.ts";
+// required to initialize parsers declared in `parser_declarations`
+import "./features/condition.ts";
 import { statements } from "./features/statement.ts";
 import { TokenKind } from "./lexer.ts";
 import { InternalError, RuntimeError } from "./util/error.ts";

@@ -8,6 +8,8 @@ import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
 import {} from "../util/array.ts";
+import { ConditionAstNode } from "./condition.ts";
+import { condition } from "./parser_declarations.ts";
 import {
   StructureDefiniitonAstNode,
   structureDefinition,
@@ -17,6 +19,7 @@ import {
 
 export type StatementAstNode =
   | ExpressionAstNode
+  | ConditionAstNode
   | StructureDefiniitonAstNode
   | AssignmentAstNode;
 
@@ -57,6 +60,7 @@ export class StatementsAstNode implements InterpretableAstNode {
 
 const statement = alt_sc(
   assignment,
+  condition,
   structureDefinition,
   expression,
 );
