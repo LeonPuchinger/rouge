@@ -7,8 +7,8 @@
 variable_name = identifier, [ ":", identifier ];
 assignment = variable_name, "=", expression;
 
-condition = "if", "(", boolean_expression, ")", "{", statements, "}";
-loop = "loop", "(", boolean_expression, ")", "{", statements, "}";
+condition = "if", "(", expression, ")", "{", statements, "}", [ "else", "{", statements, "}" ];
+loop = "loop", "(", expression, ")", "{", statements, "}";
 
 statement =
     assignment
