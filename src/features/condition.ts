@@ -12,11 +12,12 @@ import {
 import { WithOptionalAttributes } from "../util/type.ts";
 import { BooleanExpressionAstNode } from "./boolean_expression.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
+import { condition } from "./parser_declarations.ts";
 import { statements, StatementsAstNode } from "./statement.ts";
 
 /* AST NODES */
 
-class ConditionAstNode implements InterpretableAstNode {
+export class ConditionAstNode implements InterpretableAstNode {
   ifKeyword!: Token<TokenKind>;
   condition!: ExpressionAstNode;
   trueStatements!: StatementsAstNode;
@@ -85,30 +86,32 @@ const elseBranch = kright(
   ),
 );
 
-export const condition = apply(
-  seq(
-    str<TokenKind>("if"),
-    kmid(
-      surround_with_breaking_whitespace(str("(")),
-      expression,
-      surround_with_breaking_whitespace(str(")")),
+condition.setPattern(
+  apply(
+    seq(
+      str<TokenKind>("if"),
+      kmid(
+        surround_with_breaking_whitespace(str("(")),
+        expression,
+        surround_with_breaking_whitespace(str(")")),
+      ),
+      kright(
+        ends_with_breaking_whitespace(str("{")),
+        statements,
+      ),
+      surround_with_breaking_whitespace(str("}")),
+      opt(elseBranch),
     ),
-    kright(
-      ends_with_breaking_whitespace(str("{")),
-      statements,
-    ),
-    surround_with_breaking_whitespace(str("}")),
-    opt(elseBranch),
+    ([ifKeyword, condition, ifStatements, firstClosingBrace, elseBranch]) => {
+      const [falseStatements, elseClosingBrace] = elseBranch ?? [];
+      return new ConditionAstNode({
+        ifKeyword: ifKeyword,
+        condition: condition,
+        trueStatements: ifStatements,
+        ifClosingBrace: firstClosingBrace,
+        falseStatements: falseStatements,
+        elseClosingBrace: elseClosingBrace,
+      });
+    },
   ),
-  ([ifKeyword, condition, ifStatements, firstClosingBrace, elseBranch]) => {
-    const [falseStatements, elseClosingBrace] = elseBranch ?? [];
-    return new ConditionAstNode({
-      ifKeyword: ifKeyword,
-      condition: condition,
-      trueStatements: ifStatements,
-      ifClosingBrace: firstClosingBrace,
-      falseStatements: falseStatements,
-      elseClosingBrace: elseClosingBrace,
-    });
-  },
 );
