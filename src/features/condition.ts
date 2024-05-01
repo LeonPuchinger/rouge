@@ -2,6 +2,7 @@ import { apply, kmid, kright, opt, seq, str, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { analysisTable, runtimeTable } from "../symbol.ts";
 import { None, Option } from "../util/monad/index.ts";
 import { Some } from "../util/monad/option.ts";
 import {
@@ -32,14 +33,19 @@ export class ConditionAstNode implements InterpretableAstNode {
   }
 
   analyze(): AnalysisFindings {
+    analysisTable.pushScope();
     const conditionFindings = this.condition.analyze();
+    const trueFindings = this.trueStatements.analyze();
+    analysisTable.popScope();
+    analysisTable.pushScope();
     const findings = AnalysisFindings.merge(
       conditionFindings,
-      this.trueStatements.analyze(),
+      trueFindings,
       this.falseStatements
         .map((statements) => statements.analyze())
         .unwrapOr(AnalysisFindings.empty()),
     );
+    analysisTable.popScope();
     if (conditionFindings.isErroneous()) {
       return findings;
     }
@@ -56,12 +62,17 @@ export class ConditionAstNode implements InterpretableAstNode {
   }
 
   interpret(): void {
+    runtimeTable.pushScope();
     const conditionResult = (this.condition as BooleanExpressionAstNode)
       .evaluate();
     if (conditionResult.value) {
       this.trueStatements.interpret();
+      runtimeTable.popScope();
     } else {
+      runtimeTable.popScope();
+      runtimeTable.pushScope();
       this.falseStatements.then((statements) => statements.interpret());
+      runtimeTable.popScope();
     }
   }
 
