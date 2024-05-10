@@ -150,3 +150,11 @@ export class TypeTable {
 export const typeTable = new TypeTable();
 typeTable.setType("number", new PrimitiveSymbolType("number"));
 typeTable.setType("boolean", new PrimitiveSymbolType("boolean"));
+
+/* ~~~ TEMPORARY ~~~ */
+
+// will be replaced by stdlib implementation in the future
+
+typeTable.setType("Nothing", new CompositeSymbolType({fields: new Map()}))
+
+/* ~~~ TEMPORARY ~~~ */
