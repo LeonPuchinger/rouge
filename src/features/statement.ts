@@ -7,7 +7,8 @@ import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
-import { } from "../util/array.ts";
+import {} from "../util/array.ts";
+import { accessEnvironment } from "../util/environment.ts";
 import { None } from "../util/monad/option.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { ReturnStatementAstNode } from "./function.ts";
@@ -45,9 +46,16 @@ export class StatementsAstNode implements InterpretableAstNode {
   }
 
   interpret(): void {
-    this.children.forEach((child) => {
+    const flags = accessEnvironment("flags");
+    for (const child of this.children) {
+      if (flags.terminateCurrentFrame) {
+        if (this.config.representsFrame) {
+          flags.terminateCurrentFrame = false;
+        }
+        return;
+      }
       child.interpret();
-    });
+    }
   }
 
   analyze(): AnalysisFindings {
