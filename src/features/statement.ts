@@ -25,9 +25,20 @@ export type StatementAstNode =
 
 export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
+  config = {
+    isFrame: false,
+  };
 
-  constructor(params: Attributes<StatementsAstNode>) {
+  constructor(params: Omit<Attributes<StatementsAstNode>, "config">) {
     Object.assign(this, params);
+  }
+
+  configure(updateConfig: Partial<typeof this.config>) {
+    for (const [key, value] of Object.entries(updateConfig)) {
+      if (value !== undefined) {
+        Object.assign(this.config, { [key]: value });
+      }
+    }
   }
 
   interpret(): void {
