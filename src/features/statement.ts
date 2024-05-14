@@ -28,7 +28,7 @@ export type StatementAstNode =
 export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
   config = {
-    isFrame: false,
+    representsFrame: false,
     representsGlobalScope: false,
   };
 
