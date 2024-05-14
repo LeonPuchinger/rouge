@@ -3,10 +3,16 @@
  */
 interface Environment {
   source: string;
+  flags: {
+    terminateCurrentFrame: boolean;
+  };
 }
 
 let environment: Environment = {
   source: "",
+  flags: {
+    terminateCurrentFrame: false,
+  },
 };
 
 /**
