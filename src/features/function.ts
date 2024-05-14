@@ -10,7 +10,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { EvaluableAstNode } from "../ast.ts";
+import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -130,6 +130,20 @@ export class FunctionAstNode implements EvaluableAstNode {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.functionKeywordToken, this.closingBraceToken];
+  }
+}
+
+export class ReturnStatementAstNode implements InterpretableAstNode {
+  interpret(): void {
+    throw new Error("Method not implemented.");
+  }
+
+  analyze(): AnalysisFindings {
+    throw new Error("Method not implemented.");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    throw new Error("Method not implemented.");
   }
 }
 

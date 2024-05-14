@@ -1,14 +1,16 @@
 import { alt_sc, apply, list_sc, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
-import { AnalysisFindings } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { InternalError } from "../util/error.ts";
 import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
-import {} from "../util/array.ts";
+import { } from "../util/array.ts";
+import { None } from "../util/monad/option.ts";
 import { ConditionAstNode } from "./condition.ts";
+import { ReturnStatementAstNode } from "./function.ts";
 import { condition } from "./parser_declarations.ts";
 import {
   StructureDefiniitonAstNode,
@@ -27,6 +29,7 @@ export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
   config = {
     isFrame: false,
+    representsGlobalScope: false,
   };
 
   constructor(params: Omit<Attributes<StatementsAstNode>, "config">) {
@@ -48,9 +51,22 @@ export class StatementsAstNode implements InterpretableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    return this.children
+    const findings = this.children
       .map((statement) => statement.analyze())
       .reduce((previous, current) => AnalysisFindings.merge(previous, current));
+    if (this.config.representsGlobalScope) {
+      for (const child of this.children) {
+        if (child instanceof ReturnStatementAstNode) {
+          findings.errors.push(AnalysisError({
+            message:
+              "Return statements are only allowed inside of functions or methods",
+            beginHighlight: child,
+            endHighlight: None(),
+          }));
+        }
+      }
+    }
+    return findings;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
