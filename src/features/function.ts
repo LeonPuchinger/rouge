@@ -24,6 +24,7 @@ import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
+import { functionDefinition } from "./parser_declarations.ts";
 import { statements, StatementsAstNode } from "./statement.ts";
 
 /* DATA TYPES */
@@ -74,7 +75,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   }
 }
 
-class FunctionAstNode implements EvaluableAstNode {
+export class FunctionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   returnType!: Option<Token<TokenKind>>;
   statements!: StatementsAstNode;
@@ -160,7 +161,7 @@ const returnType = apply(
   (token) => Some(token),
 );
 
-export const functionDefinition = apply(
+functionDefinition.setPattern(apply(
   seq(
     str<TokenKind>("function"),
     seq(
@@ -191,4 +192,4 @@ export const functionDefinition = apply(
       functionKeywordToken: functionKeyword,
       closingBraceToken: closingBrace,
     }),
-);
+));
