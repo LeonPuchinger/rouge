@@ -84,7 +84,7 @@ export class FunctionAstNode implements EvaluableAstNode {
 
   constructor(params: Attributes<FunctionAstNode>) {
     Object.assign(this, params);
-    this.statements.configure({representsFrame: true});
+    this.statements.configure({ representsFrame: true });
   }
 
   evaluate(): SymbolValue<Function> {
