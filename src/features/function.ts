@@ -10,7 +10,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -24,8 +24,13 @@ import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
+import { ConditionAstNode } from "./condition.ts";
 import { functionDefinition } from "./parser_declarations.ts";
-import { statements, StatementsAstNode } from "./statement.ts";
+import {
+  StatementAstNode,
+  statements,
+  StatementsAstNode,
+} from "./statement.ts";
 
 /* DATA TYPES */
 
@@ -73,6 +78,33 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.name, this.type];
   }
+}
+
+/**
+ * Creates a control flow graph (CFG) of a list of statements.
+ * The CFG is a list of all possible branches/paths to traverse the statements.
+ * A branch is forked when the statements contain a condition or a loop, for instance.
+ *
+ * @param statements
+ */
+function uniqueBranches(statements: StatementAstNode[]): AstNode[][] {
+  const current = statements.at(0);
+  if (current === undefined) {
+    return [[]];
+  }
+  const remaining = statements.slice(1);
+  if (current instanceof ConditionAstNode) {
+    const trueStatements = [...current.trueStatements.children, ...remaining];
+    const falseStatements = current.falseStatements
+      .map((node) => [...node.children, ...remaining])
+      .unwrapOr(remaining);
+    return [
+      ...uniqueBranches(trueStatements),
+      ...uniqueBranches(falseStatements),
+    ];
+  }
+  return uniqueBranches(remaining)
+    .map((branch) => [current, ...branch]);
 }
 
 export class FunctionAstNode implements EvaluableAstNode {
