@@ -96,13 +96,20 @@ export class CompositeSymbolType implements SymbolType {
   }
 }
 
-type Scope = Map<string, SymbolType>;
+type Scope = {
+  types: Map<string, SymbolType>;
+  returnType: Option<SymbolType>;
+};
 
 export class TypeTable {
-  private scopes: Scope[] = [new Map()];
+  private scopes: Scope[] = [];
+
+  constructor() {
+    this.pushScope();
+  }
 
   pushScope() {
-    this.scopes.push(new Map());
+    this.scopes.push({ types: new Map(), returnType: None() });
   }
 
   popScope() {
@@ -119,7 +126,7 @@ export class TypeTable {
     name: string,
     scope: Scope,
   ): Option<SymbolType> {
-    return Some(scope.get(name));
+    return Some(scope.types.get(name));
   }
 
   findTypeInCurrentScope(name: string): Option<SymbolType> {
@@ -143,7 +150,17 @@ export class TypeTable {
 
   setType(name: string, symbolType: SymbolType) {
     const currentScope = this.scopes[this.scopes.length - 1];
-    currentScope.set(name, symbolType);
+    currentScope.types.set(name, symbolType);
+  }
+
+  setReturnType(returnType: SymbolType) {
+    const current = this.scopes.at(-1)!;
+    current.returnType = Some(returnType);
+  }
+
+  getReturnType(): Option<SymbolType> {
+    const current = this.scopes.at(-1)!;
+    return current.returnType;
   }
 }
 
@@ -155,6 +172,6 @@ typeTable.setType("boolean", new PrimitiveSymbolType("boolean"));
 
 // will be replaced by stdlib implementation in the future
 
-typeTable.setType("Nothing", new CompositeSymbolType({fields: new Map()}))
+typeTable.setType("Nothing", new CompositeSymbolType({ fields: new Map() }));
 
 /* ~~~ TEMPORARY ~~~ */
