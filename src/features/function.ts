@@ -4,6 +4,7 @@ import {
   kmid,
   kright,
   list_sc,
+  opt,
   opt_sc,
   seq,
   str,
@@ -28,8 +29,9 @@ import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
-import { Attributes } from "../util/type.ts";
+import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { ConditionAstNode } from "./condition.ts";
+import { expression, ExpressionAstNode } from "./expression.ts";
 import { functionDefinition } from "./parser_declarations.ts";
 import {
   StatementAstNode,
@@ -224,6 +226,14 @@ export class FunctionAstNode implements EvaluableAstNode {
 }
 
 export class ReturnStatementAstNode implements InterpretableAstNode {
+  keyword!: Token<TokenKind>;
+  expression!: Option<ExpressionAstNode>;
+
+  constructor(params: WithOptionalAttributes<ReturnStatementAstNode>) {
+    Object.assign(this, params);
+    this.expression = Some(params.expression);
+  }
+
   interpret(): void {
     throw new Error("Method not implemented.");
   }
@@ -233,7 +243,12 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    throw new Error("Method not implemented.");
+    return [
+      this.keyword,
+      this.expression
+        .map((node) => node.tokenRange()[1])
+        .unwrapOr(this.keyword),
+    ];
   }
 }
 
@@ -297,3 +312,16 @@ functionDefinition.setPattern(apply(
       closingBraceToken: closingBrace,
     }),
 ));
+
+const returnStatement = apply(
+  kouter(
+    str<TokenKind>("return"),
+    opt(tok(TokenKind.breakingWhitespace)),
+    expression,
+  ),
+  ([keyword, expression]) =>
+    new ReturnStatementAstNode({
+      keyword: keyword,
+      expression: expression,
+    }),
+);
