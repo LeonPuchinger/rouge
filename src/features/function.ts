@@ -11,7 +11,11 @@ import {
   Token,
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
-import { AnalysisError, AnalysisFindings } from "../finding.ts";
+import {
+  AnalysisError,
+  AnalysisFindings,
+  AnalysisWarning,
+} from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   analysisTable,
@@ -23,6 +27,7 @@ import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
+import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes } from "../util/type.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { functionDefinition } from "./parser_declarations.ts";
@@ -107,6 +112,54 @@ function uniqueBranches(statements: StatementAstNode[]): AstNode[][] {
     .map((branch) => [current, ...branch]);
 }
 
+function analyzeReturnPlacements(
+  statements: StatementsAstNode,
+): AnalysisFindings {
+  const findings = AnalysisFindings.empty();
+  if (statements.children.length === 0) {
+    return findings;
+  }
+  const branches = uniqueBranches(statements.children);
+  for (const branch of branches) {
+    let returnFound = false;
+    const remainingStatements = [];
+    for (const statement of branch) {
+      if (statement instanceof ReturnStatementAstNode) {
+        returnFound = true;
+        continue;
+      }
+      if (returnFound) {
+        remainingStatements.push(statement);
+      }
+    }
+    if (!returnFound && findings.errors.length === 0) {
+      findings.errors.push(AnalysisError({
+        message: "This function is missing a return statement somewhere",
+        beginHighlight: statements.children.at(0)!,
+        endHighlight: Some(statements.children.at(-1)),
+      }));
+    } else {
+      if (remainingStatements.length > 0) {
+        findings.warnings.push(AnalysisWarning({
+          message:
+            "These statements are never going to be run because they are situated after a return statement.",
+          beginHighlight: new DummyAstNode({
+            tokenFrom: remainingStatements[0].tokenRange()[0],
+            tokenTo: remainingStatements[0].tokenRange()[1],
+          }),
+          endHighlight: Some(
+            new DummyAstNode({
+              tokenFrom: remainingStatements.at(-1)?.tokenRange()[0]!,
+              tokenTo: remainingStatements.at(-1)?.tokenRange()[1]!,
+            }),
+          ),
+        }));
+      }
+    }
+  }
+  return findings;
+}
+
 export class FunctionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   returnType!: Option<Token<TokenKind>>;
@@ -145,6 +198,10 @@ export class FunctionAstNode implements EvaluableAstNode {
       );
     }
     // TODO: introduce return statements and check with return type
+    findings = AnalysisFindings.merge(
+      findings,
+      analyzeReturnPlacements(this.statements),
+    );
     analysisTable.popScope();
     return findings;
   }
