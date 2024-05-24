@@ -1,7 +1,7 @@
 import { rule } from "typescript-parsec";
 import { TokenKind } from "../lexer.ts";
 import { ConditionAstNode } from "./condition.ts";
-import { FunctionAstNode } from "./function.ts";
+import { FunctionDefinitionAstNode } from "./function.ts";
 
 /*
 This file contains uninitialized parser declarations.
@@ -41,4 +41,4 @@ parser -> condition
 
 export const condition = rule<TokenKind, ConditionAstNode>();
 
-export const functionDefinition = rule<TokenKind, FunctionAstNode>();
+export const functionDefinition = rule<TokenKind, FunctionDefinitionAstNode>();

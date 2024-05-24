@@ -162,14 +162,14 @@ function analyzeReturnPlacements(
   return findings;
 }
 
-export class FunctionAstNode implements EvaluableAstNode {
+export class FunctionDefinitionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   returnType!: Option<Token<TokenKind>>;
   statements!: StatementsAstNode;
   functionKeywordToken!: Token<TokenKind>;
   closingBraceToken!: Token<TokenKind>;
 
-  constructor(params: Attributes<FunctionAstNode>) {
+  constructor(params: Attributes<FunctionDefinitionAstNode>) {
     Object.assign(this, params);
   }
 
@@ -395,7 +395,7 @@ functionDefinition.setPattern(apply(
     functionKeyword,
     [parameters, returnType, [_, statements, closingBrace]],
   ]) =>
-    new FunctionAstNode({
+    new FunctionDefinitionAstNode({
       parameters: parameters,
       returnType: returnType,
       statements: statements,
