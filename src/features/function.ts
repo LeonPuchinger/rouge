@@ -32,6 +32,7 @@ import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
+import { functionDefinition, returnStatement } from "./parser_declarations.ts";
 import {
   StatementAstNode,
   statements,
@@ -387,7 +388,7 @@ const returnType = apply(
   (token) => Some(token),
 );
 
-export const functionDefinition = apply(
+functionDefinition.setPattern(apply(
   seq(
     str<TokenKind>("function"),
     seq(
@@ -418,9 +419,9 @@ export const functionDefinition = apply(
       functionKeywordToken: functionKeyword,
       closingBraceToken: closingBrace,
     }),
-);
+));
 
-export const returnStatement = apply(
+returnStatement.setPattern(apply(
   kouter(
     str<TokenKind>("return"),
     opt(tok(TokenKind.breakingWhitespace)),
@@ -431,4 +432,4 @@ export const returnStatement = apply(
       keyword: keyword,
       expression: expression,
     }),
-);
+));

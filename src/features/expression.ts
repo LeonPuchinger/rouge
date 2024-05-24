@@ -8,6 +8,7 @@ import { Attributes } from "../util/type.ts";
 import { booleanExpression } from "./boolean_expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
 import { symbolExpression } from "./symbol_expression.ts";
+import { functionDefinition } from "./parser_declarations.ts";
 
 /* AST Nodes */
 
@@ -47,6 +48,7 @@ export const expression = apply(
     booleanExpression,
     numericExpression,
     symbolExpression,
+    functionDefinition,
   ),
   (expression: EvaluableAstNode) =>
     new ExpressionAstNode({ child: expression }),
