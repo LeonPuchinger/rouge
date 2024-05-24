@@ -10,7 +10,6 @@ import { expression, ExpressionAstNode } from "./expression.ts";
 import {} from "../util/array.ts";
 import { None } from "../util/monad/index.ts";
 import { ConditionAstNode } from "./condition.ts";
-import { returnStatement, ReturnStatementAstNode } from "./function.ts";
 import { condition } from "./parser_declarations.ts";
 import {
   StructureDefiniitonAstNode,
@@ -23,8 +22,7 @@ export type StatementAstNode =
   | ExpressionAstNode
   | ConditionAstNode
   | StructureDefiniitonAstNode
-  | AssignmentAstNode
-  | ReturnStatementAstNode;
+  | AssignmentAstNode;
 
 export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
@@ -54,7 +52,7 @@ export class StatementsAstNode implements InterpretableAstNode {
       .reduce((previous, current) => AnalysisFindings.merge(previous, current));
     if (this.config.representsGlobalScope) {
       for (const child of this.children) {
-        if (child instanceof ReturnStatementAstNode) {
+        if (false) {
           findings.errors.push(AnalysisError({
             message:
               "Return statements are only allowed inside of functions or methods",
@@ -88,7 +86,6 @@ const statement = alt_sc(
   condition,
   structureDefinition,
   expression,
-  returnStatement,
 );
 
 export const statements = apply(
