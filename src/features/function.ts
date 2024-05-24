@@ -239,7 +239,47 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    throw new Error("Method not implemented.");
+    const findings = this.expression
+      .map((node) => node.analyze())
+      .unwrapOr(AnalysisFindings.empty());
+    const actualReturnType = this.expression.map((node) => node.resolveType());
+    const supposedReturnType = typeTable.getReturnType();
+    // curried version of AnalysisError with the highlighted range pre-applied
+    const ReturnTypeError = (message: string, messageHighlight?: string) =>
+      AnalysisError({
+        message: message,
+        beginHighlight: DummyAstNode.fromToken(this.keyword),
+        endHighlight: this.expression,
+        messageHighlight: messageHighlight,
+      });
+    if (
+      supposedReturnType.kind === "some" && actualReturnType.kind === "none"
+    ) {
+      findings.errors.push(ReturnTypeError(
+        "This function needs to return a value, however, this return statement is empty.",
+      ));
+      return findings;
+    }
+    if (
+      supposedReturnType.kind === "none" && actualReturnType.kind === "some"
+    ) {
+      findings.errors.push(ReturnTypeError(
+        "This function does not return a value, therefore return statements have to be empty.",
+      ));
+      return findings;
+    }
+    const matchingReturnTypes = actualReturnType
+      .zip(supposedReturnType)
+      .map(([actual, supposed]) => actual.typeCompatibleWith(supposed))
+      .unwrapOr(false);
+    if (!matchingReturnTypes) {
+      findings.errors.push(
+        ReturnTypeError(
+          "The type of the returned value and the type that is supposed to be returned by the function do not match",
+        ),
+      );
+    }
+    return findings;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
