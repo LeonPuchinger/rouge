@@ -4,18 +4,10 @@
 interface Environment {
   // The input source code
   source: string;
-  // Boolean flags that control the behavior of the interpreter
-  flags: {
-    // If set, stops the execution of all nested statements (scopes) until a frame is reached.
-    terminateCurrentFrame: boolean;
-  };
 }
 
 let environment: Environment = {
   source: "",
-  flags: {
-    terminateCurrentFrame: false,
-  },
 };
 
 /**

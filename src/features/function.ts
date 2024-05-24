@@ -225,6 +225,27 @@ export class FunctionAstNode implements EvaluableAstNode {
   }
 }
 
+/**
+ * A custom error type that is NOT used for any actual error handling.
+ * Statements inside of a function can be nested to various degrees 
+ * (e.g. conditions, loops). Therefore it can be difficult to get the
+ * return value of a function from a return statement back to the caller.
+ * This error is used to propagate ´the return value back through the
+ * call stack to the nearest function, where it is caught.
+ * The benefit of throwing an error is that execution of all nested 
+ * statements stops immediately without having to implement any further logic.
+ */
+class ReturnValueContainer extends Error {
+    /**
+   * @param value The value that is supposed to be returned.
+   *  Can be `None` in case the function does not return anything,
+   *  but an empty return statement is encountered.
+   */
+  constructor(public value: Option<SymbolValue>) {
+    super();
+  }
+}
+
 export class ReturnStatementAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   expression!: Option<ExpressionAstNode>;
@@ -235,7 +256,9 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
   }
 
   interpret(): void {
-    throw new Error("Method not implemented.");
+    throw new ReturnValueContainer(
+      this.expression.map((node) => node.evaluate()),
+    );
   }
 
   analyze(): AnalysisFindings {
@@ -357,7 +380,7 @@ const returnStatement = apply(
   kouter(
     str<TokenKind>("return"),
     opt(tok(TokenKind.breakingWhitespace)),
-    expression,
+    opt_sc(expression),
   ),
   ([keyword, expression]) =>
     new ReturnStatementAstNode({
