@@ -376,7 +376,7 @@ functionDefinition.setPattern(apply(
     }),
 ));
 
-const returnStatement = apply(
+export const returnStatement = apply(
   kouter(
     str<TokenKind>("return"),
     opt(tok(TokenKind.breakingWhitespace)),

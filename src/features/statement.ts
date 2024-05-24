@@ -10,7 +10,7 @@ import { expression, ExpressionAstNode } from "./expression.ts";
 import {} from "../util/array.ts";
 import { None } from "../util/monad/index.ts";
 import { ConditionAstNode } from "./condition.ts";
-import { ReturnStatementAstNode } from "./function.ts";
+import { returnStatement, ReturnStatementAstNode } from "./function.ts";
 import { condition } from "./parser_declarations.ts";
 import {
   StructureDefiniitonAstNode,
@@ -23,7 +23,8 @@ export type StatementAstNode =
   | ExpressionAstNode
   | ConditionAstNode
   | StructureDefiniitonAstNode
-  | AssignmentAstNode;
+  | AssignmentAstNode
+  | ReturnStatementAstNode;
 
 export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
@@ -87,6 +88,7 @@ const statement = alt_sc(
   condition,
   structureDefinition,
   expression,
+  returnStatement,
 );
 
 export const statements = apply(
