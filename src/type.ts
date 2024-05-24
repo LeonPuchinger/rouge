@@ -130,7 +130,7 @@ export class TypeTable {
   }
 
   findTypeInCurrentScope(name: string): Option<SymbolType> {
-    const current = this.scopes.toReversed().at(0);
+    const current = this.scopes.at(-1);
     if (current !== undefined) {
       return this.findTypeInScope(name, current);
     }
