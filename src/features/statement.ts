@@ -1,6 +1,6 @@
 import { alt_sc, apply, list_sc, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
-import { AnalysisError, AnalysisFindings } from "../finding.ts";
+import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { InternalError } from "../util/error.ts";
 import { Attributes } from "../util/type.ts";
@@ -8,7 +8,6 @@ import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
 import {} from "../util/array.ts";
-import { None } from "../util/monad/index.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { condition } from "./parser_declarations.ts";
 import {
@@ -50,18 +49,6 @@ export class StatementsAstNode implements InterpretableAstNode {
     const findings = this.children
       .map((statement) => statement.analyze())
       .reduce((previous, current) => AnalysisFindings.merge(previous, current));
-    if (this.config.representsGlobalScope) {
-      for (const child of this.children) {
-        if (false) {
-          findings.errors.push(AnalysisError({
-            message:
-              "Return statements are only allowed inside of functions or methods",
-            beginHighlight: child,
-            endHighlight: None(),
-          }));
-        }
-      }
-    }
     return findings;
   }
 

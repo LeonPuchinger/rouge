@@ -292,8 +292,26 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     const findings = this.expression
       .map((node) => node.analyze())
       .unwrapOr(AnalysisFindings.empty());
+    const savedReturnType = typeTable.findReturnType();
+    if (savedReturnType.kind === "none") {
+      findings.errors.push(AnalysisError({
+        message:
+          "Return statements are only allowed inside of functions or methods",
+        beginHighlight: DummyAstNode.fromToken(this.keyword),
+        endHighlight: this.expression,
+      }));
+      return findings;
+    }
+    const supposedReturnType = savedReturnType.unwrap();
     const actualReturnType = this.expression.map((node) => node.resolveType());
-    const supposedReturnType = typeTable.getReturnType();
+    const nothingType = typeTable
+      .findType("Nothing")
+      .unwrapOrThrow(
+        new InternalError(
+          "The type called `Nothing` from the standard library could not be located.",
+          "This type is required for basic language functionality.",
+        ),
+      );
     // curried version of AnalysisError with the highlighted range pre-applied
     const ReturnTypeError = (message: string, messageHighlight?: string) =>
       AnalysisError({
@@ -302,25 +320,24 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
         endHighlight: this.expression,
         messageHighlight: messageHighlight,
       });
-    if (
-      supposedReturnType.kind === "some" && actualReturnType.kind === "none"
-    ) {
+    const returnValueRequired = !supposedReturnType.typeCompatibleWith(
+      nothingType,
+    );
+    const returnStatementEmpty = actualReturnType.kind === "none";
+    if (returnValueRequired && returnStatementEmpty) {
       findings.errors.push(ReturnTypeError(
         "This function needs to return a value, however, this return statement is empty.",
       ));
       return findings;
     }
-    if (
-      supposedReturnType.kind === "none" && actualReturnType.kind === "some"
-    ) {
+    if (!returnValueRequired && !returnStatementEmpty) {
       findings.errors.push(ReturnTypeError(
         "This function does not return a value, therefore return statements have to be empty.",
       ));
       return findings;
     }
     const matchingReturnTypes = actualReturnType
-      .zip(supposedReturnType)
-      .map(([actual, supposed]) => actual.typeCompatibleWith(supposed))
+      .map((actual) => actual.typeCompatibleWith(supposedReturnType))
       .unwrapOr(false);
     if (!matchingReturnTypes) {
       findings.errors.push(

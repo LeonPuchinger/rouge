@@ -158,9 +158,20 @@ export class TypeTable {
     current.returnType = Some(returnType);
   }
 
-  getReturnType(): Option<SymbolType> {
+  findReturnTypeInCurrentScope(): Option<SymbolType> {
     const current = this.scopes.at(-1)!;
     return current.returnType;
+  }
+
+  findReturnType(): Option<SymbolType> {
+    for (const currentScope of this.scopes.toReversed()) {
+      const returnType = currentScope.returnType;
+      if (returnType.kind === "none") {
+        continue;
+      }
+      return returnType;
+    }
+    return None();
   }
 }
 
