@@ -27,20 +27,9 @@ export type StatementAstNode =
 
 export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
-  config = {
-    representsGlobalScope: false,
-  };
 
   constructor(params: Omit<Attributes<StatementsAstNode>, "config">) {
     Object.assign(this, params);
-  }
-
-  configure(updateConfig: Partial<typeof this.config>) {
-    for (const [key, value] of Object.entries(updateConfig)) {
-      if (value !== undefined) {
-        Object.assign(this.config, { [key]: value });
-      }
-    }
   }
 
   interpret(): void {
