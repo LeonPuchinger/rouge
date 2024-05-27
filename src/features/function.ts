@@ -27,7 +27,7 @@ import {
 import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
-import { kouter } from "../util/parser.ts";
+import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import {
   Attributes,
@@ -402,7 +402,7 @@ functionDefinition.setPattern(apply(
       opt_sc(returnType),
       seq(
         str<TokenKind>("{"),
-        statements,
+        surround_with_breaking_whitespace(statements),
         str<TokenKind>("}"),
       ),
     ),
