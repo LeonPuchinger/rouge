@@ -403,7 +403,7 @@ functionDefinition.setPattern(apply(
     seq(
       kmid(
         str("("),
-        parameters,
+        opt(parameters),
         str(")"),
       ),
       kright(
@@ -422,7 +422,7 @@ functionDefinition.setPattern(apply(
     [parameters, returnType, [_, statements, closingBrace]],
   ]) =>
     new FunctionDefinitionAstNode({
-      parameters: parameters,
+      parameters: parameters ?? [],
       returnType: returnType,
       statements: statements,
       functionKeywordToken: functionKeyword,
