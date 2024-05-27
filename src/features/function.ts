@@ -87,81 +87,6 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   }
 }
 
-/**
- * Creates a control flow graph (CFG) of a list of statements.
- * The CFG is a list of all possible branches/paths to traverse the statements.
- * A branch is forked when the statements contain a condition or a loop, for instance.
- *
- * @param statements
- */
-function uniqueBranches(statements: StatementAstNode[]): AstNode[][] {
-  const current = statements.at(0);
-  if (current === undefined) {
-    return [[]];
-  }
-  const remaining = statements.slice(1);
-  if (current instanceof ConditionAstNode) {
-    const trueStatements = [...current.trueStatements.children, ...remaining];
-    const falseStatements = current.falseStatements
-      .map((node) => [...node.children, ...remaining])
-      .unwrapOr(remaining);
-    return [
-      ...uniqueBranches(trueStatements),
-      ...uniqueBranches(falseStatements),
-    ];
-  }
-  return uniqueBranches(remaining)
-    .map((branch) => [current, ...branch]);
-}
-
-function analyzeReturnPlacements(
-  statements: StatementsAstNode,
-): AnalysisFindings {
-  const findings = AnalysisFindings.empty();
-  if (statements.children.length === 0) {
-    return findings;
-  }
-  const branches = uniqueBranches(statements.children);
-  for (const branch of branches) {
-    let returnFound = false;
-    const remainingStatements = [];
-    for (const statement of branch) {
-      if (statement instanceof ReturnStatementAstNode) {
-        returnFound = true;
-        continue;
-      }
-      if (returnFound) {
-        remainingStatements.push(statement);
-      }
-    }
-    if (!returnFound && findings.errors.length === 0) {
-      findings.errors.push(AnalysisError({
-        message: "This function is missing a return statement somewhere",
-        beginHighlight: statements.children.at(0)!,
-        endHighlight: Some(statements.children.at(-1)),
-      }));
-    } else {
-      if (remainingStatements.length > 0) {
-        findings.warnings.push(AnalysisWarning({
-          message:
-            "These statements are never going to be run because they are situated after a return statement.",
-          beginHighlight: new DummyAstNode({
-            tokenFrom: remainingStatements[0].tokenRange()[0],
-            tokenTo: remainingStatements[0].tokenRange()[1],
-          }),
-          endHighlight: Some(
-            new DummyAstNode({
-              tokenFrom: remainingStatements.at(-1)?.tokenRange()[0]!,
-              tokenTo: remainingStatements.at(-1)?.tokenRange()[1]!,
-            }),
-          ),
-        }));
-      }
-    }
-  }
-  return findings;
-}
-
 export class FunctionDefinitionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   returnType!: Option<Token<TokenKind>>;
@@ -178,6 +103,90 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const returnType = this.returnType
       .flatMap((token) => typeTable.findType(token.text));
     return new FunctionSymbolValue(this.statements, params, returnType);
+  }
+
+  /**
+   * Creates a control flow graph (CFG) of the statements within the function.
+   * The CFG is a list of all possible branches/paths to traverse the statements.
+   * A branch is forked when the statements contain a condition or a loop, for instance.
+   */
+  uniqueBranches(statements: StatementAstNode[]): AstNode[][] {
+    const current = statements.at(0);
+    if (current === undefined) {
+      return [[]];
+    }
+    const remaining = statements.slice(1);
+    if (current instanceof ConditionAstNode) {
+      const trueStatements = [...current.trueStatements.children, ...remaining];
+      const falseStatements = current.falseStatements
+        .map((node) => [...node.children, ...remaining])
+        .unwrapOr(remaining);
+      return [
+        ...this.uniqueBranches(trueStatements),
+        ...this.uniqueBranches(falseStatements),
+      ];
+    }
+    return this.uniqueBranches(remaining)
+      .map((branch) => [current, ...branch]);
+  }
+
+  /**
+   * Analyzes whether a single branch of the CFG contains a return statement.
+   * Each branch needs to contain at least one return statement.
+   * Creating the finding for the missing return statement is delegated to the caller.
+   * When there are statements after a return statement, a warning is added to the findings.
+   */
+  analyzeBranch(
+    statements: AstNode[],
+  ): { branchContainsReturn: boolean; branchFindings: AnalysisFindings } {
+    const findings = AnalysisFindings.empty();
+    const returnStatementIndex = statements.findIndex((value) =>
+      value instanceof ReturnStatementAstNode
+    );
+    if (returnStatementIndex === undefined) {
+      return { branchContainsReturn: false, branchFindings: findings };
+    }
+    const remainingStatements = statements.slice(returnStatementIndex);
+    const unreachableCode = remainingStatements.length >= 1;
+    if (unreachableCode) {
+      findings.warnings.push(AnalysisWarning({
+        message:
+          "These statements are never going to be run because they are situated after a return statement.",
+        beginHighlight: remainingStatements.at(0)!,
+        endHighlight: Some(remainingStatements.at(-1)!),
+      }));
+    }
+    return { branchContainsReturn: true, branchFindings: findings };
+  }
+
+  /**
+   * Analyzes whether return statements in the function are placed in a legal way.
+   * This method assumes that the function is required to return a non `Nothing` return value.
+   */
+  analyzeReturnPlacements(): AnalysisFindings {
+    let findings = AnalysisFindings.empty();
+    const functionEmpty = this.statements.children.length === 0;
+    if (functionEmpty) {
+      return findings;
+    }
+    const branches = this.uniqueBranches(this.statements.children);
+    const missingReturnStatement = branches.some((branch) => {
+      const {
+        branchContainsReturn,
+        branchFindings,
+      } = this.analyzeBranch(branch);
+      findings = AnalysisFindings.merge(findings, branchFindings);
+      return !branchContainsReturn;
+    });
+    if (missingReturnStatement) {
+      findings.errors.push(AnalysisError({
+        message:
+          "This function is missing at least one return statement somewhere.",
+        beginHighlight: DummyAstNode.fromToken(this.functionKeywordToken),
+        endHighlight: Some(DummyAstNode.fromToken(this.closingBraceToken)),
+      }));
+    }
+    return findings;
   }
 
   analyze(): AnalysisFindings {
@@ -230,7 +239,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     }
     findings = AnalysisFindings.merge(
       findings,
-      analyzeReturnPlacements(this.statements),
+      this.analyzeReturnPlacements(),
     );
     analysisTable.popScope();
     return findings;
