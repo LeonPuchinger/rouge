@@ -23,7 +23,7 @@ export class PrimitiveSymbolType implements SymbolType {
 
 export class FunctionSymbolType implements SymbolType {
   parameters!: SymbolType[];
-  returnType!: Option<SymbolType>;
+  returnType!: SymbolType;
 
   constructor(params: Attributes<FunctionSymbolType>) {
     Object.assign(this, params);
@@ -34,9 +34,7 @@ export class FunctionSymbolType implements SymbolType {
       return false;
     }
     const matchingReturnTypes = other.returnType
-      .zip(this.returnType)
-      .map((returnTypes) => returnTypes[0].typeCompatibleWith(returnTypes[1]))
-      .unwrapOr(false);
+      .typeCompatibleWith(this.returnType);
     if (!matchingReturnTypes) {
       return false;
     }

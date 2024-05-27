@@ -1,3 +1,5 @@
+import { typeTable } from "../type.ts";
+import { InternalError } from "./error.ts";
 import { Option } from "./monad/index.ts";
 
 /**
@@ -38,3 +40,15 @@ type ConvertOptionals<T> =
 export type Attributes<T> = OmitFunctions<T>;
 
 export type WithOptionalAttributes<T> = ConvertOptionals<Attributes<T>>;
+
+/**
+ * The `Nothing` type from the standard library.
+ */
+export const nothingType = typeTable
+  .findType("Nothing")
+  .unwrapOrThrow(
+    new InternalError(
+      "The type called `Nothing` from the standard library could not be located.",
+      "This type is required for basic language functionality.",
+    ),
+  );

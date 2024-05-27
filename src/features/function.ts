@@ -25,11 +25,15 @@ import {
   SymbolValue,
 } from "../symbol.ts";
 import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
-import { InternalError, UnresolvableSymbolTypeError } from "../util/error.ts";
+import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import { kouter } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
-import { Attributes, WithOptionalAttributes } from "../util/type.ts";
+import {
+  Attributes,
+  nothingType,
+  WithOptionalAttributes,
+} from "../util/type.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 import { functionDefinition, returnStatement } from "./parser_declarations.ts";
@@ -101,7 +105,8 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   evaluate(): SymbolValue<Function> {
     const params = this.parameters.map((v) => v.resolveType());
     const returnType = this.returnType
-      .flatMap((token) => typeTable.findType(token.text));
+      .flatMap((token) => typeTable.findType(token.text))
+      .unwrapOr(nothingType);
     return new FunctionSymbolValue(this.statements, params, returnType);
   }
 
@@ -224,14 +229,6 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
         }));
       }
     }
-    const nothingType = typeTable
-      .findType("Nothing")
-      .unwrapOrThrow(
-        new InternalError(
-          "The type called `Nothing` from the standard library could not be located.",
-          "This type is required for basic language functionality.",
-        ),
-      );
     if (returnTypeResolvable) {
       typeTable.setReturnType(
         this.returnType
@@ -251,8 +248,10 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
+    // TODO, return type should not be an option, use `Nothing` instead
     const returnType = this.returnType
-      .flatMap((token) => typeTable.findType(token.text));
+      .flatMap((token) => typeTable.findType(token.text))
+      .unwrapOr(nothingType);
     return new FunctionSymbolType({
       parameters: parameterTypes,
       returnType: returnType,
@@ -316,14 +315,6 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     }
     const supposedReturnType = savedReturnType.unwrap();
     const actualReturnType = this.expression.map((node) => node.resolveType());
-    const nothingType = typeTable
-      .findType("Nothing")
-      .unwrapOrThrow(
-        new InternalError(
-          "The type called `Nothing` from the standard library could not be located.",
-          "This type is required for basic language functionality.",
-        ),
-      );
     // curried version of AnalysisError with the highlighted range pre-applied
     const ReturnTypeError = (message: string, messageHighlight?: string) =>
       AnalysisError({
