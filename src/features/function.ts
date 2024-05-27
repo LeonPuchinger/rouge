@@ -403,7 +403,7 @@ functionDefinition.setPattern(apply(
     seq(
       kmid(
         str("("),
-        opt(parameters),
+        opt_sc(parameters),
         str(")"),
       ),
       kright(
