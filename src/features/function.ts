@@ -201,7 +201,9 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
-    for (const index in this.parameters) {
+    // using traditional for loop, because for-in loops break
+    // when used with extension methods in the same project
+    for (let index = 0; index < this.parameters.length; index += 1) {
       analysisTable.setSymbol(
         this.parameters[index].name.text,
         new StaticSymbol({ valueType: parameterTypes[index] }),
