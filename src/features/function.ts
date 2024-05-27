@@ -392,9 +392,9 @@ const parameters = apply(
   (v) => [v].flat(),
 );
 
-const returnType = apply(
-  opt_sc(tok(TokenKind.ident)),
-  (token) => Some(token),
+const returnType = kright(
+  seq(str<TokenKind>("-"), str(">")),
+  tok(TokenKind.ident),
 );
 
 functionDefinition.setPattern(apply(
@@ -406,10 +406,7 @@ functionDefinition.setPattern(apply(
         opt_sc(parameters),
         str(")"),
       ),
-      kright(
-        seq(str("-"), str(">")),
-        returnType,
-      ),
+      opt_sc(returnType),
       seq(
         str<TokenKind>("{"),
         statements,
@@ -423,7 +420,7 @@ functionDefinition.setPattern(apply(
   ]) =>
     new FunctionDefinitionAstNode({
       parameters: parameters ?? [],
-      returnType: returnType,
+      returnType: Some(returnType),
       statements: statements,
       functionKeywordToken: functionKeyword,
       closingBraceToken: closingBrace,
