@@ -1,4 +1,4 @@
-import { alt_sc, apply, list_sc, tok, Token } from "typescript-parsec";
+import { alt_sc, apply, list_sc, opt_sc, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
