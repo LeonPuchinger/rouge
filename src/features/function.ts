@@ -151,7 +151,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     if (returnStatementIndex === -1) {
       return { branchContainsReturn: false, branchFindings: findings };
     }
-    const remainingStatements = statements.slice(returnStatementIndex);
+    const remainingStatements = statements.slice(returnStatementIndex + 1);
     const unreachableCode = remainingStatements.length >= 1;
     if (unreachableCode) {
       findings.warnings.push(AnalysisWarning({
