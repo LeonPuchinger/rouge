@@ -230,16 +230,17 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       }
     }
     if (returnTypeResolvable) {
-      typeTable.setReturnType(
-        this.returnType
-          .flatMap((token) => typeTable.findType(token.text))
-          .unwrapOr(nothingType),
-      );
+      const returnType = this.returnType
+        .flatMap((token) => typeTable.findType(token.text))
+        .unwrapOr(nothingType);
+      typeTable.setReturnType(returnType);
+      if (!returnType.typeCompatibleWith(nothingType)) {
+        findings = AnalysisFindings.merge(
+          findings,
+          this.analyzeReturnPlacements(),
+        );
+      }
     }
-    findings = AnalysisFindings.merge(
-      findings,
-      this.analyzeReturnPlacements(),
-    );
     analysisTable.popScope();
     return findings;
   }
