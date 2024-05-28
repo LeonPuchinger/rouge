@@ -27,7 +27,12 @@ import {
 import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
-import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
+import {
+  ends_with_breaking_whitespace,
+  kouter,
+  starts_with_breaking_whitespace,
+  surround_with_breaking_whitespace,
+} from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import {
   Attributes,
@@ -367,7 +372,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
 export const parameter = apply(
   kouter(
     tok(TokenKind.ident),
-    str(":"),
+    surround_with_breaking_whitespace(str(":")),
     tok(TokenKind.ident),
   ),
   ([ident, type]) =>
@@ -379,14 +384,14 @@ export const parameter = apply(
 
 const parameters = apply(
   alt_sc(
-    list_sc(parameter, str(",")),
+    list_sc(parameter, surround_with_breaking_whitespace(str(","))),
     parameter,
   ),
   (v) => [v].flat(),
 );
 
 const returnType = kright(
-  str<TokenKind>("->"),
+  ends_with_breaking_whitespace(str<TokenKind>("->")),
   tok(TokenKind.ident),
 );
 
@@ -395,13 +400,13 @@ functionDefinition.setPattern(apply(
     str<TokenKind>("function"),
     seq(
       kmid(
-        str("("),
+        surround_with_breaking_whitespace(str("(")),
         opt_sc(parameters),
-        str(")"),
+        surround_with_breaking_whitespace(str(")")),
       ),
       opt_sc(returnType),
       seq(
-        str<TokenKind>("{"),
+        starts_with_breaking_whitespace(str<TokenKind>("{")),
         surround_with_breaking_whitespace(statements),
         str<TokenKind>("}"),
       ),
