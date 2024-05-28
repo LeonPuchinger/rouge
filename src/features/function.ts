@@ -249,7 +249,6 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
-    // TODO, return type should not be an option, use `Nothing` instead
     const returnType = this.returnType
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
