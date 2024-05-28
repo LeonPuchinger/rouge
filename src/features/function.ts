@@ -148,7 +148,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const returnStatementIndex = statements.findIndex((value) =>
       value instanceof ReturnStatementAstNode
     );
-    if (returnStatementIndex === undefined) {
+    if (returnStatementIndex === -1) {
       return { branchContainsReturn: false, branchFindings: findings };
     }
     const remainingStatements = statements.slice(returnStatementIndex);
