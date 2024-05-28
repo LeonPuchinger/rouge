@@ -4,14 +4,19 @@ import {
   kmid,
   kright,
   list_sc,
+  opt,
   opt_sc,
   seq,
   str,
   tok,
   Token,
 } from "typescript-parsec";
-import { EvaluableAstNode } from "../ast.ts";
-import { AnalysisError, AnalysisFindings } from "../finding.ts";
+import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import {
+  AnalysisError,
+  AnalysisFindings,
+  AnalysisWarning,
+} from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   analysisTable,
@@ -22,9 +27,26 @@ import {
 import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
-import { kouter } from "../util/parser.ts";
-import { Attributes } from "../util/type.ts";
-import { statements, StatementsAstNode } from "./statement.ts";
+import {
+  ends_with_breaking_whitespace,
+  kouter,
+  starts_with_breaking_whitespace,
+  surround_with_breaking_whitespace,
+} from "../util/parser.ts";
+import { DummyAstNode } from "../util/snippet.ts";
+import {
+  Attributes,
+  nothingType,
+  WithOptionalAttributes,
+} from "../util/type.ts";
+import { ConditionAstNode } from "./condition.ts";
+import { expression, ExpressionAstNode } from "./expression.ts";
+import { functionDefinition, returnStatement } from "./parser_declarations.ts";
+import {
+  StatementAstNode,
+  statements,
+  StatementsAstNode,
+} from "./statement.ts";
 
 /* DATA TYPES */
 
@@ -74,22 +96,107 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   }
 }
 
-class FunctionAstNode implements EvaluableAstNode {
+export class FunctionDefinitionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   returnType!: Option<Token<TokenKind>>;
   statements!: StatementsAstNode;
   functionKeywordToken!: Token<TokenKind>;
   closingBraceToken!: Token<TokenKind>;
 
-  constructor(params: Attributes<FunctionAstNode>) {
+  constructor(params: Attributes<FunctionDefinitionAstNode>) {
     Object.assign(this, params);
   }
 
   evaluate(): SymbolValue<Function> {
     const params = this.parameters.map((v) => v.resolveType());
     const returnType = this.returnType
-      .flatMap((token) => typeTable.findType(token.text));
+      .flatMap((token) => typeTable.findType(token.text))
+      .unwrapOr(nothingType);
     return new FunctionSymbolValue(this.statements, params, returnType);
+  }
+
+  /**
+   * Creates a control flow graph (CFG) of the statements within the function.
+   * The CFG is a list of all possible branches/paths to traverse the statements.
+   * A branch is forked when the statements contain a condition or a loop, for instance.
+   */
+  uniqueBranches(statements: StatementAstNode[]): AstNode[][] {
+    const current = statements.at(0);
+    if (current === undefined) {
+      return [[]];
+    }
+    const remaining = statements.slice(1);
+    if (current instanceof ConditionAstNode) {
+      const trueStatements = [...current.trueStatements.children, ...remaining];
+      const falseStatements = current.falseStatements
+        .map((node) => [...node.children, ...remaining])
+        .unwrapOr(remaining);
+      return [
+        ...this.uniqueBranches(trueStatements),
+        ...this.uniqueBranches(falseStatements),
+      ];
+    }
+    return this.uniqueBranches(remaining)
+      .map((branch) => [current, ...branch]);
+  }
+
+  /**
+   * Analyzes whether a single branch of the CFG contains a return statement.
+   * Each branch needs to contain at least one return statement.
+   * Creating the finding for the missing return statement is delegated to the caller.
+   * When there are statements after a return statement, a warning is added to the findings.
+   */
+  analyzeBranch(
+    statements: AstNode[],
+  ): { branchContainsReturn: boolean; branchFindings: AnalysisFindings } {
+    const findings = AnalysisFindings.empty();
+    const returnStatementIndex = statements.findIndex((value) =>
+      value instanceof ReturnStatementAstNode
+    );
+    if (returnStatementIndex === -1) {
+      return { branchContainsReturn: false, branchFindings: findings };
+    }
+    const remainingStatements = statements.slice(returnStatementIndex + 1);
+    const unreachableCode = remainingStatements.length >= 1;
+    if (unreachableCode) {
+      findings.warnings.push(AnalysisWarning({
+        message:
+          "These statements are never going to be run because they are situated after a return statement.",
+        beginHighlight: remainingStatements.at(0)!,
+        endHighlight: Some(remainingStatements.at(-1)!),
+      }));
+    }
+    return { branchContainsReturn: true, branchFindings: findings };
+  }
+
+  /**
+   * Analyzes whether return statements in the function are placed in a legal way.
+   * This method assumes that the function is required to return a non `Nothing` return value.
+   */
+  analyzeReturnPlacements(): AnalysisFindings {
+    let findings = AnalysisFindings.empty();
+    const functionEmpty = this.statements.children.length === 0;
+    if (functionEmpty) {
+      return findings;
+    }
+    const branches = this.uniqueBranches(this.statements.children);
+    const missingReturnStatement = branches.some((branch) => {
+      const {
+        branchContainsReturn,
+        branchFindings,
+      } = this.analyzeBranch(branch);
+      findings = AnalysisFindings.merge(findings, branchFindings);
+      return !branchContainsReturn;
+    });
+    if (missingReturnStatement) {
+      findings.errors.push(AnalysisError({
+        message:
+          "This function is missing at least one return statement somewhere.",
+        beginHighlight: DummyAstNode.fromToken(this.functionKeywordToken),
+        endHighlight: Some(DummyAstNode.fromToken(this.closingBraceToken)),
+      }));
+    }
+    return findings;
   }
 
   analyze(): AnalysisFindings {
@@ -104,13 +211,41 @@ class FunctionAstNode implements EvaluableAstNode {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
-    for (const index in this.parameters) {
+    // using traditional for loop, because for-in loops break
+    // when used with extension methods in the same project
+    for (let index = 0; index < this.parameters.length; index += 1) {
       analysisTable.setSymbol(
         this.parameters[index].name.text,
         new StaticSymbol({ valueType: parameterTypes[index] }),
       );
     }
-    // TODO: introduce return statements and check with return type
+    let returnTypeResolvable = false;
+    if (this.returnType.kind === "some") {
+      const returnTypeName = this.returnType.unwrap().text;
+      returnTypeResolvable = typeTable
+        .findType(returnTypeName)
+        .map((_) => true)
+        .unwrapOr(false);
+      if (!returnTypeResolvable) {
+        findings.errors.push(AnalysisError({
+          message: "The return type specified for the function does not exist",
+          beginHighlight: DummyAstNode.fromToken(this.returnType.unwrap()),
+          endHighlight: None(),
+        }));
+      }
+    }
+    if (returnTypeResolvable) {
+      const returnType = this.returnType
+        .flatMap((token) => typeTable.findType(token.text))
+        .unwrapOr(nothingType);
+      typeTable.setReturnType(returnType);
+      if (!returnType.typeCompatibleWith(nothingType)) {
+        findings = AnalysisFindings.merge(
+          findings,
+          this.analyzeReturnPlacements(),
+        );
+      }
+    }
     analysisTable.popScope();
     return findings;
   }
@@ -120,7 +255,8 @@ class FunctionAstNode implements EvaluableAstNode {
       parameter.resolveType()
     );
     const returnType = this.returnType
-      .flatMap((token) => typeTable.findType(token.text));
+      .flatMap((token) => typeTable.findType(token.text))
+      .unwrapOr(nothingType);
     return new FunctionSymbolType({
       parameters: parameterTypes,
       returnType: returnType,
@@ -132,12 +268,111 @@ class FunctionAstNode implements EvaluableAstNode {
   }
 }
 
+/**
+ * A custom error type that is NOT used for any actual error handling.
+ * Statements inside of a function can be nested to various degrees
+ * (e.g. conditions, loops). Therefore it can be difficult to get the
+ * return value of a function from a return statement back to the caller.
+ * This error is used to propagate ´the return value back through the
+ * call stack to the nearest function, where it is caught.
+ * The benefit of throwing an error is that execution of all nested
+ * statements stops immediately without having to implement any further logic.
+ */
+class ReturnValueContainer extends Error {
+  /**
+   * @param value The value that is supposed to be returned.
+   *  Can be `None` in case the function does not return anything,
+   *  but an empty return statement is encountered.
+   */
+  constructor(public value: Option<SymbolValue>) {
+    super();
+  }
+}
+
+export class ReturnStatementAstNode implements InterpretableAstNode {
+  keyword!: Token<TokenKind>;
+  expression!: Option<ExpressionAstNode>;
+
+  constructor(params: WithOptionalAttributes<ReturnStatementAstNode>) {
+    Object.assign(this, params);
+    this.expression = Some(params.expression);
+  }
+
+  interpret(): void {
+    throw new ReturnValueContainer(
+      this.expression.map((node) => node.evaluate()),
+    );
+  }
+
+  analyze(): AnalysisFindings {
+    const findings = this.expression
+      .map((node) => node.analyze())
+      .unwrapOr(AnalysisFindings.empty());
+    const savedReturnType = typeTable.findReturnType();
+    if (savedReturnType.kind === "none") {
+      findings.errors.push(AnalysisError({
+        message:
+          "Return statements are only allowed inside of functions or methods",
+        beginHighlight: DummyAstNode.fromToken(this.keyword),
+        endHighlight: this.expression,
+      }));
+      return findings;
+    }
+    const supposedReturnType = savedReturnType.unwrap();
+    const actualReturnType = this.expression.map((node) => node.resolveType());
+    // curried version of AnalysisError with the highlighted range pre-applied
+    const ReturnTypeError = (message: string, messageHighlight?: string) =>
+      AnalysisError({
+        message: message,
+        beginHighlight: DummyAstNode.fromToken(this.keyword),
+        endHighlight: this.expression,
+        messageHighlight: messageHighlight,
+      });
+    const returnValueRequired = !supposedReturnType.typeCompatibleWith(
+      nothingType,
+    );
+    const returnStatementEmpty = actualReturnType.kind === "none";
+    if (returnValueRequired && returnStatementEmpty) {
+      findings.errors.push(ReturnTypeError(
+        "This function needs to return a value, however, this return statement is empty.",
+      ));
+      return findings;
+    }
+    if (!returnValueRequired && !returnStatementEmpty) {
+      findings.errors.push(ReturnTypeError(
+        "This function does not return a value, therefore return statements have to be empty.",
+      ));
+      return findings;
+    }
+    const matchingReturnTypes = actualReturnType
+      .map((actual) => actual.typeCompatibleWith(supposedReturnType))
+      .unwrapOr(false);
+    if (!matchingReturnTypes) {
+      findings.errors.push(
+        ReturnTypeError(
+          "The type of the returned value and the type that is supposed to be returned by the function do not match",
+        ),
+      );
+    }
+    return findings;
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [
+      this.keyword,
+      this.expression
+        .map((node) => node.tokenRange()[1])
+        .unwrapOr(this.keyword),
+    ];
+  }
+}
+
 /* PARSER */
 
 export const parameter = apply(
   kouter(
     tok(TokenKind.ident),
-    str(":"),
+    surround_with_breaking_whitespace(str(":")),
     tok(TokenKind.ident),
   ),
   ([ident, type]) =>
@@ -149,33 +384,30 @@ export const parameter = apply(
 
 const parameters = apply(
   alt_sc(
-    list_sc(parameter, str(",")),
+    list_sc(parameter, surround_with_breaking_whitespace(str(","))),
     parameter,
   ),
   (v) => [v].flat(),
 );
 
-const returnType = apply(
-  opt_sc(tok(TokenKind.ident)),
-  (token) => Some(token),
+const returnType = kright(
+  ends_with_breaking_whitespace(str<TokenKind>("->")),
+  tok(TokenKind.ident),
 );
 
-export const functionDefinition = apply(
+functionDefinition.setPattern(apply(
   seq(
     str<TokenKind>("function"),
     seq(
       kmid(
-        str("("),
-        parameters,
-        str(")"),
+        surround_with_breaking_whitespace(str("(")),
+        opt_sc(parameters),
+        surround_with_breaking_whitespace(str(")")),
       ),
-      kright(
-        seq(str("-"), str(">")),
-        returnType,
-      ),
+      opt_sc(returnType),
       seq(
-        str<TokenKind>("{"),
-        statements,
+        starts_with_breaking_whitespace(str<TokenKind>("{")),
+        surround_with_breaking_whitespace(statements),
         str<TokenKind>("}"),
       ),
     ),
@@ -184,11 +416,24 @@ export const functionDefinition = apply(
     functionKeyword,
     [parameters, returnType, [_, statements, closingBrace]],
   ]) =>
-    new FunctionAstNode({
-      parameters: parameters,
-      returnType: returnType,
+    new FunctionDefinitionAstNode({
+      parameters: parameters ?? [],
+      returnType: Some(returnType),
       statements: statements,
       functionKeywordToken: functionKeyword,
       closingBraceToken: closingBrace,
     }),
-);
+));
+
+returnStatement.setPattern(apply(
+  kouter(
+    str<TokenKind>("return"),
+    opt(tok(TokenKind.breakingWhitespace)),
+    opt_sc(expression),
+  ),
+  ([keyword, expression]) =>
+    new ReturnStatementAstNode({
+      keyword: keyword,
+      expression: expression,
+    }),
+));

@@ -1,4 +1,4 @@
-import { alt_sc, apply, list_sc, tok, Token } from "typescript-parsec";
+import { alt_sc, apply, list_sc, opt_sc, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -9,7 +9,8 @@ import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
 import {} from "../util/array.ts";
 import { ConditionAstNode } from "./condition.ts";
-import { condition } from "./parser_declarations.ts";
+import { ReturnStatementAstNode } from "./function.ts";
+import { condition, returnStatement } from "./parser_declarations.ts";
 import {
   StructureDefiniitonAstNode,
   structureDefinition,
@@ -20,26 +21,26 @@ import {
 export type StatementAstNode =
   | ExpressionAstNode
   | ConditionAstNode
+  | ReturnStatementAstNode
   | StructureDefiniitonAstNode
   | AssignmentAstNode;
 
 export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
 
-  constructor(params: Attributes<StatementsAstNode>) {
+  constructor(params: Omit<Attributes<StatementsAstNode>, "config">) {
     Object.assign(this, params);
   }
 
   interpret(): void {
-    this.children.forEach((child) => {
-      child.interpret();
-    });
+    this.children.forEach((child) => child.interpret());
   }
 
   analyze(): AnalysisFindings {
-    return this.children
+    const findings = this.children
       .map((statement) => statement.analyze())
       .reduce((previous, current) => AnalysisFindings.merge(previous, current));
+    return findings;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -61,14 +62,17 @@ export class StatementsAstNode implements InterpretableAstNode {
 const statement = alt_sc(
   assignment,
   condition,
+  returnStatement,
   structureDefinition,
   expression,
 );
 
 export const statements = apply(
-  list_sc(
-    statement,
-    tok(TokenKind.breakingWhitespace),
+  opt_sc(
+    list_sc(
+      statement,
+      tok(TokenKind.breakingWhitespace),
+    ),
   ),
-  (statements) => new StatementsAstNode({ children: statements }),
+  (statements) => new StatementsAstNode({ children: statements ?? [] }),
 );

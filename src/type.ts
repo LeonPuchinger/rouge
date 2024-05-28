@@ -23,7 +23,7 @@ export class PrimitiveSymbolType implements SymbolType {
 
 export class FunctionSymbolType implements SymbolType {
   parameters!: SymbolType[];
-  returnType!: Option<SymbolType>;
+  returnType!: SymbolType;
 
   constructor(params: Attributes<FunctionSymbolType>) {
     Object.assign(this, params);
@@ -34,9 +34,7 @@ export class FunctionSymbolType implements SymbolType {
       return false;
     }
     const matchingReturnTypes = other.returnType
-      .zip(this.returnType)
-      .map((returnTypes) => returnTypes[0].typeCompatibleWith(returnTypes[1]))
-      .unwrapOr(false);
+      .typeCompatibleWith(this.returnType);
     if (!matchingReturnTypes) {
       return false;
     }
@@ -96,13 +94,20 @@ export class CompositeSymbolType implements SymbolType {
   }
 }
 
-type Scope = Map<string, SymbolType>;
+type Scope = {
+  types: Map<string, SymbolType>;
+  returnType: Option<SymbolType>;
+};
 
 export class TypeTable {
-  private scopes: Scope[] = [new Map()];
+  private scopes: Scope[] = [];
+
+  constructor() {
+    this.pushScope();
+  }
 
   pushScope() {
-    this.scopes.push(new Map());
+    this.scopes.push({ types: new Map(), returnType: None() });
   }
 
   popScope() {
@@ -119,11 +124,11 @@ export class TypeTable {
     name: string,
     scope: Scope,
   ): Option<SymbolType> {
-    return Some(scope.get(name));
+    return Some(scope.types.get(name));
   }
 
   findTypeInCurrentScope(name: string): Option<SymbolType> {
-    const current = this.scopes.toReversed().at(0);
+    const current = this.scopes.at(-1);
     if (current !== undefined) {
       return this.findTypeInScope(name, current);
     }
@@ -143,10 +148,39 @@ export class TypeTable {
 
   setType(name: string, symbolType: SymbolType) {
     const currentScope = this.scopes[this.scopes.length - 1];
-    currentScope.set(name, symbolType);
+    currentScope.types.set(name, symbolType);
+  }
+
+  setReturnType(returnType: SymbolType) {
+    const current = this.scopes.at(-1)!;
+    current.returnType = Some(returnType);
+  }
+
+  findReturnTypeInCurrentScope(): Option<SymbolType> {
+    const current = this.scopes.at(-1)!;
+    return current.returnType;
+  }
+
+  findReturnType(): Option<SymbolType> {
+    for (const currentScope of this.scopes.toReversed()) {
+      const returnType = currentScope.returnType;
+      if (returnType.kind === "none") {
+        continue;
+      }
+      return returnType;
+    }
+    return None();
   }
 }
 
 export const typeTable = new TypeTable();
 typeTable.setType("number", new PrimitiveSymbolType("number"));
 typeTable.setType("boolean", new PrimitiveSymbolType("boolean"));
+
+/* ~~~ TEMPORARY ~~~ */
+
+// will be replaced by stdlib implementation in the future
+
+typeTable.setType("Nothing", new CompositeSymbolType({ fields: new Map() }));
+
+/* ~~~ TEMPORARY ~~~ */

@@ -2,6 +2,7 @@
  * Store state globally that lives throughout the whole execution of the program.
  */
 interface Environment {
+  // The input source code
   source: string;
 }
 

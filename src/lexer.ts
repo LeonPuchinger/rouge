@@ -20,8 +20,8 @@ const lexer = buildLexer([
   [true, /^(false|true)/g, TokenKind.booleanLiteral],
   [true, /^(function|structure|use|if|else|while)/g, TokenKind.keyword],
   [true, /^[_A-Za-z]+[\-_0-9A-Za-z]*/g, TokenKind.ident],
-  [true, /^[{}]/g, TokenKind.standalonePunctuation],
-  [true, /^[!@=<>()#$%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenKind.punctuation],
+  [true, /^[{}()]/g, TokenKind.standalonePunctuation],
+  [true, /^[!@=<>#$%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenKind.punctuation],
   [true, /^\S/g, TokenKind.unspecified],
 ]);
 

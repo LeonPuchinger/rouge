@@ -73,7 +73,7 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
   constructor(
     public value: StatementsAstNode,
     parameterTypes: SymbolType[],
-    returnType: Option<SymbolType>,
+    returnType: SymbolType,
   ) {
     this.valueType = new FunctionSymbolType({
       parameters: parameterTypes,

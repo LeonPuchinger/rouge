@@ -1,13 +1,15 @@
 import { expectEOF, Token } from "typescript-parsec";
 import { AST } from "./ast.ts";
-// required to initialize parsers declared in `parser_declarations`
-import "./features/condition.ts";
 import { statements } from "./features/statement.ts";
 import { TokenKind } from "./lexer.ts";
 import { InternalError, RuntimeError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
 import { DummyAstNode } from "./util/snippet.ts";
 import { toMultiline } from "./util/string.ts";
+
+// required to initialize parsers declared in `parser_declarations`
+import "./features/condition.ts";
+import "./features/function.ts";
 
 /**
  * Top level production/entry point to the parser
