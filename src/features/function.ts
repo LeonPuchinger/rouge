@@ -386,7 +386,7 @@ const parameters = apply(
 );
 
 const returnType = kright(
-  seq(str<TokenKind>("-"), str(">")),
+  str<TokenKind>("->"),
   tok(TokenKind.ident),
 );
 
