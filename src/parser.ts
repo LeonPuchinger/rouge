@@ -1,6 +1,6 @@
 import { expectEOF, Token } from "typescript-parsec";
 import { AST } from "./ast.ts";
-import { statements } from "./features/statement.ts";
+import { globalStatements } from "./features/statement.ts";
 import { TokenKind } from "./lexer.ts";
 import { InternalError, RuntimeError } from "./util/error.ts";
 import * as logger from "./util/logger.ts";
@@ -14,7 +14,7 @@ import "./features/function.ts";
 /**
  * Top level production/entry point to the parser
  */
-export const start = statements;
+export const start = globalStatements;
 
 /**
  * Parse a sequence of tokens into an AST based the grammar of the language.
