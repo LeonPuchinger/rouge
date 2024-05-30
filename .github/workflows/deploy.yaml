@@ -1,11 +1,9 @@
 name: Deploy Module to GitHub Packages
 
 on:
-  create:
+  push:
     tags:
-      - "*"
-    branches:
-      - "main"
+      - "v*"
 
 permissions:
   contents: read
@@ -13,6 +11,7 @@ permissions:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     container:
       image: node:lts
@@ -29,10 +28,10 @@ jobs:
 
       - name: Check whether commit is tagged with semantic versioning
         run: |
-          if [[ $(git describe --tags) =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+          if [[ $(git describe --tags) =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
             echo "Commit is tagged with semantic versioning, proceeding with the workflow."
           else
-            echo "Commit is not tagged with semantic versioning, skipping the workflow."
+            echo "Commit is not tagged with semantic versioning (e.g. "v1.0.0"), skipping the workflow."
             exit 1
           fi
         shell: bash
@@ -42,8 +41,10 @@ jobs:
           # allow command failure to be able to catch exit codes
           set +e
           # update package version
-          git describe --tags | xargs npm version --no-git-tag-version
-          exit_code = $?
+          latest_tag=$(git describe --tags)
+          package_version=${latest_tag#v}
+          npm version --no-git-tag-version ${package_version}
+          exit_code=$?
           # re-allow failure
           set -e
           # setting version to implicit default (0.0.0) is allowed (error code 123)
