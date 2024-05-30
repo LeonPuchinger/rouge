@@ -9,7 +9,7 @@ import {
   StaticSymbol,
 } from "../symbol.ts";
 import { None } from "../util/monad/index.ts";
-import { kouter } from "../util/parser.ts";
+import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
 import { concatLines } from "../util/string.ts";
 import { Attributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
@@ -81,7 +81,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
 export const assignment = apply(
   kouter(
     tok(TokenKind.ident),
-    str("="),
+    surround_with_breaking_whitespace(str("=")),
     expression,
   ),
   ([token, expression]) =>
