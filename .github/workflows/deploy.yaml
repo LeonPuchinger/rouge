@@ -1,7 +1,7 @@
 name: Deploy Module to GitHub Packages
 
 on:
-  create:
+  push:
     tags:
       - "v*"
 
