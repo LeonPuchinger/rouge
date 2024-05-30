@@ -3,6 +3,7 @@ import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { InternalError } from "../util/error.ts";
+import { surround_with_breaking_whitespace } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
@@ -76,3 +77,5 @@ export const statements = apply(
   ),
   (statements) => new StatementsAstNode({ children: statements ?? [] }),
 );
+
+export const globalStatements = surround_with_breaking_whitespace(statements);
