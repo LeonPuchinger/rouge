@@ -57,5 +57,8 @@ cli
 cli
   .strict()
   .demandCommand()
-  .completion()
+  .completion(
+    "shell-completion",
+    "generate a completion script for bash/zsh",
+  )
   .parse();
