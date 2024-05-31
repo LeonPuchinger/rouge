@@ -1,15 +1,10 @@
 import { run } from "./main.ts";
 import * as logger from "./util/logger.ts";
+import { Loglevel, updateLoggerConfig } from "./util/logger.ts";
 // @deno-types="@types/yargs"
 import yargs from "yargs";
 
-// TODO: get loglevel from environment variable or some other parameter
-logger.updateLoggerConfig({ loglevel: logger.Loglevel.debug });
-
-const cli = yargs(Deno.args)
-  .strict()
-  .demandCommand()
-  .completion();
+const cli = yargs(Deno.args);
 
 cli.command(
   "run [entry point]",
@@ -36,4 +31,22 @@ cli.command(
   },
 );
 
-cli.parse();
+cli
+  .option(
+    "loglevel",
+    {
+      description:
+        'The loglevel used by the language itself; can also be passed via the environment variable "ROUGE_LOGLEVEL"',
+      choices: Object.values(Loglevel),
+      default: Deno.env.get("ROUGE_LOGLEVEL") ?? Loglevel.info,
+      type: "string",
+    },
+  ).middleware((argv) => {
+    updateLoggerConfig({ loglevel: (argv.loglevel as Loglevel) });
+  });
+
+cli
+  .strict()
+  .demandCommand()
+  .completion()
+  .parse();
