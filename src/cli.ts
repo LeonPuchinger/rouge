@@ -1,34 +1,43 @@
-import { run } from "./main.ts";
+import * as interpreter from "./main.ts";
 import * as logger from "./util/logger.ts";
 import { Loglevel, updateLoggerConfig } from "./util/logger.ts";
 // @deno-types="@types/yargs"
 import yargs from "yargs";
 
+/**
+ * Executes the interpreter with the contents of the file located at `input_file_path`.
+ */
+function run(input_file_path: string) {
+  let file_contents: string;
+  try {
+    file_contents = Deno.readTextFileSync(input_file_path);
+  } catch {
+    console.log("The input file does not exist.");
+    Deno.exit(1);
+  }
+  try {
+    const findings = interpreter.run(file_contents);
+    findings.errors.forEach(logger.error);
+    findings.warnings.forEach(logger.warning);
+  } catch (error) {
+    logger.error(error);
+  }
+}
+
 const cli = yargs(Deno.args);
 
 cli.command(
-  "run [entry point]",
+  "run [entrypoint]",
   "Start execution of a rouge project from a file",
   (yargs) => {
     return yargs
-      .positional("entry point", {
+      .positional("entrypoint", {
         describe: "The file from which to start execution",
         type: "string",
         demandOption: true,
       });
   },
-  (argv) => {
-    const _input_file = argv["entry point"];
-
-    // test with example string
-    try {
-      const findings = run("a = 1\nb = a == 1");
-      findings.errors.forEach(logger.error);
-      findings.warnings.forEach(logger.warning);
-    } catch (error) {
-      logger.error(error);
-    }
-  },
+  (argv) => run(argv["entrypoint"]),
 );
 
 cli
