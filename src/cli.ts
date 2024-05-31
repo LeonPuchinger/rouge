@@ -24,7 +24,7 @@ function run(input_file_path: string) {
   }
 }
 
-const cli = yargs(Deno.args);
+const cli = yargs(Deno.args).scriptName("rouge");
 
 cli.command(
   "run [entrypoint]",
