@@ -16,10 +16,12 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/yargs": "^17.0.32",
     "typescript": "^5.3.3",
     "vite": "^5.0.11"
   },
   "dependencies": {
-    "typescript-parsec": "^0.3.4"
+    "typescript-parsec": "^0.3.4",
+    "yargs": "^17.7.2"
   }
 }
