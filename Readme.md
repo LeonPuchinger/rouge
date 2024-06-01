@@ -24,3 +24,17 @@ To build a self-contained executable, Deno is used as well.
 ```
 deno compile --allow-all --output rouge src/cli.ts
 ```
+
+## Usage
+
+Assuming the language has been compiled into an executable called `rouge` and is available on PATH, a file called `my_app.rouge` can be executed with the following command:
+
+```
+rouge run main.rouge
+```
+
+Further information about the command line interface can be obtained by running:
+
+```
+rouge --help
+```
