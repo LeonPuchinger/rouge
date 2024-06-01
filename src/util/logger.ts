@@ -2,18 +2,11 @@ import { AppError } from "./error.ts";
 
 type Loggable = string | AppError;
 export enum Loglevel {
-  debug,
-  info,
-  warning,
-  error,
+  debug = "debug",
+  info = "info",
+  warning = "warning",
+  error = "error",
 }
-
-const loglevelToString: Record<Loglevel, string> = {
-  [Loglevel.debug]: "debug",
-  [Loglevel.info]: "info",
-  [Loglevel.warning]: "warning",
-  [Loglevel.error]: "error",
-};
 
 interface LoggerConfig {
   loglevel: Loglevel;
@@ -27,7 +20,7 @@ let loggerConfig: LoggerConfig = {
     const now = new Date();
     const formattedTime =
       `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-    const formattedLevel = loglevelToString[loglevel].toUpperCase();
+    const formattedLevel = loglevel.toUpperCase();
     return `[${formattedLevel}, ${formattedTime}]: ${message}`;
   },
   colors: {
@@ -39,7 +32,7 @@ let loggerConfig: LoggerConfig = {
 
 /**
  * Configure the logger globally
- * 
+ *
  * @param updateConfig The configuration to override the current one.
  * Only entries present in the new config are replaced in the current one.
  */
