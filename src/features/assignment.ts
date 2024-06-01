@@ -1,4 +1,4 @@
-import { apply, str, tok, Token } from "typescript-parsec";
+import { apply, kright, seq, str, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -9,7 +9,10 @@ import {
   StaticSymbol,
 } from "../symbol.ts";
 import { None } from "../util/monad/index.ts";
-import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
+import {
+  ends_with_breaking_whitespace,
+  surround_with_breaking_whitespace,
+} from "../util/parser.ts";
 import { concatLines } from "../util/string.ts";
 import { Attributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
@@ -18,6 +21,7 @@ import { expression, ExpressionAstNode } from "./expression.ts";
 
 export class AssignmentAstNode implements InterpretableAstNode {
   token!: Token<TokenKind>;
+  typeAnnotation!: Token<TokenKind>;
   child!: ExpressionAstNode;
 
   constructor(params: Attributes<AssignmentAstNode>) {
@@ -78,15 +82,22 @@ export class AssignmentAstNode implements InterpretableAstNode {
 
 /* PARSER */
 
+const typeAnnotation = kright(
+  ends_with_breaking_whitespace(str<TokenKind>(":")),
+  tok(TokenKind.ident),
+);
+
 export const assignment = apply(
-  kouter(
+  seq(
     tok(TokenKind.ident),
-    surround_with_breaking_whitespace(str("=")),
+    surround_with_breaking_whitespace(typeAnnotation),
+    ends_with_breaking_whitespace(str("=")),
     expression,
   ),
-  ([token, expression]) =>
+  ([name, typeAnnotation, _, expression]) =>
     new AssignmentAstNode({
-      token: token,
+      token: name,
+      typeAnnotation: typeAnnotation,
       child: expression,
     }),
 );
