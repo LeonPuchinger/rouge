@@ -16,5 +16,11 @@ Deno is used to run/debug the language locally.
 The entrypoint for the program can be found in `src/cli.ts`
 
 ```
-deno run src/cli.ts
+deno run --allow-all src/cli.ts
+```
+
+To build a self-contained executable, Deno is used as well.
+
+```
+deno compile --allow-all --output rouge src/cli.ts
 ```
