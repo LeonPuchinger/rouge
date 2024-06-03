@@ -3,6 +3,7 @@ import { Err, Ok, Result } from "./index.ts";
 
 export interface Option<T> {
   kind: "some" | "none";
+  hasValue(): boolean;
   map<U>(fn: (value: T) => U | undefined): Option<U>;
   flatMap<U>(fn: (value: T) => Option<U>): Option<U>;
   orErr<E>(err: E): Result<T, E>;
@@ -24,6 +25,10 @@ export function Some<T>(value: T | undefined): Option<T> {
 
   return {
     kind: "some",
+
+    hasValue(): boolean {
+      return true;
+    },
 
     map<U>(fn: (value: T) => U | undefined): Option<U> {
       return Some(fn(value));
@@ -85,6 +90,10 @@ export function Some<T>(value: T | undefined): Option<T> {
 export function None<T>(): Option<T> {
   return {
     kind: "none",
+
+    hasValue(): boolean {
+      return false;
+    },
 
     map<U>(_fn: (value: T) => U | undefined): Option<U> {
       return None();
