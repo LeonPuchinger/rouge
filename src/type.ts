@@ -146,6 +146,10 @@ export class TypeTable {
     return None();
   }
 
+  typeResolvable(name: string): boolean {
+    return this.findType(name).kind === "some";
+  }
+
   setType(name: string, symbolType: SymbolType) {
     const currentScope = this.scopes[this.scopes.length - 1];
     currentScope.types.set(name, symbolType);

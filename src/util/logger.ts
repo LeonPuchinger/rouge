@@ -14,6 +14,13 @@ interface LoggerConfig {
   colors: Partial<Record<Loglevel, string>>;
 }
 
+const loglevelPriority: Record<Loglevel, number> = {
+  [Loglevel.debug]: 0,
+  [Loglevel.info]: 1,
+  [Loglevel.warning]: 2,
+  [Loglevel.error]: 3,
+};
+
 let loggerConfig: LoggerConfig = {
   loglevel: Loglevel.info,
   format: (message: Loggable, loglevel: Loglevel) => {
@@ -44,7 +51,7 @@ export function updateLoggerConfig(updateConfig: Partial<LoggerConfig>) {
 }
 
 function log(message: Loggable, loglevel: Loglevel) {
-  if (loglevel >= loggerConfig.loglevel) {
+  if (loglevelPriority[loglevel] >= loglevelPriority[loggerConfig.loglevel]) {
     const color = loggerConfig.colors[loglevel] ?? "";
     console.log(color, loggerConfig.format(message, loglevel));
   }
