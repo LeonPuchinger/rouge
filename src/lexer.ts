@@ -10,6 +10,7 @@ export enum TokenKind {
   ident,
   standalonePunctuation,
   punctuation,
+  string,
   unspecified,
 }
 
@@ -22,6 +23,7 @@ const lexer = buildLexer([
   [true, /^[_A-Za-z]+[\-_0-9A-Za-z]*/g, TokenKind.ident],
   [true, /^[{}()]/g, TokenKind.standalonePunctuation],
   [true, /^[!@=<>#$%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenKind.punctuation],
+  [true, /^"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, TokenKind.string],
   [true, /^\S/g, TokenKind.unspecified],
 ]);
 

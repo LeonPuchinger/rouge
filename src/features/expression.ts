@@ -7,8 +7,9 @@ import { SymbolType } from "../type.ts";
 import { Attributes } from "../util/type.ts";
 import { booleanExpression } from "./boolean_expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
-import { symbolExpression } from "./symbol_expression.ts";
 import { functionDefinition } from "./parser_declarations.ts";
+import { stringLiteral } from "./string.ts";
+import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST Nodes */
 
@@ -47,6 +48,7 @@ export const expression = apply(
   alt_sc(
     booleanExpression,
     numericExpression,
+    stringLiteral,
     symbolExpression,
     functionDefinition,
   ),

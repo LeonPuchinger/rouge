@@ -62,6 +62,21 @@ export class NumericSymbolValue implements SymbolValue<number> {
   map(fn: (value: number) => number): SymbolValue<number> {
     return new NumericSymbolValue(fn(this.value));
   }
+
+  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
+    return other.typeCompatibleWith(this);
+  }
+}
+
+export class StringSymbolValue implements SymbolValue<string> {
+  valueType: SymbolType = new PrimitiveSymbolType("string");
+
+  constructor(public value: string) {}
+
+  map(fn: (value: string) => string): SymbolValue<string> {
+    return new StringSymbolValue(fn(this.value));
+  }
+
   typeCompatibleWith(other: SymbolValue<unknown>): boolean {
     return other.typeCompatibleWith(this);
   }

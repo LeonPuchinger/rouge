@@ -7,7 +7,7 @@ export interface SymbolType {
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
 }
 
-type PrimitiveSymbolTypeKind = "number" | "boolean";
+type PrimitiveSymbolTypeKind = "number" | "boolean" | "string";
 
 export class PrimitiveSymbolType implements SymbolType {
   constructor(private kind: PrimitiveSymbolTypeKind) {}
@@ -180,6 +180,7 @@ export class TypeTable {
 export const typeTable = new TypeTable();
 typeTable.setType("number", new PrimitiveSymbolType("number"));
 typeTable.setType("boolean", new PrimitiveSymbolType("boolean"));
+typeTable.setType("string", new PrimitiveSymbolType("string"));
 
 /* ~~~ TEMPORARY ~~~ */
 
