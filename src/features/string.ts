@@ -28,7 +28,7 @@ class StringAstNode implements EvaluableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    throw new Error("Method not implemented.");
+    return AnalysisFindings.empty();
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
