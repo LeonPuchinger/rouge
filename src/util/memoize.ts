@@ -1,6 +1,4 @@
 // deno-lint-ignore-file no-explicit-any
-import { None, Option, Some } from "./monad/index.ts";
-
 /**
  * A decorator used for caching return values of methods.
  * The decorator works lazily which means the result is calculated the first time the method is called.
@@ -21,20 +19,20 @@ import { None, Option, Some } from "./monad/index.ts";
  * }
  */
 export function memoize(
-  _target: any,
-  _key: string,
-  descriptor: TypedPropertyDescriptor<(...args: any[]) => any>,
+  originalMethod: any,
+  _ctx: ClassMethodDecoratorContext,
 ): any {
-  const originalMethod = descriptor.value!;
-  // set wrapper function
-  descriptor.value = function (...args: any[]): any {
-    let cache: Option<any> = None();
-    if (cache.kind === "none") {
+  const cache = new WeakMap();
+  return function (...args: unknown[]) {
+    // @ts-ignore: Implicit 'this' has type 'any'
+    if (!cache.has(this)) {
+      // @ts-ignore: Implicit 'this' has type 'any'
       const result = originalMethod.apply(this, args);
-      cache = Some(result);
+      // @ts-ignore: Implicit 'this' has type 'any'
+      cache.set(this, result);
       return result;
     }
-    return cache.unwrap();
+    // @ts-ignore: Implicit 'this' has type 'any'
+    return cache.get(this);
   };
-  return descriptor;
 }
