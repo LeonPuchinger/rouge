@@ -77,8 +77,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
     if (typeTable.findType(this.type.text).kind === "none") {
       findings.errors.push(AnalysisError({
         message: `The type called "${this.type.text}" could not be found.`,
-        // TODO: Find a way to only highlight the type, e.g. through a dummy AST node created on the spot
-        beginHighlight: this,
+        beginHighlight: DummyAstNode.fromToken(this.type),
         endHighlight: None(),
       }));
     }
