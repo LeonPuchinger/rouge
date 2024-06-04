@@ -32,7 +32,7 @@ class StringAstNode implements EvaluableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    throw new Error("Method not implemented.");
+    return [this.literal, this.literal];
   }
 }
 
