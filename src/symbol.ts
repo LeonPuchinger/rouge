@@ -41,7 +41,7 @@ export interface SymbolValue<T = unknown> {
 }
 
 export class BooleanSymbolValue implements SymbolValue<boolean> {
-  valueType: SymbolType = new PrimitiveSymbolType("boolean");
+  valueType: SymbolType = new PrimitiveSymbolType("Boolean");
 
   constructor(public value: boolean) {}
 
@@ -55,7 +55,7 @@ export class BooleanSymbolValue implements SymbolValue<boolean> {
 }
 
 export class NumericSymbolValue implements SymbolValue<number> {
-  valueType: SymbolType = new PrimitiveSymbolType("number");
+  valueType: SymbolType = new PrimitiveSymbolType("Number");
 
   constructor(public value: number) {}
 
@@ -69,7 +69,7 @@ export class NumericSymbolValue implements SymbolValue<number> {
 }
 
 export class StringSymbolValue implements SymbolValue<string> {
-  valueType: SymbolType = new PrimitiveSymbolType("string");
+  valueType: SymbolType = new PrimitiveSymbolType("String");
 
   constructor(public value: string) {}
 

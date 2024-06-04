@@ -42,7 +42,7 @@ class NumericLiteralAstNode implements NumericExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("number");
+    return new PrimitiveSymbolType("Number");
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -82,7 +82,7 @@ class UnaryNumericExpressionAstNode implements NumericExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("number");
+    return new PrimitiveSymbolType("Number");
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -157,7 +157,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("number");
+    return new PrimitiveSymbolType("Number");
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -177,7 +177,7 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
 
   analyze(): AnalysisFindings {
     const analysisResult = this.child.analyze();
-    if (!this.child.resolveType().isPrimitive("number")) {
+    if (!this.child.resolveType().isPrimitive("Number")) {
       analysisResult.errors.push(AnalysisError({
         message:
           "You tried to use a numeric operation on something that is not a number.",
@@ -195,7 +195,7 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("number");
+    return new PrimitiveSymbolType("Number");
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

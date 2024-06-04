@@ -50,7 +50,7 @@ export class ConditionAstNode implements InterpretableAstNode {
       return findings;
     }
     const conditionType = this.condition.resolveType();
-    if (!conditionType.isPrimitive("boolean")) {
+    if (!conditionType.isPrimitive("Boolean")) {
       findings.errors.push(AnalysisError({
         message:
           "The expression inside of the if statement needs to evaluate to a boolean value.",

@@ -25,7 +25,7 @@ class StringAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("string");
+    return new PrimitiveSymbolType("String");
   }
 
   analyze(): AnalysisFindings {
