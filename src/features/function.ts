@@ -8,7 +8,7 @@ import {
   seq,
   str,
   tok,
-  Token
+  Token,
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import {
@@ -77,8 +77,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
     if (typeTable.findType(this.type.text).kind === "none") {
       findings.errors.push(AnalysisError({
         message: `The type called "${this.type.text}" could not be found.`,
-        // TODO: Find a way to only highlight the type, e.g. through a dummy AST node created on the spot
-        beginHighlight: this,
+        beginHighlight: DummyAstNode.fromToken(this.type),
         endHighlight: None(),
       }));
     }
@@ -201,21 +200,16 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   analyze(): AnalysisFindings {
     analysisTable.pushScope();
     let findings = AnalysisFindings.empty();
-    findings = this.parameters
-      .map((parameter) => parameter.analyze())
-      .reduce(
-        (previous, current) => AnalysisFindings.merge(previous, current),
-        findings,
-      );
-    const parameterTypes = this.parameters.map((parameter) =>
-      parameter.resolveType()
-    );
-    // using traditional for loop, because for-in loops break
-    // when used with extension methods in the same project
-    for (let index = 0; index < this.parameters.length; index += 1) {
+    for (const parameter of this.parameters) {
+      const parameterFindings = parameter.analyze();
+      findings = AnalysisFindings.merge(findings, parameterFindings);
+      if (parameterFindings.isErroneous()) {
+        continue;
+      }
+      const parameterType = parameter.resolveType();
       analysisTable.setSymbol(
-        this.parameters[index].name.text,
-        new StaticSymbol({ valueType: parameterTypes[index] }),
+        parameter.name.text,
+        new StaticSymbol({ valueType: parameterType }),
       );
     }
     let returnTypeResolvable = false;
