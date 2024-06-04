@@ -7,7 +7,7 @@ export interface SymbolType {
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
 }
 
-type PrimitiveSymbolTypeKind = "number" | "boolean";
+type PrimitiveSymbolTypeKind = "number" | "boolean" | "string";
 
 export class PrimitiveSymbolType implements SymbolType {
   constructor(private kind: PrimitiveSymbolTypeKind) {}

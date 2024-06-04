@@ -2,8 +2,9 @@ import { apply, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { SymbolValue } from "../symbol.ts";
+import { StringSymbolValue } from "../symbol.ts";
 import { SymbolType } from "../type.ts";
+import { memoize } from "../util/memoize.ts";
 import { Attributes } from "../util/type.ts";
 
 /* AST NODES */
@@ -15,8 +16,11 @@ class StringAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): SymbolValue<unknown> {
-    throw new Error("Method not implemented.");
+  @memoize
+  evaluate(): StringSymbolValue {
+    // remove quotation marks which are part of the literal
+    const contents = this.literal.text.slice(1, -1);
+    return new StringSymbolValue(contents);
   }
 
   resolveType(): SymbolType {
