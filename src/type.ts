@@ -180,6 +180,7 @@ export class TypeTable {
 export const typeTable = new TypeTable();
 typeTable.setType("number", new PrimitiveSymbolType("number"));
 typeTable.setType("boolean", new PrimitiveSymbolType("boolean"));
+typeTable.setType("string", new PrimitiveSymbolType("string"));
 
 /* ~~~ TEMPORARY ~~~ */
 
