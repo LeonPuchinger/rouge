@@ -6,6 +6,7 @@ import { StringSymbolValue } from "../symbol.ts";
 import { SymbolType } from "../type.ts";
 import { memoize } from "../util/memoize.ts";
 import { Attributes } from "../util/type.ts";
+import { PrimitiveSymbolType } from "../type.ts";
 
 /* AST NODES */
 
@@ -24,7 +25,7 @@ class StringAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    throw new Error("Method not implemented.");
+    return new PrimitiveSymbolType("string");
   }
 
   analyze(): AnalysisFindings {
