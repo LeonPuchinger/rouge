@@ -9,7 +9,7 @@ import { Attributes } from "../util/type.ts";
 /* AST NODES */
 
 class StringAstNode implements EvaluableAstNode {
-  token!: Token<TokenKind>;
+  literal!: Token<TokenKind>;
 
   constructor(params: Attributes<StringAstNode>) {
     Object.assign(this, params);
@@ -18,12 +18,15 @@ class StringAstNode implements EvaluableAstNode {
   evaluate(): SymbolValue<unknown> {
     throw new Error("Method not implemented.");
   }
+
   resolveType(): SymbolType {
     throw new Error("Method not implemented.");
   }
+
   analyze(): AnalysisFindings {
     throw new Error("Method not implemented.");
   }
+
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     throw new Error("Method not implemented.");
   }
@@ -33,5 +36,5 @@ class StringAstNode implements EvaluableAstNode {
 
 export const stringLiteral = apply(
   tok(TokenKind.string),
-  (token) => new StringAstNode({ token: token }),
+  (token) => new StringAstNode({ literal: token }),
 );
