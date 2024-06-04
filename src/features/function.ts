@@ -4,12 +4,11 @@ import {
   kmid,
   kright,
   list_sc,
-  opt,
   opt_sc,
   seq,
   str,
   tok,
-  Token,
+  Token
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import {
@@ -428,7 +427,7 @@ functionDefinition.setPattern(apply(
 returnStatement.setPattern(apply(
   kouter(
     str<TokenKind>("return"),
-    opt(tok(TokenKind.breakingWhitespace)),
+    opt_sc(tok(TokenKind.breakingWhitespace)),
     opt_sc(expression),
   ),
   ([keyword, expression]) =>

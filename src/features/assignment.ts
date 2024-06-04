@@ -1,4 +1,4 @@
-import { apply, kright, opt, seq, str, tok, Token } from "typescript-parsec";
+import { apply, kright, opt_sc, seq, str, tok, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -134,7 +134,7 @@ const typeAnnotation = kright(
 export const assignment = apply(
   seq(
     tok(TokenKind.ident),
-    surround_with_breaking_whitespace(opt(typeAnnotation)),
+    surround_with_breaking_whitespace(opt_sc(typeAnnotation)),
     ends_with_breaking_whitespace(str("=")),
     expression,
   ),
