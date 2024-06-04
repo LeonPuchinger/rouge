@@ -4,7 +4,7 @@ import {
   kleft,
   kright,
   list_sc,
-  opt,
+  opt_sc,
   seq,
   str,
   tok,
@@ -109,7 +109,7 @@ const fields = kleft(
     field,
     fieldSeparator,
   ),
-  opt(str(",")),
+  opt_sc(str(",")),
 );
 
 export const structureDefinition = apply(
@@ -119,7 +119,7 @@ export const structureDefinition = apply(
     seq(
       kright(
         str("{"),
-        opt(surround_with_breaking_whitespace(fields)),
+        opt_sc(surround_with_breaking_whitespace(fields)),
       ),
       str("}"),
     ),

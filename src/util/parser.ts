@@ -3,11 +3,11 @@ import {
   kleft,
   kmid,
   kright,
-  opt,
+  opt_sc,
   Parser,
   rep_sc,
   seq,
-  tok,
+  tok
 } from "typescript-parsec";
 import { TokenKind } from "../lexer.ts";
 
@@ -119,7 +119,7 @@ export function starts_with_breaking_whitespace<T>(
   p: Parser<TokenKind, T>,
 ): Parser<TokenKind, T> {
   return kright(
-    opt(tok(TokenKind.breakingWhitespace)),
+    opt_sc(tok(TokenKind.breakingWhitespace)),
     p,
   );
 }
@@ -132,7 +132,7 @@ export function ends_with_breaking_whitespace<T>(
 ): Parser<TokenKind, T> {
   return kleft(
     p,
-    opt(tok(TokenKind.breakingWhitespace)),
+    opt_sc(tok(TokenKind.breakingWhitespace)),
   );
 }
 
@@ -143,8 +143,8 @@ export function surround_with_breaking_whitespace<T>(
   p: Parser<TokenKind, T>,
 ): Parser<TokenKind, T> {
   return kmid(
-    opt(tok(TokenKind.breakingWhitespace)),
+    opt_sc(tok(TokenKind.breakingWhitespace)),
     p,
-    opt(tok(TokenKind.breakingWhitespace)),
+    opt_sc(tok(TokenKind.breakingWhitespace)),
   );
 }

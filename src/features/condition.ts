@@ -1,4 +1,4 @@
-import { apply, kmid, kright, opt, seq, str, Token } from "typescript-parsec";
+import { apply, kmid, kright, opt_sc, seq, str, Token } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -111,7 +111,7 @@ condition.setPattern(
         statements,
       ),
       surround_with_breaking_whitespace(str("}")),
-      opt(elseBranch),
+      opt_sc(elseBranch),
     ),
     ([ifKeyword, condition, ifStatements, firstClosingBrace, elseBranch]) => {
       const [falseStatements, elseClosingBrace] = elseBranch ?? [];
