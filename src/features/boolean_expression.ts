@@ -44,7 +44,7 @@ class BooleanLiteralAstNode implements BooleanExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("boolean");
+    return new PrimitiveSymbolType("Boolean");
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -71,7 +71,7 @@ class BooleanNegationAstNode implements BooleanExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("boolean");
+    return new PrimitiveSymbolType("Boolean");
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -114,7 +114,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
     }
     if (
       [">", ">=", "<", "<="].includes(operator) &&
-      (!leftType.isPrimitive("number") || !rightType.isPrimitive("number"))
+      (!leftType.isPrimitive("Number") || !rightType.isPrimitive("Number"))
     ) {
       findings.errors.push(AnalysisError({
         message:
@@ -125,7 +125,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
     }
     if (
       ["&&", "||", "^"].includes(operator) &&
-      (!leftType.isPrimitive("boolean") || !rightType.isPrimitive("boolean"))
+      (!leftType.isPrimitive("Boolean") || !rightType.isPrimitive("Boolean"))
     ) {
       findings.errors.push(AnalysisError({
         message:
@@ -180,7 +180,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("boolean");
+    return new PrimitiveSymbolType("Boolean");
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
