@@ -36,7 +36,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    throw new Error("Method not implemented.");
+    return [this.keyword, this.closingParenthesis];
   }
 }
 
