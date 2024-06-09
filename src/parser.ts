@@ -10,6 +10,7 @@ import { toMultiline } from "./util/string.ts";
 // required to initialize parsers declared in `parser_declarations`
 import "./features/condition.ts";
 import "./features/function.ts";
+import "./features/invocation.ts";
 
 /**
  * Top level production/entry point to the parser

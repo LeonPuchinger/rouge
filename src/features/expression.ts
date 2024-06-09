@@ -7,7 +7,7 @@ import { SymbolType } from "../type.ts";
 import { Attributes } from "../util/type.ts";
 import { booleanExpression } from "./boolean_expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
-import { functionDefinition } from "./parser_declarations.ts";
+import { functionDefinition, invocation } from "./parser_declarations.ts";
 import { stringLiteral } from "./string.ts";
 import { symbolExpression } from "./symbol_expression.ts";
 
@@ -49,6 +49,7 @@ export const expression = apply(
     booleanExpression,
     numericExpression,
     stringLiteral,
+    invocation,
     symbolExpression,
     functionDefinition,
   ),

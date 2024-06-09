@@ -10,10 +10,11 @@ import {
 } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
+import { invocation } from "./parser_declarations.ts";
 
 /* AST NODES */
 
-class InvocationAstNode implements EvaluableAstNode {
+export class InvocationAstNode implements EvaluableAstNode {
   keyword!: Token<TokenKind>;
   closingParenthesis!: Token<TokenKind>;
 
@@ -45,7 +46,7 @@ const parameters = list_sc(
   str(","),
 );
 
-export const invocation = apply(
+invocation.setPattern(apply(
   seq(
     tok(TokenKind.ident),
     surround_with_breaking_whitespace(str("(")),
@@ -57,4 +58,4 @@ export const invocation = apply(
       keyword: keyword,
       closingParenthesis: closingParenthesis,
     }),
-);
+));
