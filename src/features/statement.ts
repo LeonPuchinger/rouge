@@ -58,7 +58,7 @@ export class StatementsAstNode implements InterpretableAstNode {
   }
 }
 
-/* PARSERS */
+/* PARSER */
 
 const statement = alt_sc(
   assignment,

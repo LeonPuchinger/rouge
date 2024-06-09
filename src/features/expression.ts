@@ -11,7 +11,7 @@ import { functionDefinition } from "./parser_declarations.ts";
 import { stringLiteral } from "./string.ts";
 import { symbolExpression } from "./symbol_expression.ts";
 
-/* AST Nodes */
+/* AST NODES */
 
 export class ExpressionAstNode
   implements EvaluableAstNode, InterpretableAstNode {
