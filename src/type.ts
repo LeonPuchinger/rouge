@@ -5,6 +5,7 @@ import { Attributes } from "./util/type.ts";
 export interface SymbolType {
   typeCompatibleWith(other: SymbolType): boolean;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
+  isFunction(): boolean;
 }
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
@@ -18,6 +19,10 @@ export class PrimitiveSymbolType implements SymbolType {
 
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
     return kind === this.kind;
+  }
+
+  isFunction(): boolean {
+    return false;
   }
 }
 
@@ -48,6 +53,10 @@ export class FunctionSymbolType implements SymbolType {
 
   isPrimitive(): boolean {
     return false;
+  }
+
+  isFunction(): boolean {
+    return true;
   }
 }
 
@@ -90,6 +99,10 @@ export class CompositeSymbolType implements SymbolType {
   }
 
   isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
+    return false;
+  }
+
+  isFunction(): boolean {
     return false;
   }
 }
