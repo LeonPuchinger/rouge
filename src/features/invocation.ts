@@ -28,14 +28,6 @@ export class InvocationAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): SymbolValue<unknown> {
-    throw new Error("Method not implemented.");
-  }
-
-  resolveType(): SymbolType {
-    throw new Error("Method not implemented.");
-  }
-
   analyzeFunctionInvocation(
     functionSymbol: StaticSymbol<FunctionSymbolType>,
   ): AnalysisFindings {
@@ -131,6 +123,14 @@ export class InvocationAstNode implements EvaluableAstNode {
       );
     }
     return findings;
+  }
+
+  evaluate(): SymbolValue<unknown> {
+    throw new Error("Method not implemented.");
+  }
+
+  resolveType(): SymbolType {
+    throw new Error("Method not implemented.");
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
