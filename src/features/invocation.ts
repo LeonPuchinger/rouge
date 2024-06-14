@@ -149,10 +149,11 @@ invocation.setPattern(apply(
     opt(parameters),
     starts_with_breaking_whitespace(str(")")),
   ),
-  ([name, _, parameters, closingParenthesis]) =>
+  ([name, openParenthesis, parameters, closingParenthesis]) =>
     new InvocationAstNode({
       name: name,
       parameters: parameters ?? [],
+      openParenthesis: openParenthesis,
       closingParenthesis: closingParenthesis,
     }),
 ));
