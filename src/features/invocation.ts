@@ -5,7 +5,7 @@ import { TokenKind } from "../lexer.ts";
 import { analysisTable, SymbolValue } from "../symbol.ts";
 import { SymbolType, typeTable } from "../type.ts";
 import { InternalError } from "../util/error.ts";
-import { None } from "../util/monad/option.ts";
+import { None, Some } from "../util/monad/option.ts";
 import {
   starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
@@ -14,12 +14,14 @@ import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 import { invocation } from "./parser_declarations.ts";
+import { FunctionSymbolType } from "../type.ts";
 
 /* AST NODES */
 
 export class InvocationAstNode implements EvaluableAstNode {
   name!: Token<TokenKind>;
   parameters!: ExpressionAstNode[];
+  openParenthesis!: Token<TokenKind>;
   closingParenthesis!: Token<TokenKind>;
 
   constructor(params: Attributes<InvocationAstNode>) {
@@ -35,7 +37,44 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   analyzeFunctionInvocation(): AnalysisFindings {
-    return AnalysisFindings.empty();
+    const findings = AnalysisFindings.empty();
+    const functionSymbol = analysisTable.findSymbol(this.name.text).unwrap();
+    const functionType = functionSymbol.valueType as FunctionSymbolType;
+    const expectedParameterTypes = functionType.parameters;
+    const foundParameters = this.parameters;
+    const foundParameterTypes = foundParameters
+      .map((parameter) => parameter.resolveType());
+    if (expectedParameterTypes.length != foundParameterTypes.length) {
+      findings.errors.push(AnalysisError({
+        message:
+          `The function expected ${expectedParameterTypes.length} parameters but ${foundParameterTypes.length} were supplied.`,
+        beginHighlight: this.parameters.at(0) ??
+          DummyAstNode.fromToken(this.openParenthesis),
+        endHighlight: Some(
+          this.parameters.at(-1) ??
+            DummyAstNode.fromToken(this.closingParenthesis),
+        ),
+      }));
+    }
+    for (
+      let index = 0;
+      index <
+        Math.min(expectedParameterTypes.length, foundParameterTypes.length);
+      index += 1
+    ) {
+      const expectedParameterType = expectedParameterTypes[index];
+      const foundParameterType = foundParameterTypes[index];
+      if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
+        findings.errors.push(AnalysisError({
+          // TODO: resolve type name and add type names to the error message
+          message:
+            "The supplied value has a value that is incompatible with the required type",
+          beginHighlight: foundParameters[index],
+          endHighlight: None(),
+        }));
+      }
+    }
+    return findings;
   }
 
   analyzeStructureInvocation(): AnalysisFindings {
