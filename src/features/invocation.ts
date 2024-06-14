@@ -84,7 +84,10 @@ export class InvocationAstNode implements EvaluableAstNode {
   analyze(): AnalysisFindings {
     let findings = this.parameters
       .map((parameter) => parameter.analyze())
-      .reduce((previous, current) => AnalysisFindings.merge(previous, current));
+      .reduce(
+        (previous, current) => AnalysisFindings.merge(previous, current),
+        AnalysisFindings.empty(),
+      );
     const calledSymbol = analysisTable.findSymbol(this.name.text);
     const [isFunction, symbolExists] = calledSymbol
       .map((symbol) => [symbol.valueType.isFunction(), true])
