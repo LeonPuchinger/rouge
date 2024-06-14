@@ -21,9 +21,9 @@ export class RuntimeSymbol implements Symbol {
   }
 }
 
-export class StaticSymbol implements Symbol {
+export class StaticSymbol<T extends SymbolType = SymbolType> implements Symbol {
   node!: Option<AstNode>;
-  valueType!: SymbolType;
+  valueType!: T;
 
   constructor(params: WithOptionalAttributes<StaticSymbol>) {
     Object.assign(this, params);

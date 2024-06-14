@@ -2,7 +2,7 @@ import { apply, list_sc, opt, seq, str, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { analysisTable, SymbolValue } from "../symbol.ts";
+import { analysisTable, StaticSymbol, SymbolValue } from "../symbol.ts";
 import { SymbolType, typeTable } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Some } from "../util/monad/option.ts";
@@ -36,11 +36,11 @@ export class InvocationAstNode implements EvaluableAstNode {
     throw new Error("Method not implemented.");
   }
 
-  analyzeFunctionInvocation(): AnalysisFindings {
+  analyzeFunctionInvocation(
+    functionSymbol: StaticSymbol<FunctionSymbolType>,
+  ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
-    const functionSymbol = analysisTable.findSymbol(this.name.text).unwrap();
-    const functionType = functionSymbol.valueType as FunctionSymbolType;
-    const expectedParameterTypes = functionType.parameters;
+    const expectedParameterTypes = functionSymbol.valueType.parameters;
     const foundParameters = this.parameters;
     const foundParameterTypes = foundParameters
       .map((parameter) => parameter.resolveType());
@@ -85,8 +85,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     let findings = this.parameters
       .map((parameter) => parameter.analyze())
       .reduce((previous, current) => AnalysisFindings.merge(previous, current));
-    const [isFunction, symbolExists] = analysisTable
-      .findSymbol(this.name.text)
+    const calledSymbol = analysisTable.findSymbol(this.name.text);
+    const [isFunction, symbolExists] = calledSymbol
       .map((symbol) => [symbol.valueType.isFunction(), true])
       .unwrapOr([false, false]);
     const isType = typeTable
@@ -116,7 +116,9 @@ export class InvocationAstNode implements EvaluableAstNode {
     if (isFunction && !findings.isErroneous()) {
       findings = AnalysisFindings.merge(
         findings,
-        this.analyzeFunctionInvocation(),
+        this.analyzeFunctionInvocation(
+          calledSymbol.unwrap() as StaticSymbol<FunctionSymbolType>,
+        ),
       );
     }
     if (isType && !findings.isErroneous()) {
