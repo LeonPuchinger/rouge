@@ -11,9 +11,10 @@ interface Symbol {
   node: Option<AstNode>;
 }
 
-export class RuntimeSymbol implements Symbol {
+export class RuntimeSymbol<T extends SymbolValue = SymbolValue<unknown>>
+  implements Symbol {
   node!: Option<AstNode>;
-  value!: SymbolValue<unknown>;
+  value!: T;
 
   constructor(params: WithOptionalAttributes<RuntimeSymbol>) {
     Object.assign(this, params);
@@ -87,7 +88,7 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
 
   constructor(
     public value: StatementsAstNode,
-    parameterTypes: SymbolType[],
+    parameterTypes: Record<string, SymbolType>,
     returnType: SymbolType,
   ) {
     this.valueType = new FunctionSymbolType({

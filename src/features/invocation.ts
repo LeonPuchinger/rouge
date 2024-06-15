@@ -2,8 +2,15 @@ import { apply, list_sc, opt, seq, str, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { analysisTable, StaticSymbol, SymbolValue } from "../symbol.ts";
-import { SymbolType, typeTable } from "../type.ts";
+import {
+  analysisTable,
+  FunctionSymbolValue,
+  RuntimeSymbol,
+  runtimeTable,
+  StaticSymbol,
+  SymbolValue,
+} from "../symbol.ts";
+import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Some } from "../util/monad/option.ts";
 import {
@@ -14,7 +21,6 @@ import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 import { invocation } from "./parser_declarations.ts";
-import { FunctionSymbolType } from "../type.ts";
 
 /* AST NODES */
 
@@ -32,7 +38,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     functionSymbol: StaticSymbol<FunctionSymbolType>,
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
-    const expectedParameterTypes = functionSymbol.valueType.parameters;
+    const expectedParameters = functionSymbol.valueType.parameters;
+    const expectedParameterTypes = Object.values(expectedParameters);
     const foundParameters = this.parameters;
     const foundParameterTypes = foundParameters
       .map((parameter) => parameter.resolveType());

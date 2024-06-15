@@ -27,7 +27,7 @@ export class PrimitiveSymbolType implements SymbolType {
 }
 
 export class FunctionSymbolType implements SymbolType {
-  parameters!: SymbolType[];
+  parameters!: Record<string, SymbolType>;
   returnType!: SymbolType;
 
   constructor(params: Attributes<FunctionSymbolType>) {
@@ -43,11 +43,19 @@ export class FunctionSymbolType implements SymbolType {
     if (!matchingReturnTypes) {
       return false;
     }
-    if (other.parameters.length !== this.parameters.length) {
+    const otherParameterNames = Object.keys(other.parameters);
+    const thisParameterNames = Object.keys(this.parameters);
+    if (otherParameterNames.length !== thisParameterNames.length) {
       return false;
     }
-    return other.parameters.every((value, index) =>
-      value.typeCompatibleWith(this.parameters[index])
+    const matchingNames = otherParameterNames.every((name) =>
+      name in thisParameterNames
+    );
+    if (!matchingNames) {
+      return false;
+    }
+    return otherParameterNames.every((name) =>
+      other.parameters[name].typeCompatibleWith(this.parameters[name])
     );
   }
 

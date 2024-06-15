@@ -106,11 +106,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   evaluate(): SymbolValue<Function> {
-    const params = this.parameters.map((v) => v.resolveType());
+    const parameterTypes: Record<string, SymbolType> = {};
+    for (const parameter of this.parameters) {
+      parameterTypes[parameter.name.text] = parameter.resolveType();
+    }
     const returnType = this.returnType
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
-    return new FunctionSymbolValue(this.statements, params, returnType);
+    return new FunctionSymbolValue(this.statements, parameterTypes, returnType);
   }
 
   /**
@@ -244,9 +247,10 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    const parameterTypes = this.parameters.map((parameter) =>
-      parameter.resolveType()
-    );
+    const parameterTypes: Record<string, SymbolType> = {};
+    for (const parameter of this.parameters) {
+      parameterTypes[parameter.name.text] = parameter.resolveType();
+    }
     const returnType = this.returnType
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
