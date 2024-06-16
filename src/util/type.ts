@@ -1,3 +1,4 @@
+import { CompositeSymbolValue } from "../symbol.ts";
 import { typeTable } from "../type.ts";
 import { InternalError } from "./error.ts";
 import { Option } from "./monad/index.ts";
@@ -52,3 +53,8 @@ export const nothingType = typeTable
       "This type is required for basic language functionality.",
     ),
   );
+
+/**
+ * An instance of the `Nothing` type from the standard library.
+ */
+export const nothingInstance = new CompositeSymbolValue({});

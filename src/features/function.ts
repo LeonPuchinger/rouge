@@ -35,6 +35,7 @@ import {
 import { DummyAstNode } from "../util/snippet.ts";
 import {
   Attributes,
+  nothingInstance,
   nothingType,
   WithOptionalAttributes,
 } from "../util/type.ts";
@@ -275,13 +276,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
  * The benefit of throwing an error is that execution of all nested
  * statements stops immediately without having to implement any further logic.
  */
-class ReturnValueContainer extends Error {
+export class ReturnValueContainer extends Error {
   /**
    * @param value The value that is supposed to be returned.
-   *  Can be `None` in case the function does not return anything,
-   *  but an empty return statement is encountered.
+   *  In case the function does not return anything
+   *  but an empty return statement is encountered, the value
+   *  can be of type `Nothing` in the interpreted language.
    */
-  constructor(public value: Option<SymbolValue>) {
+  constructor(public value: SymbolValue) {
     super();
   }
 }
@@ -297,7 +299,9 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
 
   interpret(): void {
     throw new ReturnValueContainer(
-      this.expression.map((node) => node.evaluate()),
+      this.expression
+        .map((node) => node.evaluate())
+        .unwrapOr(nothingInstance),
     );
   }
 

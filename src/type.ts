@@ -82,8 +82,8 @@ export class CompositeSymbolType implements SymbolType {
   /**
    * @param fields The key-value pairs of name and type that make up this user defined type.
    */
-  constructor(params: Attributes<CompositeSymbolType>) {
-    Object.assign(this, params);
+  constructor(params: { fields: Record<string, SymbolType> }) {
+    this.fields = new Map(Object.entries(params.fields));
   }
 
   typeCompatibleWith(other: SymbolType): boolean {
