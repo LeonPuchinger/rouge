@@ -18,8 +18,9 @@ import {
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
-import { Attributes } from "../util/type.ts";
+import { Attributes, nothingInstance } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
+import { ReturnValueContainer } from "./function.ts";
 import { invocation } from "./parser_declarations.ts";
 
 /* AST NODES */
@@ -132,7 +133,41 @@ export class InvocationAstNode implements EvaluableAstNode {
     return findings;
   }
 
+  evaluateFunction(
+    functionSymbol: RuntimeSymbol<FunctionSymbolValue>,
+  ): SymbolValue<unknown> {
+    runtimeTable.pushScope();
+    const symbolType = functionSymbol.value.valueType as FunctionSymbolType;
+    const parameterNames = Object.keys(symbolType.parameters);
+    for (let index = 0; index < this.parameters.length; index += 1) {
+      const parameterName = parameterNames[index];
+      const symbolValue = this.parameters[index].evaluate();
+      runtimeTable.setSymbol(
+        parameterName,
+        new RuntimeSymbol({
+          value: symbolValue,
+        }),
+      );
+    }
+    let returnValue: SymbolValue = nothingInstance;
+    try {
+      functionSymbol.value.value.interpret();
+    } catch (exception) {
+      if (exception instanceof ReturnValueContainer) {
+        returnValue = exception.value;
+      }
+    }
+    runtimeTable.popScope();
+    return returnValue;
+  }
+
   evaluate(): SymbolValue<unknown> {
+    const calledSymbol = runtimeTable.findSymbol(this.name.text);
+    if (calledSymbol.hasValue()) {
+      return this.evaluateFunction(
+        calledSymbol.unwrap() as RuntimeSymbol<FunctionSymbolValue>,
+      );
+    }
     throw new Error("Method not implemented.");
   }
 
