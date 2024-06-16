@@ -243,6 +243,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
         );
       }
     }
+    findings = AnalysisFindings.merge(findings, this.statements.analyze());
     analysisTable.popScope();
     return findings;
   }
