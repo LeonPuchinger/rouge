@@ -68,12 +68,6 @@ export class AssignmentAstNode implements InterpretableAstNode {
           }));
         }
       });
-      analysisTable.setSymbol(
-        ident,
-        new StaticSymbol({
-          valueType: expressionType,
-        }),
-      );
     } else {
       this.typeAnnotation.then((annotationName) => {
         findings.errors.push(AnalysisError({
@@ -105,6 +99,15 @@ export class AssignmentAstNode implements InterpretableAstNode {
             }),
           );
         });
+    }
+    if (!findings.isErroneous()) {
+      const expressionType = this.child.resolveType();
+      analysisTable.setSymbol(
+        ident,
+        new StaticSymbol({
+          valueType: expressionType,
+        }),
+      );
     }
     return findings;
   }
