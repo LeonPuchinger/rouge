@@ -207,6 +207,6 @@ typeTable.setType("String", new PrimitiveSymbolType("String"));
 
 // will be replaced by stdlib implementation in the future
 
-typeTable.setType("Nothing", new CompositeSymbolType({ fields: new Map() }));
+typeTable.setType("Nothing", new CompositeSymbolType({ fields: {} }));
 
 /* ~~~ TEMPORARY ~~~ */

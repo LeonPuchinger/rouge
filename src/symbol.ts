@@ -1,6 +1,11 @@
 import { AstNode } from "./ast.ts";
 import { StatementsAstNode } from "./features/statement.ts";
-import { FunctionSymbolType, PrimitiveSymbolType, SymbolType } from "./type.ts";
+import {
+  CompositeSymbolType,
+  FunctionSymbolType,
+  PrimitiveSymbolType,
+  SymbolType,
+} from "./type.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { WithOptionalAttributes } from "./util/type.ts";
@@ -100,6 +105,33 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
   map(
     fn: (value: StatementsAstNode) => StatementsAstNode,
   ): SymbolValue<StatementsAstNode> {
+    return { ...this, value: fn(this.value) };
+  }
+
+  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
+    return other.typeCompatibleWith(this);
+  }
+}
+
+export class CompositeSymbolValue
+  implements SymbolValue<Map<string, SymbolValue>> {
+  valueType: SymbolType;
+  value: Map<string, SymbolValue>;
+
+  constructor(fields: Record<string, [SymbolValue, SymbolType]>) {
+    this.value = new Map(
+      Object.entries(fields).map((field) => [field[0], field[1][0]]),
+    );
+    this.valueType = new CompositeSymbolType({
+      fields: Object.fromEntries(
+        Object.entries(fields).map((field) => [field[0], field[1][1]]),
+      ),
+    });
+  }
+
+  map(
+    fn: (value: Map<string, SymbolValue>) => Map<string, SymbolValue>,
+  ): SymbolValue<Map<string, SymbolValue>> {
     return { ...this, value: fn(this.value) };
   }
 

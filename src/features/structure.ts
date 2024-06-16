@@ -74,7 +74,7 @@ export class StructureDefiniitonAstNode implements InterpretableAstNode {
   }
 
   interpret(): void {
-    const structureType = new CompositeSymbolType({ fields: new Map() });
+    const structureType = new CompositeSymbolType({ fields: {} });
     for (const field of this.fields) {
       const fieldName = field[0].text;
       const fieldType = typeTable.findType(field[1].text);
