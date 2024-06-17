@@ -172,7 +172,9 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    throw new Error("Method not implemented.");
+    const functionSymbol = analysisTable.findSymbol(this.name.text).unwrap();
+    const functionType = functionSymbol.valueType as FunctionSymbolType;
+    return functionType.returnType;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
