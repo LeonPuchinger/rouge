@@ -22,13 +22,13 @@ import { Attributes } from "../util/type.ts";
 
 /* AST NODES */
 
-export class StructureDefiniitonAstNode implements InterpretableAstNode {
+export class StructureDefinitonAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   name!: Token<TokenKind>;
   fields!: [Token<TokenKind>, Token<TokenKind>][];
   closingBrace!: Token<TokenKind>;
 
-  constructor(params: Attributes<StructureDefiniitonAstNode>) {
+  constructor(params: Attributes<StructureDefinitonAstNode>) {
     Object.assign(this, params);
   }
 
@@ -134,7 +134,7 @@ export const structureDefinition = apply(
     ),
   ),
   ([keyword, typeName, [fields, closingBrace]]) =>
-    new StructureDefiniitonAstNode({
+    new StructureDefinitonAstNode({
       keyword: keyword,
       name: typeName,
       fields: fields ?? [],
