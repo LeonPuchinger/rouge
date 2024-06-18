@@ -119,7 +119,7 @@ export const structureDefinition = apply(
     seq(
       kright(
         str("{"),
-        opt_sc(surround_with_breaking_whitespace(fields)),
+        surround_with_breaking_whitespace(opt_sc(fields)),
       ),
       str("}"),
     ),
