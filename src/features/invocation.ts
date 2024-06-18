@@ -230,9 +230,12 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    const functionSymbol = analysisTable.findSymbol(this.name.text).unwrap();
-    const functionType = functionSymbol.valueType as FunctionSymbolType;
-    return functionType.returnType;
+    return analysisTable
+      .findSymbol(this.name.text)
+      .map((symbol) => symbol.valueType)
+      .unwrapOr(
+        typeTable.findType(this.name.text).unwrap(),
+      );
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
