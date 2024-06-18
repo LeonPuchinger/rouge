@@ -135,9 +135,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     const [isFunction, symbolExists] = calledSymbol
       .map((symbol) => [symbol.valueType.isFunction(), true])
       .unwrapOr([false, false]);
-    const isType = typeTable
-      .findType(this.name.text)
-      .hasValue();
+    const calledType = typeTable.findType(this.name.text);
+    const isType = calledType.hasValue();
     if (symbolExists && isType) {
       throw new InternalError(
         `Encountered a type and a symbol with the same name ('${this.name.text}')`,

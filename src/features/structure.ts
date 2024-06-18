@@ -13,7 +13,7 @@ import {
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { CompositeSymbolType, typeTable } from "../type.ts";
+import { CompositeSymbolType, SymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None } from "../util/monad/option.ts";
 import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
@@ -30,6 +30,23 @@ export class StructureDefiniitonAstNode implements InterpretableAstNode {
 
   constructor(params: Attributes<StructureDefiniitonAstNode>) {
     Object.assign(this, params);
+  }
+
+  /**
+   * Generates a composite symbol type of the struct with all its fields.
+   */
+  generateSymbolType(): SymbolType {
+    const structureType = new CompositeSymbolType({ fields: {} });
+    for (const field of this.fields) {
+      const fieldName = field[0].text;
+      const fieldType = typeTable.findType(field[1].text);
+      structureType.fields.set(
+        fieldName,
+        fieldType.unwrapOrThrow(UnresolvableSymbolTypeError()),
+      );
+    }
+    typeTable.setType(this.name.text, structureType);
+    return structureType;
   }
 
   analyze(): AnalysisFindings {
@@ -70,20 +87,12 @@ export class StructureDefiniitonAstNode implements InterpretableAstNode {
       }
       fieldNames.push(fieldName);
     }
+    typeTable.setType(this.name.text, this.generateSymbolType());
     return findings;
   }
 
   interpret(): void {
-    const structureType = new CompositeSymbolType({ fields: {} });
-    for (const field of this.fields) {
-      const fieldName = field[0].text;
-      const fieldType = typeTable.findType(field[1].text);
-      structureType.fields.set(
-        fieldName,
-        fieldType.unwrapOrThrow(UnresolvableSymbolTypeError()),
-      );
-    }
-    typeTable.setType(this.name.text, structureType);
+    typeTable.setType(this.name.text, this.generateSymbolType());
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

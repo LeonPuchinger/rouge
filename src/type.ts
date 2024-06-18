@@ -196,6 +196,11 @@ export class TypeTable {
     }
     return None();
   }
+
+  clear() {
+    this.scopes = [];
+    this.pushScope();
+  }
 }
 
 export const typeTable = new TypeTable();
