@@ -10,7 +10,12 @@ import {
   StaticSymbol,
   SymbolValue,
 } from "../symbol.ts";
-import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
+import {
+  CompositeSymbolType,
+  FunctionSymbolType,
+  SymbolType,
+  typeTable,
+} from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Some } from "../util/monad/option.ts";
 import {
@@ -77,8 +82,45 @@ export class InvocationAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  analyzeStructureInvocation(): AnalysisFindings {
-    return AnalysisFindings.empty();
+  analyzeStructureInvocation(
+    structureSymbol: StaticSymbol<CompositeSymbolType>,
+  ): AnalysisFindings {
+    const findings = AnalysisFindings.empty();
+    const expectedFields = structureSymbol.valueType.fields;
+    const expectedFieldTypes = Object.values(expectedFields);
+    const foundFields = this.parameters;
+    const foundFieldTypes = foundFields.map((field) => field.resolveType());
+    if (expectedFieldTypes.length != foundFieldTypes.length) {
+      findings.errors.push(AnalysisError({
+        message:
+          `The structure expected ${expectedFieldTypes.length} fields but ${foundFieldTypes.length} were supplied.`,
+        beginHighlight: this.parameters.at(0) ??
+          DummyAstNode.fromToken(this.openParenthesis),
+        endHighlight: Some(
+          this.parameters.at(-1) ??
+            DummyAstNode.fromToken(this.closingParenthesis),
+        ),
+      }));
+    }
+    for (
+      let index = 0;
+      index <
+        Math.min(expectedFieldTypes.length, foundFieldTypes.length);
+      index += 1
+    ) {
+      const expectedParameterType = expectedFieldTypes[index];
+      const foundParameterType = foundFieldTypes[index];
+      if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
+        findings.errors.push(AnalysisError({
+          // TODO: resolve type name and add type names to the error message
+          message:
+            "The supplied value has a value that is incompatible with the required type",
+          beginHighlight: foundFields[index],
+          endHighlight: None(),
+        }));
+      }
+    }
+    return findings;
   }
 
   analyze(): AnalysisFindings {
@@ -127,7 +169,9 @@ export class InvocationAstNode implements EvaluableAstNode {
     if (isType && !findings.isErroneous()) {
       findings = AnalysisFindings.merge(
         findings,
-        this.analyzeStructureInvocation(),
+        this.analyzeStructureInvocation(
+          calledSymbol.unwrap() as StaticSymbol<CompositeSymbolType>,
+        ),
       );
     }
     return findings;
