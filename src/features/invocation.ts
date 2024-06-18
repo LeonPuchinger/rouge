@@ -88,7 +88,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const expectedFields = structureType.fields;
-    const expectedFieldTypes = Object.values(expectedFields);
+    const expectedFieldTypes = Array.from(expectedFields.values());
     const foundFields = this.parameters;
     const foundFieldTypes = foundFields.map((field) => field.resolveType());
     if (expectedFieldTypes.length != foundFieldTypes.length) {
