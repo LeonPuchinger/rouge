@@ -1,6 +1,11 @@
 import { AstNode } from "./ast.ts";
 import { StatementsAstNode } from "./features/statement.ts";
-import { FunctionSymbolType, PrimitiveSymbolType, SymbolType } from "./type.ts";
+import {
+  CompositeSymbolType,
+  FunctionSymbolType,
+  PrimitiveSymbolType,
+  SymbolType,
+} from "./type.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { WithOptionalAttributes } from "./util/type.ts";
@@ -11,9 +16,10 @@ interface Symbol {
   node: Option<AstNode>;
 }
 
-export class RuntimeSymbol implements Symbol {
+export class RuntimeSymbol<T extends SymbolValue = SymbolValue<unknown>>
+  implements Symbol {
   node!: Option<AstNode>;
-  value!: SymbolValue<unknown>;
+  value!: T;
 
   constructor(params: WithOptionalAttributes<RuntimeSymbol>) {
     Object.assign(this, params);
@@ -21,9 +27,9 @@ export class RuntimeSymbol implements Symbol {
   }
 }
 
-export class StaticSymbol implements Symbol {
+export class StaticSymbol<T extends SymbolType = SymbolType> implements Symbol {
   node!: Option<AstNode>;
-  valueType!: SymbolType;
+  valueType!: T;
 
   constructor(params: WithOptionalAttributes<StaticSymbol>) {
     Object.assign(this, params);
@@ -87,7 +93,7 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
 
   constructor(
     public value: StatementsAstNode,
-    parameterTypes: SymbolType[],
+    parameterTypes: Record<string, SymbolType>,
     returnType: SymbolType,
   ) {
     this.valueType = new FunctionSymbolType({
@@ -99,6 +105,33 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
   map(
     fn: (value: StatementsAstNode) => StatementsAstNode,
   ): SymbolValue<StatementsAstNode> {
+    return { ...this, value: fn(this.value) };
+  }
+
+  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
+    return other.typeCompatibleWith(this);
+  }
+}
+
+export class CompositeSymbolValue
+  implements SymbolValue<Map<string, SymbolValue>> {
+  valueType: SymbolType;
+  value: Map<string, SymbolValue>;
+
+  constructor(fields: Map<string, [SymbolValue, SymbolType]>) {
+    this.value = new Map(
+      Array.from(fields, ([name, [value, _type]]) => [name, value]),
+    );
+    this.valueType = new CompositeSymbolType({
+      fields: Object.fromEntries(
+        Array.from(fields, ([name, [_value, type]]) => [name, type]),
+      ),
+    });
+  }
+
+  map(
+    fn: (value: Map<string, SymbolValue>) => Map<string, SymbolValue>,
+  ): SymbolValue<Map<string, SymbolValue>> {
     return { ...this, value: fn(this.value) };
   }
 

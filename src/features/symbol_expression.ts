@@ -7,7 +7,7 @@ import { SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 
-/* AST Nodes */
+/* AST NODES */
 
 export class SymbolExpressionAstNode implements EvaluableAstNode {
   identifierToken: Token<TokenKind>;

@@ -36,7 +36,6 @@ export class AssignmentAstNode implements InterpretableAstNode {
     const ident = this.token.text;
     const isInitialAssignment = !analysisTable.findSymbol(ident).hasValue();
     const expressionFindingsErroneous = findings.isErroneous();
-    const expressionType = this.child.resolveType();
     if (isInitialAssignment) {
       this.typeAnnotation.then((annotationName) => {
         if (!typeTable.typeResolvable(annotationName.text)) {
@@ -53,6 +52,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
       if (findings.isErroneous()) {
         return findings;
       }
+      const expressionType = this.child.resolveType();
       this.typeAnnotation.then((annotationName) => {
         const resolvedAnnotation = typeTable.findType(annotationName.text)
           .unwrap();
@@ -68,12 +68,6 @@ export class AssignmentAstNode implements InterpretableAstNode {
           }));
         }
       });
-      analysisTable.setSymbol(
-        ident,
-        new StaticSymbol({
-          valueType: expressionType,
-        }),
-      );
     } else {
       this.typeAnnotation.then((annotationName) => {
         findings.errors.push(AnalysisError({
@@ -86,6 +80,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
       if (expressionFindingsErroneous) {
         return findings;
       }
+      const expressionType = this.child.resolveType();
       analysisTable.findSymbol(ident)
         .then((existing) => {
           if (existing.valueType.typeCompatibleWith(expressionType)) {
@@ -104,6 +99,15 @@ export class AssignmentAstNode implements InterpretableAstNode {
             }),
           );
         });
+    }
+    if (!findings.isErroneous()) {
+      const expressionType = this.child.resolveType();
+      analysisTable.setSymbol(
+        ident,
+        new StaticSymbol({
+          valueType: expressionType,
+        }),
+      );
     }
     return findings;
   }

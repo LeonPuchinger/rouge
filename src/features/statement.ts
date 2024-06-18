@@ -8,14 +8,12 @@ import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
+import { typeTable } from "../type.ts";
 import {} from "../util/array.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { ReturnStatementAstNode } from "./function.ts";
 import { condition, returnStatement } from "./parser_declarations.ts";
-import {
-  StructureDefiniitonAstNode,
-  structureDefinition,
-} from "./structure.ts";
+import { structureDefinition, StructureDefinitonAstNode } from "./structure.ts";
 
 /* AST NODES */
 
@@ -23,7 +21,7 @@ export type StatementAstNode =
   | ExpressionAstNode
   | ConditionAstNode
   | ReturnStatementAstNode
-  | StructureDefiniitonAstNode
+  | StructureDefinitonAstNode
   | AssignmentAstNode;
 
 export class StatementsAstNode implements InterpretableAstNode {
@@ -41,6 +39,7 @@ export class StatementsAstNode implements InterpretableAstNode {
     const findings = this.children
       .map((statement) => statement.analyze())
       .reduce((previous, current) => AnalysisFindings.merge(previous, current));
+    typeTable.reset();
     return findings;
   }
 
@@ -58,7 +57,7 @@ export class StatementsAstNode implements InterpretableAstNode {
   }
 }
 
-/* PARSERS */
+/* PARSER */
 
 const statement = alt_sc(
   assignment,

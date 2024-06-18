@@ -5,6 +5,7 @@ import { Attributes } from "./util/type.ts";
 export interface SymbolType {
   typeCompatibleWith(other: SymbolType): boolean;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
+  isFunction(): boolean;
 }
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
@@ -19,10 +20,14 @@ export class PrimitiveSymbolType implements SymbolType {
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
     return kind === this.kind;
   }
+
+  isFunction(): boolean {
+    return false;
+  }
 }
 
 export class FunctionSymbolType implements SymbolType {
-  parameters!: SymbolType[];
+  parameters!: Record<string, SymbolType>;
   returnType!: SymbolType;
 
   constructor(params: Attributes<FunctionSymbolType>) {
@@ -38,16 +43,28 @@ export class FunctionSymbolType implements SymbolType {
     if (!matchingReturnTypes) {
       return false;
     }
-    if (other.parameters.length !== this.parameters.length) {
+    const otherParameterNames = Object.keys(other.parameters);
+    const thisParameterNames = Object.keys(this.parameters);
+    if (otherParameterNames.length !== thisParameterNames.length) {
       return false;
     }
-    return other.parameters.every((value, index) =>
-      value.typeCompatibleWith(this.parameters[index])
+    const matchingNames = otherParameterNames.every((name) =>
+      name in thisParameterNames
+    );
+    if (!matchingNames) {
+      return false;
+    }
+    return otherParameterNames.every((name) =>
+      other.parameters[name].typeCompatibleWith(this.parameters[name])
     );
   }
 
   isPrimitive(): boolean {
     return false;
+  }
+
+  isFunction(): boolean {
+    return true;
   }
 }
 
@@ -65,8 +82,8 @@ export class CompositeSymbolType implements SymbolType {
   /**
    * @param fields The key-value pairs of name and type that make up this user defined type.
    */
-  constructor(params: Attributes<CompositeSymbolType>) {
-    Object.assign(this, params);
+  constructor(params: { fields: Record<string, SymbolType> }) {
+    this.fields = new Map(Object.entries(params.fields));
   }
 
   typeCompatibleWith(other: SymbolType): boolean {
@@ -92,6 +109,10 @@ export class CompositeSymbolType implements SymbolType {
   isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
     return false;
   }
+
+  isFunction(): boolean {
+    return false;
+  }
 }
 
 type Scope = {
@@ -103,7 +124,7 @@ export class TypeTable {
   private scopes: Scope[] = [];
 
   constructor() {
-    this.pushScope();
+    this.reset();
   }
 
   pushScope() {
@@ -175,17 +196,26 @@ export class TypeTable {
     }
     return None();
   }
+
+  initializeStandardLibraryTypes() {
+    this.setType("Number", new PrimitiveSymbolType("Number"));
+    this.setType("Boolean", new PrimitiveSymbolType("Boolean"));
+    this.setType("String", new PrimitiveSymbolType("String"));
+
+    /* ~~~ TEMPORARY ~~~ */
+
+    // will be replaced by stdlib implementation in the future
+
+    this.setType("Nothing", new CompositeSymbolType({ fields: {} }));
+
+    /* ~~~ TEMPORARY ~~~ */
+  }
+
+  reset() {
+    this.scopes = [];
+    this.pushScope();
+    this.initializeStandardLibraryTypes();
+  }
 }
 
 export const typeTable = new TypeTable();
-typeTable.setType("Number", new PrimitiveSymbolType("Number"));
-typeTable.setType("Boolean", new PrimitiveSymbolType("Boolean"));
-typeTable.setType("String", new PrimitiveSymbolType("String"));
-
-/* ~~~ TEMPORARY ~~~ */
-
-// will be replaced by stdlib implementation in the future
-
-typeTable.setType("Nothing", new CompositeSymbolType({ fields: new Map() }));
-
-/* ~~~ TEMPORARY ~~~ */
