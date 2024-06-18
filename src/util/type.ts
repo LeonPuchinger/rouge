@@ -57,4 +57,4 @@ export const nothingType = typeTable
 /**
  * An instance of the `Nothing` type from the standard library.
  */
-export const nothingInstance = new CompositeSymbolValue({});
+export const nothingInstance = new CompositeSymbolValue(new Map());

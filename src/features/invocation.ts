@@ -4,6 +4,7 @@ import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   analysisTable,
+  CompositeSymbolValue,
   FunctionSymbolValue,
   RuntimeSymbol,
   runtimeTable,
@@ -203,6 +204,20 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     runtimeTable.popScope();
     return returnValue;
+  }
+
+  evaluateStructure(
+    structureType: CompositeSymbolType,
+  ): SymbolValue<unknown> {
+    const instantiatedFields = new Map<string, [SymbolValue, SymbolType]>(
+      Array.from(
+        structureType.fields,
+        ([name, type], index) => {
+          return [name, [this.parameters[index].evaluate(), type]];
+        },
+      ),
+    );
+    return new CompositeSymbolValue(instantiatedFields);
   }
 
   evaluate(): SymbolValue<unknown> {

@@ -118,13 +118,13 @@ export class CompositeSymbolValue
   valueType: SymbolType;
   value: Map<string, SymbolValue>;
 
-  constructor(fields: Record<string, [SymbolValue, SymbolType]>) {
+  constructor(fields: Map<string, [SymbolValue, SymbolType]>) {
     this.value = new Map(
-      Object.entries(fields).map((field) => [field[0], field[1][0]]),
+      Array.from(fields, ([name, [value, _type]]) => [name, value]),
     );
     this.valueType = new CompositeSymbolType({
       fields: Object.fromEntries(
-        Object.entries(fields).map((field) => [field[0], field[1][1]]),
+        Array.from(fields, ([name, [_value, type]]) => [name, type]),
       ),
     });
   }
