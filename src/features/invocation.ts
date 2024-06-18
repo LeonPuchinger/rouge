@@ -236,8 +236,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     return analysisTable
       .findSymbol(this.name.text)
       .map((symbol) => symbol.valueType)
-      .unwrapOr(
-        typeTable.findType(this.name.text).unwrap(),
+      .unwrapOrElse(
+        typeTable.findType(this.name.text).unwrap,
       );
   }
 

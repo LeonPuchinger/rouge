@@ -10,6 +10,7 @@ export interface Option<T> {
   or(alternative: Option<T>): Option<T>;
   unwrap(): T;
   unwrapOr(defaultValue: T): T;
+  unwrapOrElse(computeDefaultValue: () => T): T;
   unwrapOrThrow(error: Error): T;
   then(fn: (value: T) => void): Option<T>;
   onNone(fn: () => void): Option<T>;
@@ -51,6 +52,10 @@ export function Some<T>(value: T | undefined): Option<T> {
     },
 
     unwrapOr(_defaultValue: T): T {
+      return value;
+    },
+
+    unwrapOrElse(_computeDefaultValue: () => T): T {
       return value;
     },
 
@@ -117,6 +122,10 @@ export function None<T>(): Option<T> {
 
     unwrapOr(defaultValue: T): T {
       return defaultValue;
+    },
+
+    unwrapOrElse(computeDefaultValue: () => T): T {
+      return computeDefaultValue();
     },
 
     unwrapOrThrow(error: Error): T {
