@@ -84,10 +84,10 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   analyzeStructureInvocation(
-    structureSymbol: StaticSymbol<CompositeSymbolType>,
+    structureType: CompositeSymbolType,
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
-    const expectedFields = structureSymbol.valueType.fields;
+    const expectedFields = structureType.fields;
     const expectedFieldTypes = Object.values(expectedFields);
     const foundFields = this.parameters;
     const foundFieldTypes = foundFields.map((field) => field.resolveType());
@@ -170,7 +170,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeStructureInvocation(
-          calledSymbol.unwrap() as StaticSymbol<CompositeSymbolType>,
+          calledType.unwrap() as CompositeSymbolType,
         ),
       );
     }
@@ -226,7 +226,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         calledSymbol.unwrap() as RuntimeSymbol<FunctionSymbolValue>,
       );
     }
-    throw new Error("Method not implemented.");
+    const calledStructure = typeTable.findType(this.name.text);
+    return this.evaluateStructure(
+      calledStructure.unwrap() as CompositeSymbolType,
+    );
   }
 
   resolveType(): SymbolType {
