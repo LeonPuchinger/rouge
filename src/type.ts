@@ -124,7 +124,7 @@ export class TypeTable {
   private scopes: Scope[] = [];
 
   constructor() {
-    this.pushScope();
+    this.reset();
   }
 
   pushScope() {
@@ -197,21 +197,25 @@ export class TypeTable {
     return None();
   }
 
-  clear() {
+  initializeStandardLibraryTypes() {
+    this.setType("Number", new PrimitiveSymbolType("Number"));
+    this.setType("Boolean", new PrimitiveSymbolType("Boolean"));
+    this.setType("String", new PrimitiveSymbolType("String"));
+
+    /* ~~~ TEMPORARY ~~~ */
+
+    // will be replaced by stdlib implementation in the future
+
+    this.setType("Nothing", new CompositeSymbolType({ fields: {} }));
+
+    /* ~~~ TEMPORARY ~~~ */
+  }
+
+  reset() {
     this.scopes = [];
     this.pushScope();
+    this.initializeStandardLibraryTypes();
   }
 }
 
 export const typeTable = new TypeTable();
-typeTable.setType("Number", new PrimitiveSymbolType("Number"));
-typeTable.setType("Boolean", new PrimitiveSymbolType("Boolean"));
-typeTable.setType("String", new PrimitiveSymbolType("String"));
-
-/* ~~~ TEMPORARY ~~~ */
-
-// will be replaced by stdlib implementation in the future
-
-typeTable.setType("Nothing", new CompositeSymbolType({ fields: {} }));
-
-/* ~~~ TEMPORARY ~~~ */
