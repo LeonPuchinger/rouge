@@ -12,12 +12,7 @@ import { WithOptionalAttributes } from "./util/type.ts";
 
 // Symbol
 
-interface Symbol {
-  node: Option<AstNode>;
-}
-
-export class RuntimeSymbol<T extends SymbolValue = SymbolValue<unknown>>
-  implements Symbol {
+export class RuntimeSymbol<T extends SymbolValue = SymbolValue<unknown>> {
   node!: Option<AstNode>;
   value!: T;
 
@@ -27,7 +22,7 @@ export class RuntimeSymbol<T extends SymbolValue = SymbolValue<unknown>>
   }
 }
 
-export class StaticSymbol<T extends SymbolType = SymbolType> implements Symbol {
+export class StaticSymbol<T extends SymbolType = SymbolType> {
   node!: Option<AstNode>;
   valueType!: T;
 
@@ -36,6 +31,8 @@ export class StaticSymbol<T extends SymbolType = SymbolType> implements Symbol {
     this.node = Some(params.node);
   }
 }
+
+type Symbol = RuntimeSymbol | StaticSymbol;
 
 // Symbol Value
 
