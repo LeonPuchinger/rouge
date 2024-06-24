@@ -78,6 +78,7 @@ export class FunctionSymbolType implements SymbolType {
  */
 export class CompositeSymbolType implements SymbolType {
   fields!: Map<string, SymbolType>;
+  id!: string;
 
   /**
    * @param fields The key-value pairs of name and type that make up this user defined type.
@@ -87,6 +88,10 @@ export class CompositeSymbolType implements SymbolType {
   }
 
   typeCompatibleWith(other: SymbolType): boolean {
+    if (other instanceof CompositeSymbolType) {
+      return other.id === this.id;
+    }
+    // TODO: additional checks beyond id should only produce an `InternalError` in case of mismatch
     if (!(other instanceof CompositeSymbolType)) {
       return false;
     }
