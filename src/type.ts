@@ -1,22 +1,24 @@
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
+import { surroundWithIfNonEmpty } from "./util/string.ts";
 import { WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
 export interface SymbolType {
   typeCompatibleWith(other: SymbolType): boolean;
+  displayName(): string;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
   isFunction(): boolean;
 }
 
 export class FunctionSymbolType implements SymbolType {
-  parameters!: Record<string, SymbolType>;
+  parameters!: Map<string, SymbolType>;
   returnType!: SymbolType;
   placeholders!: Map<string, PlaceholderSymbolType>;
 
   constructor(params: {
-    parameters: Record<string, SymbolType>;
+    parameters: Map<string, SymbolType>;
     returnType: SymbolType;
     placeholders?: Map<string, PlaceholderSymbolType>;
   }) {
@@ -58,8 +60,21 @@ export class FunctionSymbolType implements SymbolType {
       return false;
     }
     return otherParameterNames.every((name) =>
-      other.parameters[name].typeCompatibleWith(this.parameters[name])
+      other.parameters.get(name)!.typeCompatibleWith(this.parameters.get(name)!)
     );
+  }
+
+  displayName(): string {
+    const placeholders = Array.from(this.placeholders.entries())
+      .map(([_name, type]) => type.displayName())
+      .join(" , ");
+    const parameters = Array.from(this.parameters.entries())
+      .map(([name, type]) => `${name}: ${type.displayName()}`)
+      .join(" , ");
+    const returnType = this.returnType.displayName();
+    return `Function${
+      surroundWithIfNonEmpty(placeholders, "<", ">")
+    }(${parameters}) -> ${returnType}`;
   }
 
   isPrimitive(): boolean {
@@ -136,6 +151,13 @@ export class CompositeSymbolType implements SymbolType {
     return true;
   }
 
+  displayName(): string {
+    const placeholders = Array.from(this.placeholders.entries())
+      .map(([_name, type]) => type.displayName())
+      .join(" , ");
+    return `${this.id}${surroundWithIfNonEmpty(placeholders, "<", ">")}`;
+  }
+
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
     return this.id === kind;
   }
@@ -147,6 +169,7 @@ export class CompositeSymbolType implements SymbolType {
 
 export class PlaceholderSymbolType implements SymbolType {
   reference!: Option<SymbolType>;
+  name!: string;
 
   constructor(params: WithOptionalAttributes<PlaceholderSymbolType>) {
     this.reference = Some(params.reference);
@@ -156,6 +179,12 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.reference
       .map((reference) => reference.typeCompatibleWith(other))
       .unwrapOr(true);
+  }
+
+  displayName(): string {
+    return this.reference
+      .map((reference) => reference.displayName())
+      .unwrapOr(this.name);
   }
 
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
@@ -171,12 +200,16 @@ export class PlaceholderSymbolType implements SymbolType {
   }
 
   bind(to: SymbolType) {
-    if (this.reference.hasValue()) {
+    if (this.isBound()) {
       throw new InternalError(
-        "A placeholder symbol type can only be bound to another type once.",
+        "A PlaceholderSymbolType can only be bound to another type once.",
       );
     }
     this.reference = Some(to);
+  }
+
+  isBound(): boolean {
+    return this.reference.hasValue();
   }
 }
 

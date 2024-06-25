@@ -21,3 +21,14 @@ export function prefixIndentLines(
 ): string[] {
   return prefixLines(indentLines(lines, width), prefix);
 }
+
+export function surroundWithIfNonEmpty(
+  core: string,
+  prefix: string,
+  suffix: string,
+) {
+  if (core.length > 0) {
+    return `${prefix}${core}${suffix}`;
+  }
+  return core;
+}
