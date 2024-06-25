@@ -1,6 +1,6 @@
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
-import { Attributes } from "./util/type.ts";
+import { WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
@@ -13,14 +13,33 @@ export interface SymbolType {
 export class FunctionSymbolType implements SymbolType {
   parameters!: Record<string, SymbolType>;
   returnType!: SymbolType;
+  placeholders!: Map<string, PlaceholderSymbolType>;
 
-  constructor(params: Attributes<FunctionSymbolType>) {
+  constructor(params: {
+    parameters: Record<string, SymbolType>;
+    returnType: SymbolType;
+    placeholders?: Map<string, PlaceholderSymbolType>;
+  }) {
+    params.placeholders ??= new Map();
     Object.assign(this, params);
   }
 
   typeCompatibleWith(other: SymbolType): boolean {
     if (!(other instanceof FunctionSymbolType)) {
       return false;
+    }
+    if (this.placeholders.size !== other.placeholders.size) {
+      return false;
+    }
+    for (const placeholderName of this.placeholders.keys()) {
+      const placeholder = this.placeholders.get(placeholderName)!;
+      const otherPlaceholder = other.placeholders.get(placeholderName);
+      if (otherPlaceholder === undefined) {
+        return false;
+      }
+      if (placeholder.typeCompatibleWith(otherPlaceholder)) {
+        return false;
+      }
     }
     const matchingReturnTypes = other.returnType
       .typeCompatibleWith(this.returnType);
@@ -61,25 +80,46 @@ export class FunctionSymbolType implements SymbolType {
  * and the types for each field are type compatible themselves.
  */
 export class CompositeSymbolType implements SymbolType {
-  fields!: Map<string, SymbolType>;
   id!: string;
+  fields!: Map<string, SymbolType>;
+  placeholders!: Map<string, PlaceholderSymbolType>;
 
   /**
    * @param fields The key-value pairs of name and type that make up this user defined type.
    */
-  constructor(params: { fields?: Map<string, SymbolType>; id: string }) {
-    this.fields = params.fields ?? new Map();
-    this.id = params.id;
+  constructor(
+    params: {
+      id: string;
+      fields?: Map<string, SymbolType>;
+      placeholders?: Map<string, PlaceholderSymbolType>;
+    },
+  ) {
+    params.fields ??= new Map();
+    params.placeholders ??= new Map();
+    Object.assign(this, params);
   }
 
   typeCompatibleWith(other: SymbolType): boolean {
-    if (other instanceof CompositeSymbolType) {
-      return other.id === this.id;
-    }
-    // TODO: additional checks beyond id should only produce an `InternalError` in case of mismatch
     if (!(other instanceof CompositeSymbolType)) {
       return false;
     }
+    if (this.id !== other.id) {
+      return false;
+    }
+    if (this.placeholders.size !== other.placeholders.size) {
+      return false;
+    }
+    for (const placeholderName of this.placeholders.keys()) {
+      const placeholder = this.placeholders.get(placeholderName)!;
+      const otherPlaceholder = other.placeholders.get(placeholderName);
+      if (otherPlaceholder === undefined) {
+        return false;
+      }
+      if (placeholder.typeCompatibleWith(otherPlaceholder)) {
+        return false;
+      }
+    }
+    // TODO: additional checks beyond id and placeholders should only produce an `InternalError` in case of mismatch
     const thisKeys = Array.from(this.fields.keys());
     const otherKeys = Array.from(other.fields.keys());
     if (thisKeys.length !== otherKeys.length) {
@@ -102,6 +142,41 @@ export class CompositeSymbolType implements SymbolType {
 
   isFunction(): boolean {
     return false;
+  }
+}
+
+export class PlaceholderSymbolType implements SymbolType {
+  reference!: Option<SymbolType>;
+
+  constructor(params: WithOptionalAttributes<PlaceholderSymbolType>) {
+    this.reference = Some(params.reference);
+  }
+
+  typeCompatibleWith(other: SymbolType): boolean {
+    return this.reference
+      .map((reference) => reference.typeCompatibleWith(other))
+      .unwrapOr(true);
+  }
+
+  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
+    return this.reference
+      .map((reference) => reference.isPrimitive(kind))
+      .unwrapOr(false);
+  }
+
+  isFunction(): boolean {
+    return this.reference
+      .map((reference) => reference.isFunction())
+      .unwrapOr(false);
+  }
+
+  bind(to: SymbolType) {
+    if (this.reference.hasValue()) {
+      throw new InternalError(
+        "A placeholder symbol type can only be bound to another type once.",
+      );
+    }
+    this.reference = Some(to);
   }
 }
 
