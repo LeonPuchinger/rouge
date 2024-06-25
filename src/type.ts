@@ -8,6 +8,7 @@ type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 export interface SymbolType {
   typeCompatibleWith(other: SymbolType): boolean;
   displayName(): string;
+  complete(): boolean;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
   isFunction(): boolean;
 }
@@ -75,6 +76,12 @@ export class FunctionSymbolType implements SymbolType {
     return `Function${
       surroundWithIfNonEmpty(placeholders, "<", ">")
     }(${parameters}) -> ${returnType}`;
+  }
+
+  complete(): boolean {
+    return Array.from(this.placeholders.entries())
+      .map(([_name, type]) => type.complete())
+      .every((entry) => entry === true);
   }
 
   isPrimitive(): boolean {
@@ -158,6 +165,12 @@ export class CompositeSymbolType implements SymbolType {
     return `${this.id}${surroundWithIfNonEmpty(placeholders, "<", ">")}`;
   }
 
+  complete(): boolean {
+    return Array.from(this.placeholders.entries())
+      .map(([_name, type]) => type.complete())
+      .every((entry) => entry === true);
+  }
+
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
     return this.id === kind;
   }
@@ -185,6 +198,12 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.reference
       .map((reference) => reference.displayName())
       .unwrapOr(this.name);
+  }
+
+  complete(): boolean {
+    return this.reference
+      .map((reference) => reference.complete())
+      .unwrapOr(false);
   }
 
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
