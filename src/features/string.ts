@@ -3,10 +3,9 @@ import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { StringSymbolValue } from "../symbol.ts";
-import { SymbolType } from "../type.ts";
+import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { memoize } from "../util/memoize.ts";
 import { Attributes } from "../util/type.ts";
-import { PrimitiveSymbolType } from "../type.ts";
 
 /* AST NODES */
 
@@ -25,7 +24,7 @@ class StringAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("String");
+    return new CompositeSymbolType({ id: "String" });
   }
 
   analyze(): AnalysisFindings {

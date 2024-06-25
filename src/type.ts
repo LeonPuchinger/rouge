@@ -2,28 +2,12 @@ import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { Attributes } from "./util/type.ts";
 
+type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
+
 export interface SymbolType {
   typeCompatibleWith(other: SymbolType): boolean;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
   isFunction(): boolean;
-}
-
-type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
-
-export class PrimitiveSymbolType implements SymbolType {
-  constructor(private kind: PrimitiveSymbolTypeKind) {}
-
-  typeCompatibleWith(other: SymbolType): boolean {
-    return other instanceof PrimitiveSymbolType && other.kind === this.kind;
-  }
-
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
-    return kind === this.kind;
-  }
-
-  isFunction(): boolean {
-    return false;
-  }
 }
 
 export class FunctionSymbolType implements SymbolType {
@@ -83,8 +67,9 @@ export class CompositeSymbolType implements SymbolType {
   /**
    * @param fields The key-value pairs of name and type that make up this user defined type.
    */
-  constructor(params: { fields: Record<string, SymbolType> }) {
-    this.fields = new Map(Object.entries(params.fields));
+  constructor(params: { fields?: Map<string, SymbolType>; id: string }) {
+    this.fields = params.fields ?? new Map();
+    this.id = params.id;
   }
 
   typeCompatibleWith(other: SymbolType): boolean {
@@ -111,8 +96,8 @@ export class CompositeSymbolType implements SymbolType {
     return true;
   }
 
-  isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
-    return false;
+  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
+    return this.id === kind;
   }
 
   isFunction(): boolean {
@@ -203,15 +188,15 @@ export class TypeTable {
   }
 
   initializeStandardLibraryTypes() {
-    this.setType("Number", new PrimitiveSymbolType("Number"));
-    this.setType("Boolean", new PrimitiveSymbolType("Boolean"));
-    this.setType("String", new PrimitiveSymbolType("String"));
+    this.setType("Number", new CompositeSymbolType({ id: "Number" }));
+    this.setType("Boolean", new CompositeSymbolType({ id: "Boolean" }));
+    this.setType("String", new CompositeSymbolType({ id: "String" }));
 
     /* ~~~ TEMPORARY ~~~ */
 
     // will be replaced by stdlib implementation in the future
 
-    this.setType("Nothing", new CompositeSymbolType({ fields: {} }));
+    this.setType("Nothing", new CompositeSymbolType({ id: "Nothing" }));
 
     /* ~~~ TEMPORARY ~~~ */
   }

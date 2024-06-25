@@ -216,7 +216,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         },
       ),
     );
-    return new CompositeSymbolValue(instantiatedFields);
+    return new CompositeSymbolValue({
+      fields: instantiatedFields,
+      id: this.name.text,
+    });
   }
 
   evaluate(): SymbolValue<unknown> {
