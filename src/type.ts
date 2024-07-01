@@ -9,6 +9,7 @@ export interface SymbolType {
   typeCompatibleWith(other: SymbolType): boolean;
   displayName(): string;
   complete(): boolean;
+  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
   isFunction(): boolean;
 }
@@ -82,6 +83,26 @@ export class FunctionSymbolType implements SymbolType {
     return Array.from(this.placeholders.entries())
       .map(([_name, type]) => type.complete())
       .every((entry) => entry === true);
+  }
+
+  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType {
+    const copy = new FunctionSymbolType({
+      parameters: this.parameters,
+      returnType: this.returnType,
+      placeholders: new Map(),
+    });
+    for (const [name, placeholder] of this.placeholders) {
+      if (name in bindPlaceholders) {
+        const boundPlaceholder = new PlaceholderSymbolType({
+          name: name,
+          reference: copy.placeholders.get(name),
+        });
+        copy.placeholders.set(name, boundPlaceholder);
+      } else {
+        copy.placeholders.set(name, placeholder);
+      }
+    }
+    return copy;
   }
 
   isPrimitive(): boolean {
@@ -171,6 +192,25 @@ export class CompositeSymbolType implements SymbolType {
       .every((entry) => entry === true);
   }
 
+  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType {
+    const copy = new CompositeSymbolType({
+      id: this.id,
+      fields: this.fields,
+      placeholders: new Map(),
+    });
+    for (const [name, placeholder] of this.placeholders) {
+      if (name in bindPlaceholders) {
+        copy.placeholders.set(
+          name,
+          placeholder.bind(bindPlaceholders.get(name)!),
+        );
+      } else {
+        copy.placeholders.set(name, placeholder);
+      }
+    }
+    return copy;
+  }
+
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
     return this.id === kind;
   }
@@ -206,6 +246,12 @@ export class PlaceholderSymbolType implements SymbolType {
       .unwrapOr(false);
   }
 
+  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType {
+    return this.reference
+      .map((type) => type.fork(bindPlaceholders))
+      .unwrapOr(this);
+  }
+
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
     return this.reference
       .map((reference) => reference.isPrimitive(kind))
@@ -224,7 +270,10 @@ export class PlaceholderSymbolType implements SymbolType {
         "A PlaceholderSymbolType can only be bound to another type once.",
       );
     }
-    this.reference = Some(to);
+    return new PlaceholderSymbolType({
+      name: this.name,
+      reference: to,
+    });
   }
 
   isBound(): boolean {
