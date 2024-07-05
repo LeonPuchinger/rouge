@@ -287,18 +287,23 @@ export class CompositeSymbolType implements SymbolType {
         return false;
       }
     }
-    // TODO: additional checks beyond id and placeholders should only produce an `InternalError` in case of mismatch
     const thisKeys = Array.from(this.fields.keys());
     const otherKeys = Array.from(other.fields.keys());
     if (thisKeys.length !== otherKeys.length) {
-      return false;
+      throw new InternalError(
+        "Encountered two CompositeSymbolTypes with matching IDs but different amounts of fields.",
+      );
     }
     for (const key of thisKeys) {
       if (!other.fields.has(key)) {
-        return false;
+        throw new InternalError(
+          "Encountered two CompositeSymbolTypes with matching IDs but different names for their fields.",
+        );
       }
       if (other.fields.get(key)?.typeCompatibleWith(this.fields.get(key)!)) {
-        return false;
+        throw new InternalError(
+          "Encountered two CompositeSymbolTypes with matching IDs but at least one type-incompatible field.",
+        );
       }
     }
     return true;
