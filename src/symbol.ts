@@ -1,23 +1,13 @@
 import { AstNode } from "./ast.ts";
 import { StatementsAstNode } from "./features/statement.ts";
-import {
-  CompositeSymbolType,
-  FunctionSymbolType,
-  PrimitiveSymbolType,
-  SymbolType,
-} from "./type.ts";
+import { CompositeSymbolType, FunctionSymbolType, SymbolType } from "./type.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { WithOptionalAttributes } from "./util/type.ts";
 
 // Symbol
 
-interface Symbol {
-  node: Option<AstNode>;
-}
-
-export class RuntimeSymbol<T extends SymbolValue = SymbolValue<unknown>>
-  implements Symbol {
+export class RuntimeSymbol<T extends SymbolValue = SymbolValue<unknown>> {
   node!: Option<AstNode>;
   value!: T;
 
@@ -27,7 +17,7 @@ export class RuntimeSymbol<T extends SymbolValue = SymbolValue<unknown>>
   }
 }
 
-export class StaticSymbol<T extends SymbolType = SymbolType> implements Symbol {
+export class StaticSymbol<T extends SymbolType = SymbolType> {
   node!: Option<AstNode>;
   valueType!: T;
 
@@ -36,6 +26,8 @@ export class StaticSymbol<T extends SymbolType = SymbolType> implements Symbol {
     this.node = Some(params.node);
   }
 }
+
+type Symbol = RuntimeSymbol | StaticSymbol;
 
 // Symbol Value
 
@@ -47,7 +39,7 @@ export interface SymbolValue<T = unknown> {
 }
 
 export class BooleanSymbolValue implements SymbolValue<boolean> {
-  valueType: SymbolType = new PrimitiveSymbolType("Boolean");
+  valueType: SymbolType = new CompositeSymbolType({ id: "Boolean" });
 
   constructor(public value: boolean) {}
 
@@ -61,7 +53,7 @@ export class BooleanSymbolValue implements SymbolValue<boolean> {
 }
 
 export class NumericSymbolValue implements SymbolValue<number> {
-  valueType: SymbolType = new PrimitiveSymbolType("Number");
+  valueType: SymbolType = new CompositeSymbolType({ id: "Number" });
 
   constructor(public value: number) {}
 
@@ -75,7 +67,7 @@ export class NumericSymbolValue implements SymbolValue<number> {
 }
 
 export class StringSymbolValue implements SymbolValue<string> {
-  valueType: SymbolType = new PrimitiveSymbolType("String");
+  valueType: SymbolType = new CompositeSymbolType({ id: "String" });
 
   constructor(public value: string) {}
 
@@ -93,7 +85,7 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
 
   constructor(
     public value: StatementsAstNode,
-    parameterTypes: Record<string, SymbolType>,
+    parameterTypes: Map<string, SymbolType>,
     returnType: SymbolType,
   ) {
     this.valueType = new FunctionSymbolType({
@@ -118,14 +110,19 @@ export class CompositeSymbolValue
   valueType: SymbolType;
   value: Map<string, SymbolValue>;
 
-  constructor(fields: Map<string, [SymbolValue, SymbolType]>) {
+  constructor(params: {
+    fields?: Map<string, [SymbolValue, SymbolType]>;
+    id: string;
+  }) {
+    params.fields ??= new Map();
     this.value = new Map(
-      Array.from(fields, ([name, [value, _type]]) => [name, value]),
+      Array.from(params.fields, ([name, [value, _type]]) => [name, value]),
     );
     this.valueType = new CompositeSymbolType({
-      fields: Object.fromEntries(
-        Array.from(fields, ([name, [_value, type]]) => [name, type]),
+      fields: new Map(
+        Array.from(params.fields, ([name, [_value, type]]) => [name, type]),
       ),
+      id: params.id,
     });
   }
 

@@ -36,7 +36,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    * Generates a composite symbol type of the struct with all its fields.
    */
   generateSymbolType(): SymbolType {
-    const structureType = new CompositeSymbolType({ fields: {} });
+    const structureType = new CompositeSymbolType({ id: this.name.text });
     for (const field of this.fields) {
       const fieldName = field[0].text;
       const fieldType = typeTable.findType(field[1].text);

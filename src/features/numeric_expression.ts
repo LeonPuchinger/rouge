@@ -13,7 +13,7 @@ import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { NumericSymbolValue, SymbolValue } from "../symbol.ts";
-import { PrimitiveSymbolType, SymbolType } from "../type.ts";
+import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError, RuntimeError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
 import { None, Some, Wrapper } from "../util/monad/index.ts";
@@ -42,7 +42,7 @@ class NumericLiteralAstNode implements NumericExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("Number");
+    return new CompositeSymbolType({ id: "Number" });
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -82,7 +82,7 @@ class UnaryNumericExpressionAstNode implements NumericExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("Number");
+    return new CompositeSymbolType({ id: "Number" });
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -157,7 +157,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("Number");
+    return new CompositeSymbolType({ id: "Number" });
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -195,7 +195,7 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
   }
 
   resolveType(): SymbolType {
-    return new PrimitiveSymbolType("Number");
+    return new CompositeSymbolType({ id: "Number" });
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

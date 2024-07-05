@@ -62,9 +62,8 @@ export class AssignmentAstNode implements InterpretableAstNode {
               "The type that was explicitly annotated in the assignment is not compatible with the type of the assigned value.",
             beginHighlight: DummyAstNode.fromToken(annotationName),
             endHighlight: None(),
-            // TODO: allow resolving the names of SymbolTypes (e.g. for this error message)
             messageHighlight:
-              `Type "${annotationName.text}" is incompatible with the type of the value on the right side of the assignment.`,
+              `Type '${resolvedAnnotation.displayName()}' is incompatible with the type '${expressionType.displayName()}' on the right side of the assignment.`,
           }));
         }
       });
