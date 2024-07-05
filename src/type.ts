@@ -5,8 +5,49 @@ import { WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
+interface SymbolTypeMismatchHandler {
+  onIdMismatch?(params: { expected: string; found: string }): void;
+  onFunctionReturnTypeMismatch?(params: {
+    expected: SymbolType;
+    found: SymbolType;
+  }): void;
+  onFunctionParameterCountMismatch?(params: {
+    expected: number;
+    found: number;
+  }): void;
+  onFunctionParameterTypeMismatch?(params: {
+    expected: SymbolType;
+    found: SymbolType;
+    index: number;
+  }): void;
+  onPlaceholderCountMismatch?(params: {
+    expected: number;
+    found: number;
+  }): void;
+  onPlaceholderNameMissing?(params: { expected: string }): void;
+  onPlaceholderTypeMismatch?(
+    params: {
+      expected: SymbolType;
+      found: SymbolType;
+      name: string;
+      index: number;
+    },
+  ): void;
+  onFieldCountMismatch?(params: {
+    expected: number;
+    found: number;
+  }): void;
+  onFieldNameMissing?(params: { expected: string }): void;
+  onFieldTypeMismatch?(
+    params: { expected: SymbolType; found: SymbolType; index: number },
+  ): void;
+}
+
 export interface SymbolType {
-  typeCompatibleWith(other: SymbolType): boolean;
+  typeCompatibleWith(
+    other: SymbolType,
+    mismatchHandler?: SymbolTypeMismatchHandler,
+  ): boolean;
   displayName(): string;
   complete(): boolean;
   fork(bindPlaceholders: Map<string, SymbolType>): SymbolType;
@@ -28,41 +69,92 @@ export class FunctionSymbolType implements SymbolType {
     Object.assign(this, params);
   }
 
-  typeCompatibleWith(other: SymbolType): boolean {
+  /**
+   * Invocations are only realized using positional parameters at this point.
+   * Therefore, comparing the names of parameters is not necessary.
+   */
+  typeCompatibleWith(
+    other: SymbolType,
+    mismatchHandler?: Partial<SymbolTypeMismatchHandler>,
+  ): boolean {
     if (!(other instanceof FunctionSymbolType)) {
+      mismatchHandler?.onIdMismatch?.({
+        expected: this.displayName(),
+        found: other.displayName(),
+      });
       return false;
     }
     if (this.placeholders.size !== other.placeholders.size) {
+      mismatchHandler?.onPlaceholderCountMismatch?.({
+        expected: this.placeholders.size,
+        found: other.placeholders.size,
+      });
       return false;
     }
-    for (const placeholderName of this.placeholders.keys()) {
-      const placeholder = this.placeholders.get(placeholderName)!;
+    const placeholderNames = Array.from(this.placeholders.keys());
+    const placeholderTypes = Array.from(this.placeholders.values());
+    const placeholderIndicies = Array.from(
+      placeholderNames,
+      (_, index) => index,
+    );
+    for (const index of placeholderIndicies) {
+      const placeholderName = placeholderNames[index];
+      const placeholderType = placeholderTypes[index];
       const otherPlaceholder = other.placeholders.get(placeholderName);
       if (otherPlaceholder === undefined) {
+        mismatchHandler?.onPlaceholderNameMissing?.({
+          expected: placeholderType.name,
+        });
         return false;
       }
-      if (placeholder.typeCompatibleWith(otherPlaceholder)) {
+      if (!placeholderType.typeCompatibleWith(otherPlaceholder)) {
+        mismatchHandler?.onPlaceholderTypeMismatch?.({
+          expected: placeholderType,
+          found: otherPlaceholder,
+          name: placeholderName,
+          index: index,
+        });
         return false;
       }
     }
     const matchingReturnTypes = other.returnType
       .typeCompatibleWith(this.returnType);
     if (!matchingReturnTypes) {
+      mismatchHandler?.onFunctionReturnTypeMismatch?.({
+        expected: this.returnType,
+        found: other.returnType,
+      });
       return false;
     }
     const otherParameterNames = Object.keys(other.parameters);
     const thisParameterNames = Object.keys(this.parameters);
     if (otherParameterNames.length !== thisParameterNames.length) {
+      mismatchHandler?.onFunctionParameterCountMismatch?.({
+        expected: thisParameterNames.length,
+        found: otherParameterNames.length,
+      });
       return false;
     }
-    const matchingNames = otherParameterNames.every((name) =>
-      name in thisParameterNames
-    );
-    if (!matchingNames) {
-      return false;
-    }
-    return otherParameterNames.every((name) =>
-      other.parameters.get(name)!.typeCompatibleWith(this.parameters.get(name)!)
+    const thisParameterTypes = Array.from(this.parameters.values());
+    const otherParameterTypes = Array.from(other.parameters.values());
+    return thisParameterTypes.reduce(
+      (previous, current, index) => {
+        const thisType = current;
+        const otherType = otherParameterTypes.at(index)!;
+        const matching = thisType.typeCompatibleWith(otherType);
+        if (!matching) {
+          mismatchHandler?.onFunctionParameterTypeMismatch?.({
+            expected: thisType,
+            found: otherType,
+            index: index,
+          });
+        }
+        if (previous === false) {
+          return false;
+        }
+        return matching;
+      },
+      true,
     );
   }
 
@@ -142,23 +234,56 @@ export class CompositeSymbolType implements SymbolType {
     Object.assign(this, params);
   }
 
-  typeCompatibleWith(other: SymbolType): boolean {
+  typeCompatibleWith(
+    other: SymbolType,
+    mismatchHandler?: SymbolTypeMismatchHandler,
+  ): boolean {
     if (!(other instanceof CompositeSymbolType)) {
+      mismatchHandler?.onIdMismatch?.({
+        expected: this.id,
+        // The only other possible SymbolType is FunctionSymbolType
+        // since PlaceholderSymbolType only delegates to a Composite- or FunctionSymbolType.
+        found: "Function",
+      });
       return false;
     }
     if (this.id !== other.id) {
+      mismatchHandler?.onIdMismatch?.({
+        expected: this.id,
+        found: other.id,
+      });
       return false;
     }
     if (this.placeholders.size !== other.placeholders.size) {
+      mismatchHandler?.onPlaceholderCountMismatch?.({
+        expected: this.placeholders.size,
+        found: other.placeholders.size,
+      });
       return false;
     }
-    for (const placeholderName of this.placeholders.keys()) {
-      const placeholder = this.placeholders.get(placeholderName)!;
+    const placeholderNames = Array.from(this.placeholders.keys());
+    const placeholderTypes = Array.from(this.placeholders.values());
+    const placeholderIndicies = Array.from(
+      placeholderNames,
+      (_, index) => index,
+    );
+    for (const index of placeholderIndicies) {
+      const placeholderName = placeholderNames[index];
+      const placeholderType = placeholderTypes[index];
       const otherPlaceholder = other.placeholders.get(placeholderName);
       if (otherPlaceholder === undefined) {
+        mismatchHandler?.onPlaceholderNameMissing?.({
+          expected: placeholderType.name,
+        });
         return false;
       }
-      if (placeholder.typeCompatibleWith(otherPlaceholder)) {
+      if (!placeholderType.typeCompatibleWith(otherPlaceholder)) {
+        mismatchHandler?.onPlaceholderTypeMismatch?.({
+          expected: placeholderType,
+          found: otherPlaceholder,
+          name: placeholderName,
+          index: index,
+        });
         return false;
       }
     }
@@ -228,9 +353,12 @@ export class PlaceholderSymbolType implements SymbolType {
     this.reference = Some(params.reference);
   }
 
-  typeCompatibleWith(other: SymbolType): boolean {
+  typeCompatibleWith(
+    other: SymbolType,
+    mismatchHandler?: SymbolTypeMismatchHandler,
+  ): boolean {
     return this.reference
-      .map((reference) => reference.typeCompatibleWith(other))
+      .map((reference) => reference.typeCompatibleWith(other, mismatchHandler))
       .unwrapOr(true);
   }
 
