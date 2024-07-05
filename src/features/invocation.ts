@@ -72,9 +72,8 @@ export class InvocationAstNode implements EvaluableAstNode {
       const foundParameterType = foundParameterTypes[index];
       if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
         findings.errors.push(AnalysisError({
-          // TODO: resolve type name and add type names to the error message
           message:
-            "The supplied value has a value that is incompatible with the required type",
+            `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
           beginHighlight: foundParameters[index],
           endHighlight: None(),
         }));
@@ -113,9 +112,8 @@ export class InvocationAstNode implements EvaluableAstNode {
       const foundParameterType = foundFieldTypes[index];
       if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
         findings.errors.push(AnalysisError({
-          // TODO: resolve type name and add type names to the error message
           message:
-            "The supplied value has a value that is incompatible with the required type",
+            `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
           beginHighlight: foundFields[index],
           endHighlight: None(),
         }));
