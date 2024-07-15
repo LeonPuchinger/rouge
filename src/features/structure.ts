@@ -25,7 +25,7 @@ import { Attributes } from "../util/type.ts";
 
 export class StructureDefinitonAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
-  placeholers!: Token<TokenKind>[];
+  placeholders!: Token<TokenKind>[];
   name!: Token<TokenKind>;
   fields!: [Token<TokenKind>, Token<TokenKind>][];
   closingBrace!: Token<TokenKind>;
@@ -139,6 +139,7 @@ export const structureDefinition = apply(
     str<TokenKind>("structure"),
     opt_sc(surround_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(tok(TokenKind.ident)),
+    opt_sc(surround_with_breaking_whitespace(placeholders)),
     seq(
       kright(
         str("{"),
@@ -147,10 +148,10 @@ export const structureDefinition = apply(
       str("}"),
     ),
   ),
-  ([keyword, placeholders, typeName, [fields, closingBrace]]) =>
+  ([keyword, placeholdersA, typeName, placeholdersB, [fields, closingBrace]]) =>
     new StructureDefinitonAstNode({
       keyword: keyword,
-      placeholers: placeholders ?? [],
+      placeholders: [...(placeholdersA ?? []), ...(placeholdersB ?? [])],
       name: typeName,
       fields: fields ?? [],
       closingBrace: closingBrace,
