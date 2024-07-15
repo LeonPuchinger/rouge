@@ -381,7 +381,7 @@ const placeholderNames = kleft(
 
 const placeholders = kmid(
   str<TokenKind>("<"),
-  surround_with_breaking_whitespace(placeholderNames),
+  surround_with_breaking_whitespace(opt(placeholderNames)),
   str<TokenKind>(">"),
 );
 
@@ -414,7 +414,7 @@ const returnType = kright(
 functionDefinition.setPattern(apply(
   seq(
     str<TokenKind>("function"),
-    surround_with_breaking_whitespace(placeholders),
+    opt(surround_with_breaking_whitespace(placeholders)),
     seq(
       kmid(
         surround_with_breaking_whitespace(str("(")),
@@ -436,7 +436,7 @@ functionDefinition.setPattern(apply(
   ]) =>
     new FunctionDefinitionAstNode({
       parameters: parameters ?? [],
-      placeholders: placeholders,
+      placeholders: placeholders ?? [],
       returnType: Some(returnType),
       statements: statements,
       functionKeywordToken: functionKeyword,
