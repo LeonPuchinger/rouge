@@ -46,7 +46,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const expectedParameters = functionSymbol.valueType.parameters;
-    const expectedParameterTypes = Object.values(expectedParameters);
+    const expectedParameterTypes = Array.from(expectedParameters.values());
     const foundParameters = this.parameters;
     const foundParameterTypes = foundParameters
       .map((parameter) => parameter.resolveType());
