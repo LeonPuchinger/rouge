@@ -1,9 +1,11 @@
 import {
   alt_sc,
   apply,
+  kleft,
   kmid,
   kright,
   list_sc,
+  opt,
   opt_sc,
   seq,
   str,
@@ -97,6 +99,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
 
 export class FunctionDefinitionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
+  placeholders!: Token<TokenKind>[];
   returnType!: Option<Token<TokenKind>>;
   statements!: StatementsAstNode;
   functionKeywordToken!: Token<TokenKind>;
@@ -371,6 +374,17 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
 
 /* PARSER */
 
+const placeholderNames = kleft(
+  list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
+  opt(str(",")),
+);
+
+const placeholders = kmid(
+  str<TokenKind>("<"),
+  surround_with_breaking_whitespace(placeholderNames),
+  str<TokenKind>(">"),
+);
+
 export const parameter = apply(
   kouter(
     tok(TokenKind.ident),
@@ -400,6 +414,7 @@ const returnType = kright(
 functionDefinition.setPattern(apply(
   seq(
     str<TokenKind>("function"),
+    surround_with_breaking_whitespace(placeholders),
     seq(
       kmid(
         surround_with_breaking_whitespace(str("(")),
@@ -416,10 +431,12 @@ functionDefinition.setPattern(apply(
   ),
   ([
     functionKeyword,
+    placeholders,
     [parameters, returnType, [_, statements, closingBrace]],
   ]) =>
     new FunctionDefinitionAstNode({
       parameters: parameters ?? [],
+      placeholders: placeholders,
       returnType: Some(returnType),
       statements: statements,
       functionKeywordToken: functionKeyword,
