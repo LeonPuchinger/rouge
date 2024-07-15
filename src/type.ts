@@ -300,7 +300,7 @@ export class CompositeSymbolType implements SymbolType {
           "Encountered two CompositeSymbolTypes with matching IDs but different names for their fields.",
         );
       }
-      if (other.fields.get(key)?.typeCompatibleWith(this.fields.get(key)!)) {
+      if (!other.fields.get(key)?.typeCompatibleWith(this.fields.get(key)!)) {
         throw new InternalError(
           "Encountered two CompositeSymbolTypes with matching IDs but at least one type-incompatible field.",
         );
