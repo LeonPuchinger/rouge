@@ -9,7 +9,7 @@ import {
   seq,
   str,
   tok,
-  Token
+  Token,
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import {
