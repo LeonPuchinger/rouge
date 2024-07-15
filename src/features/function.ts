@@ -5,12 +5,11 @@ import {
   kmid,
   kright,
   list_sc,
-  opt,
   opt_sc,
   seq,
   str,
   tok,
-  Token,
+  Token
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import {
@@ -376,12 +375,12 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
 
 const placeholderNames = kleft(
   list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
-  opt(str(",")),
+  opt_sc(str(",")),
 );
 
 const placeholders = kmid(
   str<TokenKind>("<"),
-  surround_with_breaking_whitespace(opt(placeholderNames)),
+  surround_with_breaking_whitespace(opt_sc(placeholderNames)),
   str<TokenKind>(">"),
 );
 
@@ -414,7 +413,7 @@ const returnType = kright(
 functionDefinition.setPattern(apply(
   seq(
     str<TokenKind>("function"),
-    opt(surround_with_breaking_whitespace(placeholders)),
+    opt_sc(surround_with_breaking_whitespace(placeholders)),
     seq(
       kmid(
         surround_with_breaking_whitespace(str("(")),
