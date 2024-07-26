@@ -12,12 +12,14 @@ import {
   Token,
 } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
-import { AnalysisFindings } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { SymbolType, typeTable } from "../type.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { Option, Some } from "../util/monad/index.ts";
+import { None } from "../util/monad/option.ts";
 import { surround_with_breaking_whitespace } from "../util/parser.ts";
+import { DummyAstNode } from "../util/snippet.ts";
 import { WithOptionalAttributes } from "../util/type.ts";
 
 /* AST NODES */
@@ -46,7 +48,31 @@ export class CompositeTypeNameAstNode
   }
 
   analyze(): AnalysisFindings {
-    throw new Error("Method not implemented.");
+    let findings = AnalysisFindings.empty();
+    const type = typeTable.findType(this.name.text);
+    if (!type.hasValue()) {
+      findings.errors.push(AnalysisError({
+        beginHighlight: DummyAstNode.fromToken(this.name),
+        endHighlight: None(),
+        message: `The type called '${this.name.text}' could not be found.`,
+      }));
+      return findings;
+    }
+    const expectedAmountOfPlaceholders = type.unwrap().placeholders.size;
+    const foundAmountOfPlaceholders = this.placeholders.length;
+    if (expectedAmountOfPlaceholders != foundAmountOfPlaceholders) {
+      findings.errors.push(AnalysisError({
+        beginHighlight: DummyAstNode.fromToken(this.name),
+        endHighlight: None(),
+        message:
+          `The type '${this.name.text}' expected ${expectedAmountOfPlaceholders} placeholders but ${foundAmountOfPlaceholders} were supplied.`,
+      }));
+      return findings;
+    }
+    for (const placeholder of this.placeholders) {
+      findings = AnalysisFindings.merge(findings, placeholder.analyze());
+    }
+    return findings;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
