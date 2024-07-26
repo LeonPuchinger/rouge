@@ -57,12 +57,12 @@ export interface SymbolType {
 }
 
 export class FunctionSymbolType implements SymbolType {
-  parameters!: Map<string, SymbolType>;
+  parameters!: SymbolType[];
   returnType!: SymbolType;
   placeholders!: Map<string, PlaceholderSymbolType>;
 
   constructor(params: {
-    parameters: Map<string, SymbolType>;
+    parameters: SymbolType[];
     returnType: SymbolType;
     placeholders?: Map<string, PlaceholderSymbolType>;
   }) {
@@ -127,21 +127,17 @@ export class FunctionSymbolType implements SymbolType {
       });
       return false;
     }
-    const otherParameterNames = Object.keys(other.parameters);
-    const thisParameterNames = Object.keys(this.parameters);
-    if (otherParameterNames.length !== thisParameterNames.length) {
+    if (other.parameters.length !== this.parameters.length) {
       mismatchHandler?.onFunctionParameterCountMismatch?.({
-        expected: thisParameterNames.length,
-        found: otherParameterNames.length,
+        expected: this.parameters.length,
+        found: other.parameters.length,
       });
       return false;
     }
-    const thisParameterTypes = Array.from(this.parameters.values());
-    const otherParameterTypes = Array.from(other.parameters.values());
-    return thisParameterTypes.reduce(
+    return this.parameters.reduce(
       (previous, current, index) => {
         const thisType = current;
-        const otherType = otherParameterTypes.at(index)!;
+        const otherType = other.parameters.at(index)!;
         const matching = thisType.typeCompatibleWith(otherType);
         if (!matching) {
           mismatchHandler?.onFunctionParameterTypeMismatch?.({

@@ -45,8 +45,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     functionSymbol: StaticSymbol<FunctionSymbolType>,
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
-    const expectedParameters = functionSymbol.valueType.parameters;
-    const expectedParameterTypes = Array.from(expectedParameters.values());
+    const expectedParameterTypes = functionSymbol.valueType.parameters;
     const foundParameters = this.parameters;
     const foundParameterTypes = foundParameters
       .map((parameter) => parameter.resolveType());
@@ -179,8 +178,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     functionSymbol: RuntimeSymbol<FunctionSymbolValue>,
   ): SymbolValue<unknown> {
     runtimeTable.pushScope();
-    const symbolType = functionSymbol.value.valueType as FunctionSymbolType;
-    const parameterNames = Object.keys(symbolType.parameters);
+    const parameterNames = functionSymbol.value.parameterNames;
     for (let index = 0; index < this.parameters.length; index += 1) {
       const parameterName = parameterNames[index];
       const symbolValue = this.parameters[index].evaluate();
