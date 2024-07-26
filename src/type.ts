@@ -44,6 +44,7 @@ interface SymbolTypeMismatchHandler {
 }
 
 export interface SymbolType {
+  placeholders: Map<string, PlaceholderSymbolType>;
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
@@ -354,8 +355,22 @@ export class PlaceholderSymbolType implements SymbolType {
   reference!: Option<SymbolType>;
   name!: string;
 
-  constructor(params: WithOptionalAttributes<PlaceholderSymbolType>) {
+  constructor(
+    // exclude getter/setter properties from constructor invocation
+    params: Omit<WithOptionalAttributes<PlaceholderSymbolType>, "placeholders">,
+  ) {
     this.reference = Some(params.reference);
+  }
+
+  get placeholders(): Map<string, PlaceholderSymbolType> {
+    return this.reference
+      .map((reference) => reference.placeholders)
+      .unwrapOr(new Map());
+  }
+
+  set placeholders(placeholders: Map<string, PlaceholderSymbolType>) {
+    this.reference
+      .then((reference) => reference.placeholders = placeholders);
   }
 
   typeCompatibleWith(
