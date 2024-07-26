@@ -1,6 +1,7 @@
 import {
   alt_sc,
   apply,
+  kright,
   list_sc,
   nil,
   opt_sc,
@@ -24,7 +25,7 @@ import { WithOptionalAttributes } from "../util/type.ts";
 export class CompositeTypeNameAstNode
   implements Partial<EvaluableAstNode<void>> {
   name!: Token<TokenKind>;
-  //TODO: placeholders
+  placeholders!: CompositeTypeNameAstNode[];
   closingBracket!: Option<Token<TokenKind>>;
 
   constructor(params: WithOptionalAttributes<CompositeTypeNameAstNode>) {
@@ -36,8 +37,11 @@ export class CompositeTypeNameAstNode
     const type = typeTable
       .findType(this.name.text)
       .unwrapOrThrow(UnresolvableSymbolTypeError());
-    //TODO: actually bind types
-    const boundTypes = new Map();
+    const boundTypes = new Map<string, SymbolType>();
+    const placeholderNames = Array.from(type.placeholders.keys());
+    for (const [index, name] of placeholderNames.entries()) {
+      boundTypes.set(name, this.placeholders.at(index)!.resolveType());
+    }
     return type.fork(boundTypes);
   }
 
@@ -52,26 +56,29 @@ export class CompositeTypeNameAstNode
 
 /* PARSER */
 
-export const typeName = rule<TokenKind, SymbolType>();
+export const typeName = rule<TokenKind, CompositeTypeNameAstNode>();
+
+const placeholderList = kright(
+  surround_with_breaking_whitespace(str("<")),
+  seq(
+    list_sc(
+      typeName,
+      surround_with_breaking_whitespace(str(",")),
+    ),
+    surround_with_breaking_whitespace(str(">")),
+  ),
+);
 
 const compositeTypeName = apply(
   seq(
     tok(TokenKind.ident),
-    opt_sc(
-      seq(
-        surround_with_breaking_whitespace(str("<")),
-        list_sc(
-          tok(TokenKind.ident),
-          surround_with_breaking_whitespace(str(",")),
-        ),
-        surround_with_breaking_whitespace(str(">")),
-      ),
-    ),
+    opt_sc(placeholderList),
   ),
-  ([name, placeholderNotation]) =>
+  ([name, placeholders]) =>
     new CompositeTypeNameAstNode({
       name: name,
-      closingBracket: placeholderNotation?.[2],
+      placeholders: placeholders?.[0] ?? [],
+      closingBracket: placeholders?.[1],
     }),
 );
 
@@ -80,6 +87,6 @@ const functionTypeName = nil();
 typeName.setPattern(
   alt_sc(
     compositeTypeName,
-    functionTypeName,
+    compositeTypeName, // TODO: replace w/ functionTypeName
   ),
 );
