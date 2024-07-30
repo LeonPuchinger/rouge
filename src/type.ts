@@ -1,23 +1,23 @@
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { surroundWithIfNonEmpty } from "./util/string.ts";
-import { WithOptionalAttributes } from "./util/type.ts";
+import { Attributes, WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
 interface SymbolTypeMismatchHandler {
   onIdMismatch?(params: { expected: string; found: string }): void;
   onFunctionReturnTypeMismatch?(params: {
-    expected: SymbolType;
-    found: SymbolType;
+    expected: PrintableSymbolType;
+    found: PrintableSymbolType;
   }): void;
   onFunctionParameterCountMismatch?(params: {
     expected: number;
     found: number;
   }): void;
   onFunctionParameterTypeMismatch?(params: {
-    expected: SymbolType;
-    found: SymbolType;
+    expected: PrintableSymbolType;
+    found: PrintableSymbolType;
     index: number;
   }): void;
   onPlaceholderCountMismatch?(params: {
@@ -27,9 +27,8 @@ interface SymbolTypeMismatchHandler {
   onPlaceholderNameMissing?(params: { expected: string }): void;
   onPlaceholderTypeMismatch?(
     params: {
-      expected: SymbolType;
-      found: SymbolType;
-      name: string;
+      expected: PrintableSymbolType;
+      found: PrintableSymbolType;
       index: number;
     },
   ): void;
@@ -39,12 +38,17 @@ interface SymbolTypeMismatchHandler {
   }): void;
   onFieldNameMissing?(params: { expected: string }): void;
   onFieldTypeMismatch?(
-    params: { expected: SymbolType; found: SymbolType; index: number },
+    params: {
+      expected: PrintableSymbolType;
+      found: PrintableSymbolType;
+      index: number;
+    },
   ): void;
 }
 
+type PrintableSymbolType = SymbolType | DescriptiveSymbolType;
+
 export interface SymbolType {
-  placeholders: Map<string, PlaceholderSymbolType>;
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
@@ -57,12 +61,12 @@ export interface SymbolType {
 }
 
 export class FunctionSymbolType implements SymbolType {
-  parameters!: SymbolType[];
+  parameters!: Map<string, SymbolType>;
   returnType!: SymbolType;
   placeholders!: Map<string, PlaceholderSymbolType>;
 
   constructor(params: {
-    parameters: SymbolType[];
+    parameters: Map<string, SymbolType>;
     returnType: SymbolType;
     placeholders?: Map<string, PlaceholderSymbolType>;
   }) {
@@ -112,7 +116,6 @@ export class FunctionSymbolType implements SymbolType {
         mismatchHandler?.onPlaceholderTypeMismatch?.({
           expected: placeholderType,
           found: otherPlaceholder,
-          name: placeholderName,
           index: index,
         });
         return false;
@@ -127,17 +130,21 @@ export class FunctionSymbolType implements SymbolType {
       });
       return false;
     }
-    if (other.parameters.length !== this.parameters.length) {
+    const otherParameterNames = Object.keys(other.parameters);
+    const thisParameterNames = Object.keys(this.parameters);
+    if (otherParameterNames.length !== thisParameterNames.length) {
       mismatchHandler?.onFunctionParameterCountMismatch?.({
-        expected: this.parameters.length,
-        found: other.parameters.length,
+        expected: thisParameterNames.length,
+        found: otherParameterNames.length,
       });
       return false;
     }
-    return this.parameters.reduce(
+    const thisParameterTypes = Array.from(this.parameters.values());
+    const otherParameterTypes = Array.from(other.parameters.values());
+    return thisParameterTypes.reduce(
       (previous, current, index) => {
         const thisType = current;
-        const otherType = other.parameters.at(index)!;
+        const otherType = otherParameterTypes.at(index)!;
         const matching = thisType.typeCompatibleWith(otherType);
         if (!matching) {
           mismatchHandler?.onFunctionParameterTypeMismatch?.({
@@ -278,7 +285,6 @@ export class CompositeSymbolType implements SymbolType {
         mismatchHandler?.onPlaceholderTypeMismatch?.({
           expected: placeholderType,
           found: otherPlaceholder,
-          name: placeholderName,
           index: index,
         });
         return false;
@@ -307,8 +313,8 @@ export class CompositeSymbolType implements SymbolType {
   }
 
   displayName(): string {
-    const placeholders = Array.from(this.placeholders.entries())
-      .map(([_name, type]) => type.displayName())
+    const placeholders = Array.from(this.placeholders.values())
+      .map((type) => type.displayName())
       .join(" , ");
     return `${this.id}${surroundWithIfNonEmpty(placeholders, "<", ">")}`;
   }
@@ -351,22 +357,8 @@ export class PlaceholderSymbolType implements SymbolType {
   reference!: Option<SymbolType>;
   name!: string;
 
-  constructor(
-    // exclude getter/setter properties from constructor invocation
-    params: Omit<WithOptionalAttributes<PlaceholderSymbolType>, "placeholders">,
-  ) {
+  constructor(params: WithOptionalAttributes<PlaceholderSymbolType>) {
     this.reference = Some(params.reference);
-  }
-
-  get placeholders(): Map<string, PlaceholderSymbolType> {
-    return this.reference
-      .map((reference) => reference.placeholders)
-      .unwrapOr(new Map());
-  }
-
-  set placeholders(placeholders: Map<string, PlaceholderSymbolType>) {
-    this.reference
-      .then((reference) => reference.placeholders = placeholders);
   }
 
   typeCompatibleWith(
@@ -422,6 +414,162 @@ export class PlaceholderSymbolType implements SymbolType {
 
   isBound(): boolean {
     return this.reference.hasValue();
+  }
+}
+
+interface DescriptiveSymbolType {
+  typeCompatibleWith(
+    other: SymbolType,
+    mismatchHandler?: SymbolTypeMismatchHandler,
+  ): boolean;
+  displayName(): string;
+  // TODO: add the ability to update SymbolTypes from DescriptiveSymbolTypes once type hierarchies are introduced
+}
+
+export class DescriptiveCompositeSymbolType implements DescriptiveSymbolType {
+  id!: string;
+  placeholders!: DescriptiveSymbolType[];
+
+  constructor(params: Attributes<DescriptiveCompositeSymbolType>) {
+    Object.assign(this, params);
+  }
+
+  typeCompatibleWith(
+    other: SymbolType,
+    mismatchHandler?: SymbolTypeMismatchHandler,
+  ): boolean {
+    if (!(other instanceof CompositeSymbolType)) {
+      mismatchHandler?.onIdMismatch?.({
+        expected: this.id,
+        // The only other possible SymbolType is FunctionSymbolType
+        // since PlaceholderSymbolType only delegates to a Composite- or FunctionSymbolType.
+        found: "Function",
+      });
+      return false;
+    }
+    if (this.id !== other.id) {
+      mismatchHandler?.onIdMismatch?.({
+        expected: this.id,
+        found: other.id,
+      });
+      return false;
+    }
+    const otherPlaceholders = Array.from(other.placeholders.values());
+    if (otherPlaceholders.length !== this.placeholders.length) {
+      mismatchHandler?.onPlaceholderCountMismatch?.({
+        expected: this.placeholders.length,
+        found: otherPlaceholders.length,
+      });
+      return false;
+    }
+    for (let index = 0; index < otherPlaceholders.length; index += 1) {
+      const otherPlaceholder = otherPlaceholders.at(index)!;
+      const thisPlaceholder = this.placeholders.at(index)!;
+      if (
+        !thisPlaceholder.typeCompatibleWith(otherPlaceholder, mismatchHandler)
+      ) {
+        mismatchHandler?.onPlaceholderTypeMismatch?.({
+          expected: thisPlaceholder,
+          found: otherPlaceholder,
+          index: index,
+        });
+        return false;
+      }
+    }
+    return true;
+  }
+
+  displayName(): string {
+    const placeholderList = this.placeholders
+      .map((type) => type.displayName())
+      .join(" , ");
+    return `${this.id}${surroundWithIfNonEmpty(placeholderList, "<", ">")}`;
+  }
+}
+
+export class DescriptiveFunctionSymbolType implements DescriptiveSymbolType {
+  parameterTypes!: DescriptiveSymbolType[];
+  returnType!: DescriptiveSymbolType;
+  placeholders!: DescriptiveSymbolType[];
+
+  constructor(params: Attributes<DescriptiveCompositeSymbolType>) {
+    Object.assign(this, params);
+  }
+
+  typeCompatibleWith(
+    other: SymbolType,
+    mismatchHandler?: SymbolTypeMismatchHandler,
+  ): boolean {
+    if (!(other instanceof FunctionSymbolType)) {
+      mismatchHandler?.onIdMismatch?.({
+        expected: this.displayName(),
+        found: other.displayName(),
+      });
+      return false;
+    }
+    if (!this.returnType.typeCompatibleWith(other.returnType)) {
+      mismatchHandler?.onFunctionReturnTypeMismatch?.({
+        expected: this.returnType,
+        found: this.returnType,
+      });
+      return false;
+    }
+    const otherParameters = Array.from(other.parameters.values());
+    if (otherParameters.length !== this.parameterTypes.length) {
+      mismatchHandler?.onFunctionParameterCountMismatch?.({
+        expected: this.placeholders.length,
+        found: otherParameters.length,
+      });
+      return false;
+    }
+    for (let index = 0; index < otherParameters.length; index += 1) {
+      const otherParameter = otherParameters.at(index)!;
+      const thisParameter = this.parameterTypes.at(index)!;
+      if (!thisParameter.typeCompatibleWith(otherParameter, mismatchHandler)) {
+        mismatchHandler?.onFunctionParameterTypeMismatch?.({
+          expected: thisParameter,
+          found: otherParameter,
+          index: index,
+        });
+        return false;
+      }
+    }
+    const otherPlaceholders = Array.from(other.placeholders.values());
+    if (otherPlaceholders.length !== this.placeholders.length) {
+      mismatchHandler?.onPlaceholderCountMismatch?.({
+        expected: this.placeholders.length,
+        found: otherPlaceholders.length,
+      });
+      return false;
+    }
+    for (let index = 0; index < otherPlaceholders.length; index += 1) {
+      const otherPlaceholder = otherPlaceholders.at(index)!;
+      const thisPlaceholder = this.placeholders.at(index)!;
+      if (
+        !thisPlaceholder.typeCompatibleWith(otherPlaceholder, mismatchHandler)
+      ) {
+        mismatchHandler?.onPlaceholderTypeMismatch?.({
+          expected: thisPlaceholder,
+          found: otherPlaceholder,
+          index: index,
+        });
+        return false;
+      }
+    }
+    return true;
+  }
+
+  displayName(): string {
+    const placeholdersList = this.placeholders
+      .map((type) => type.displayName())
+      .join(" , ");
+    const parameters = this.parameterTypes
+      .map((type) => `${name}: ${type.displayName()}`)
+      .join(" , ");
+    const returnType = this.returnType.displayName();
+    return `Function${
+      surroundWithIfNonEmpty(placeholdersList, "<", ">")
+    }(${parameters}) -> ${returnType}`;
   }
 }
 

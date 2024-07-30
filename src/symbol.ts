@@ -82,7 +82,6 @@ export class StringSymbolValue implements SymbolValue<string> {
 
 export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
   valueType: SymbolType;
-  parameterNames: string[];
 
   constructor(
     public value: StatementsAstNode,
@@ -90,10 +89,9 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
     returnType: SymbolType,
   ) {
     this.valueType = new FunctionSymbolType({
-      parameters: Array.from(parameterTypes.values()),
+      parameters: parameterTypes,
       returnType: returnType,
     });
-    this.parameterNames = Array.from(parameterTypes.keys());
   }
 
   map(
