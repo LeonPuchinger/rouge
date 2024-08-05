@@ -14,18 +14,77 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { SymbolType, typeTable } from "../type.ts";
-import { UnresolvableSymbolTypeError } from "../util/error.ts";
+import {
+  DescriptiveCompositeSymbolType,
+  DescriptiveFunctionSymbolType,
+  DescriptiveSymbolType,
+  typeTable,
+} from "../type.ts";
 import { Option, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import { surround_with_breaking_whitespace } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
-import { WithOptionalAttributes } from "../util/type.ts";
+import { nothingType, WithOptionalAttributes } from "../util/type.ts";
 
 /* AST NODES */
 
+type TypeNameAstNode = FunctionTypeNameAstNode | CompositeTypeNameAstNode;
+
+export class FunctionTypeNameAstNode
+  implements Partial<EvaluableAstNode<void, DescriptiveSymbolType>> {
+  name!: Token<TokenKind>;
+  parameters!: TypeNameAstNode[];
+  placeholders!: TypeNameAstNode[];
+  returnType!: Option<TypeNameAstNode>;
+  closingBracket!: Option<Token<TokenKind>>;
+
+  constructor(params: WithOptionalAttributes<FunctionTypeNameAstNode>) {
+    Object.assign(this, params);
+    this.closingBracket = Some(params.closingBracket);
+  }
+
+  resolveType(): DescriptiveSymbolType {
+    const parameterTypes = this.parameters.map((parameter) =>
+      parameter.resolveType()
+    );
+    const placeholderTypes = this.placeholders.map((placeholder) =>
+      placeholder.resolveType()
+    );
+    const returnType = this.returnType.map((node) => node.resolveType())
+      .unwrapOr(nothingType);
+    return new DescriptiveFunctionSymbolType({
+      parameterTypes: parameterTypes,
+      placeholderTypes: placeholderTypes,
+      returnType: returnType,
+    });
+  }
+
+  analyze(): AnalysisFindings {
+    let findings = AnalysisFindings.empty();
+    this.returnType.then((type) => {
+      findings = AnalysisFindings.merge(findings, type.analyze());
+    });
+    for (const parameter of this.parameters) {
+      findings = AnalysisFindings.merge(findings, parameter.analyze());
+    }
+    return findings;
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [
+      this.name,
+      this.returnType
+        .map((type) => type.tokenRange()[1])
+        .unwrapOr(
+          this.closingBracket
+            .unwrapOr(this.name),
+        ),
+    ];
+  }
+}
+
 export class CompositeTypeNameAstNode
-  implements Partial<EvaluableAstNode<void>> {
+  implements Partial<EvaluableAstNode<void, DescriptiveSymbolType>> {
   name!: Token<TokenKind>;
   placeholders!: CompositeTypeNameAstNode[];
   closingBracket!: Option<Token<TokenKind>>;
@@ -35,16 +94,14 @@ export class CompositeTypeNameAstNode
     this.closingBracket = Some(params.closingBracket);
   }
 
-  resolveType(): SymbolType {
-    const type = typeTable
-      .findType(this.name.text)
-      .unwrapOrThrow(UnresolvableSymbolTypeError());
-    const boundTypes = new Map<string, SymbolType>();
-    const placeholderNames = Array.from(type.placeholders.keys());
-    for (const [index, name] of placeholderNames.entries()) {
-      boundTypes.set(name, this.placeholders.at(index)!.resolveType());
-    }
-    return type.fork(boundTypes);
+  resolveType(): DescriptiveSymbolType {
+    const placeholderTypes = this.placeholders.map((placeholder) =>
+      placeholder.resolveType()
+    );
+    return new DescriptiveCompositeSymbolType({
+      id: this.name.text,
+      placeholders: placeholderTypes,
+    });
   }
 
   analyze(): AnalysisFindings {
@@ -82,7 +139,7 @@ export class CompositeTypeNameAstNode
 
 /* PARSER */
 
-export const typeName = rule<TokenKind, CompositeTypeNameAstNode>();
+export const typeName = rule<TokenKind, TypeNameAstNode>();
 
 const placeholderList = kright(
   surround_with_breaking_whitespace(str("<")),

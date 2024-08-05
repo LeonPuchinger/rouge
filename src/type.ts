@@ -417,7 +417,7 @@ export class PlaceholderSymbolType implements SymbolType {
   }
 }
 
-interface DescriptiveSymbolType {
+export interface DescriptiveSymbolType {
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
@@ -490,9 +490,9 @@ export class DescriptiveCompositeSymbolType implements DescriptiveSymbolType {
 export class DescriptiveFunctionSymbolType implements DescriptiveSymbolType {
   parameterTypes!: DescriptiveSymbolType[];
   returnType!: DescriptiveSymbolType;
-  placeholders!: DescriptiveSymbolType[];
+  placeholderTypes!: DescriptiveSymbolType[];
 
-  constructor(params: Attributes<DescriptiveCompositeSymbolType>) {
+  constructor(params: Attributes<DescriptiveFunctionSymbolType>) {
     Object.assign(this, params);
   }
 
@@ -517,7 +517,7 @@ export class DescriptiveFunctionSymbolType implements DescriptiveSymbolType {
     const otherParameters = Array.from(other.parameters.values());
     if (otherParameters.length !== this.parameterTypes.length) {
       mismatchHandler?.onFunctionParameterCountMismatch?.({
-        expected: this.placeholders.length,
+        expected: this.placeholderTypes.length,
         found: otherParameters.length,
       });
       return false;
@@ -535,16 +535,16 @@ export class DescriptiveFunctionSymbolType implements DescriptiveSymbolType {
       }
     }
     const otherPlaceholders = Array.from(other.placeholders.values());
-    if (otherPlaceholders.length !== this.placeholders.length) {
+    if (otherPlaceholders.length !== this.placeholderTypes.length) {
       mismatchHandler?.onPlaceholderCountMismatch?.({
-        expected: this.placeholders.length,
+        expected: this.placeholderTypes.length,
         found: otherPlaceholders.length,
       });
       return false;
     }
     for (let index = 0; index < otherPlaceholders.length; index += 1) {
       const otherPlaceholder = otherPlaceholders.at(index)!;
-      const thisPlaceholder = this.placeholders.at(index)!;
+      const thisPlaceholder = this.placeholderTypes.at(index)!;
       if (
         !thisPlaceholder.typeCompatibleWith(otherPlaceholder, mismatchHandler)
       ) {
@@ -560,7 +560,7 @@ export class DescriptiveFunctionSymbolType implements DescriptiveSymbolType {
   }
 
   displayName(): string {
-    const placeholdersList = this.placeholders
+    const placeholdersList = this.placeholderTypes
       .map((type) => type.displayName())
       .join(" , ");
     const parameters = this.parameterTypes
