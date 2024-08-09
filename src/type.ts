@@ -464,6 +464,9 @@ export class DescriptiveCompositeSymbolType implements DescriptiveSymbolType {
     }
     for (let index = 0; index < otherPlaceholders.length; index += 1) {
       const otherPlaceholder = otherPlaceholders.at(index)!;
+      if (!otherPlaceholder.isBound()) {
+        continue;
+      }
       const thisPlaceholder = this.placeholders.at(index)!;
       if (
         !thisPlaceholder.typeCompatibleWith(otherPlaceholder, mismatchHandler)

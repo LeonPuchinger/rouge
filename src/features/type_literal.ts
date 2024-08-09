@@ -3,7 +3,6 @@ import {
   apply,
   kright,
   list_sc,
-  nil,
   opt_sc,
   rule,
   seq,
@@ -22,23 +21,27 @@ import {
 } from "../type.ts";
 import { Option, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
-import { surround_with_breaking_whitespace } from "../util/parser.ts";
+import {
+  opt_sc_default,
+  surround_with_breaking_whitespace,
+} from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { nothingType, WithOptionalAttributes } from "../util/type.ts";
 
 /* AST NODES */
 
-type TypeNameAstNode = FunctionTypeNameAstNode | CompositeTypeNameAstNode;
+type TypeNameAstNode = FunctionTypeLiteralAstNode | CompositeTypeLiteralAstNode;
 
-export class FunctionTypeNameAstNode
+export class FunctionTypeLiteralAstNode
   implements Partial<EvaluableAstNode<void, DescriptiveSymbolType>> {
   name!: Token<TokenKind>;
   parameters!: TypeNameAstNode[];
   placeholders!: TypeNameAstNode[];
   returnType!: Option<TypeNameAstNode>;
   closingBracket!: Option<Token<TokenKind>>;
+  closingParenthesis!: Option<Token<TokenKind>>;
 
-  constructor(params: WithOptionalAttributes<FunctionTypeNameAstNode>) {
+  constructor(params: WithOptionalAttributes<FunctionTypeLiteralAstNode>) {
     Object.assign(this, params);
     this.closingBracket = Some(params.closingBracket);
   }
@@ -67,6 +70,9 @@ export class FunctionTypeNameAstNode
     for (const parameter of this.parameters) {
       findings = AnalysisFindings.merge(findings, parameter.analyze());
     }
+    for (const placeholder of this.placeholders) {
+      findings = AnalysisFindings.merge(findings, placeholder.analyze());
+    }
     return findings;
   }
 
@@ -76,20 +82,23 @@ export class FunctionTypeNameAstNode
       this.returnType
         .map((type) => type.tokenRange()[1])
         .unwrapOr(
-          this.closingBracket
-            .unwrapOr(this.name),
+          this.closingParenthesis
+            .unwrapOr(
+              this.closingBracket
+                .unwrapOr(this.name),
+            ),
         ),
     ];
   }
 }
 
-export class CompositeTypeNameAstNode
+export class CompositeTypeLiteralAstNode
   implements Partial<EvaluableAstNode<void, DescriptiveSymbolType>> {
   name!: Token<TokenKind>;
-  placeholders!: CompositeTypeNameAstNode[];
+  placeholders!: CompositeTypeLiteralAstNode[];
   closingBracket!: Option<Token<TokenKind>>;
 
-  constructor(params: WithOptionalAttributes<CompositeTypeNameAstNode>) {
+  constructor(params: WithOptionalAttributes<CompositeTypeLiteralAstNode>) {
     Object.assign(this, params);
     this.closingBracket = Some(params.closingBracket);
   }
@@ -115,17 +124,17 @@ export class CompositeTypeNameAstNode
       }));
       return findings;
     }
-    const expectedAmountOfPlaceholders = type.unwrap().placeholders.size;
-    const foundAmountOfPlaceholders = this.placeholders.length;
-    if (expectedAmountOfPlaceholders != foundAmountOfPlaceholders) {
-      findings.errors.push(AnalysisError({
-        beginHighlight: DummyAstNode.fromToken(this.name),
-        endHighlight: None(),
-        message:
-          `The type '${this.name.text}' expected ${expectedAmountOfPlaceholders} placeholders but ${foundAmountOfPlaceholders} were supplied.`,
-      }));
-      return findings;
-    }
+    const descriptiveType = this.resolveType();
+    descriptiveType.typeCompatibleWith(type.unwrap(), {
+      onPlaceholderCountMismatch: ({ expected, found }) => {
+        findings.errors.push(AnalysisError({
+          beginHighlight: DummyAstNode.fromToken(this.name),
+          endHighlight: None(),
+          message:
+            `The type '${this.name.text}' expected ${expected} placeholders but ${found} were supplied.`,
+        }));
+      },
+    });
     for (const placeholder of this.placeholders) {
       findings = AnalysisFindings.merge(findings, placeholder.analyze());
     }
@@ -139,37 +148,103 @@ export class CompositeTypeNameAstNode
 
 /* PARSER */
 
-export const typeName = rule<TokenKind, TypeNameAstNode>();
+export const typeLiteral = rule<TokenKind, TypeNameAstNode>();
 
-const placeholderList = kright(
-  surround_with_breaking_whitespace(str("<")),
-  seq(
+const typeLiterals = apply(
+  opt_sc(
     list_sc(
-      typeName,
+      typeLiteral,
       surround_with_breaking_whitespace(str(",")),
     ),
-    surround_with_breaking_whitespace(str(">")),
   ),
+  (literals) => literals ?? [],
 );
 
 const compositeTypeName = apply(
   seq(
     tok(TokenKind.ident),
-    opt_sc(placeholderList),
+    opt_sc_default<
+      [
+        Token<TokenKind> | undefined,
+        TypeNameAstNode[],
+        Token<TokenKind> | undefined,
+      ]
+    >(
+      seq(
+        str("<"),
+        typeLiterals,
+        str(">"),
+      ),
+      [undefined, [], undefined],
+    ),
   ),
-  ([name, placeholders]) =>
-    new CompositeTypeNameAstNode({
+  ([name, [_openingBracket, placeholders, closingBracket]]) =>
+    new CompositeTypeLiteralAstNode({
       name: name,
-      placeholders: placeholders?.[0] ?? [],
-      closingBracket: placeholders?.[1],
+      placeholders: placeholders,
+      closingBracket: closingBracket,
     }),
 );
 
-const functionTypeName = nil();
+const functionTypeLiteral = apply(
+  seq(
+    str<TokenKind>("Function"),
+    opt_sc_default<
+      [
+        Token<TokenKind> | undefined,
+        TypeNameAstNode[],
+        Token<TokenKind> | undefined,
+      ]
+    >(
+      seq(
+        str("<"),
+        typeLiterals,
+        str(">"),
+      ),
+      [undefined, [], undefined],
+    ),
+    opt_sc_default<
+      [
+        Token<TokenKind> | undefined,
+        TypeNameAstNode[],
+        Token<TokenKind> | undefined,
+      ]
+    >(
+      seq(
+        str("("),
+        typeLiterals,
+        str(")"),
+      ),
+      [undefined, [], undefined],
+    ),
+    opt_sc(
+      kright(
+        str("->"),
+        typeLiteral,
+      ),
+    ),
+  ),
+  (
+    [
+      keyword,
+      [_openingBracket, placeholderList, closingBracket],
+      [_openingParenthesis, parameterList, closingParenthesis],
+      returnType,
+    ],
+  ) =>
+    new FunctionTypeLiteralAstNode({
+      name: keyword,
+      placeholders: placeholderList ?? [],
+      parameters: parameterList ?? [],
+      returnType: returnType,
+      closingBracket: closingBracket,
+      closingParenthesis: closingParenthesis,
+    }),
+);
 
-typeName.setPattern(
+typeLiteral.setPattern(
   alt_sc(
     compositeTypeName,
-    compositeTypeName, // TODO: replace w/ functionTypeName
+    functionTypeLiteral,
   ),
 );
