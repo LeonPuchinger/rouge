@@ -23,6 +23,7 @@ import { Option, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import {
   opt_sc_default,
+  starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
@@ -171,9 +172,9 @@ const compositeTypeName = apply(
       ]
     >(
       seq(
-        str("<"),
+        surround_with_breaking_whitespace(str("<")),
         typeLiterals,
-        str(">"),
+        starts_with_breaking_whitespace(str(">")),
       ),
       [undefined, [], undefined],
     ),
@@ -197,9 +198,9 @@ const functionTypeLiteral = apply(
       ]
     >(
       seq(
-        str("<"),
+        surround_with_breaking_whitespace(str("<")),
         typeLiterals,
-        str(">"),
+        starts_with_breaking_whitespace(str(">")),
       ),
       [undefined, [], undefined],
     ),
@@ -211,15 +212,15 @@ const functionTypeLiteral = apply(
       ]
     >(
       seq(
-        str("("),
+        surround_with_breaking_whitespace(str("(")),
         typeLiterals,
-        str(")"),
+        starts_with_breaking_whitespace(str(")")),
       ),
       [undefined, [], undefined],
     ),
     opt_sc(
       kright(
-        str("->"),
+        surround_with_breaking_whitespace(str("->")),
         typeLiteral,
       ),
     ),
