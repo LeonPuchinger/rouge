@@ -493,7 +493,6 @@ export class DescriptiveCompositeSymbolType implements DescriptiveSymbolType {
 export class DescriptiveFunctionSymbolType implements DescriptiveSymbolType {
   parameterTypes!: DescriptiveSymbolType[];
   returnType!: DescriptiveSymbolType;
-  placeholderTypes!: DescriptiveSymbolType[];
 
   constructor(params: Attributes<DescriptiveFunctionSymbolType>) {
     Object.assign(this, params);
@@ -520,7 +519,7 @@ export class DescriptiveFunctionSymbolType implements DescriptiveSymbolType {
     const otherParameters = Array.from(other.parameters.values());
     if (otherParameters.length !== this.parameterTypes.length) {
       mismatchHandler?.onFunctionParameterCountMismatch?.({
-        expected: this.placeholderTypes.length,
+        expected: this.parameterTypes.length,
         found: otherParameters.length,
       });
       return false;
@@ -537,42 +536,15 @@ export class DescriptiveFunctionSymbolType implements DescriptiveSymbolType {
         return false;
       }
     }
-    const otherPlaceholders = Array.from(other.placeholders.values());
-    if (otherPlaceholders.length !== this.placeholderTypes.length) {
-      mismatchHandler?.onPlaceholderCountMismatch?.({
-        expected: this.placeholderTypes.length,
-        found: otherPlaceholders.length,
-      });
-      return false;
-    }
-    for (let index = 0; index < otherPlaceholders.length; index += 1) {
-      const otherPlaceholder = otherPlaceholders.at(index)!;
-      const thisPlaceholder = this.placeholderTypes.at(index)!;
-      if (
-        !thisPlaceholder.typeCompatibleWith(otherPlaceholder, mismatchHandler)
-      ) {
-        mismatchHandler?.onPlaceholderTypeMismatch?.({
-          expected: thisPlaceholder,
-          found: otherPlaceholder,
-          index: index,
-        });
-        return false;
-      }
-    }
     return true;
   }
 
   displayName(): string {
-    const placeholdersList = this.placeholderTypes
-      .map((type) => type.displayName())
-      .join(" , ");
     const parameters = this.parameterTypes
       .map((type) => `${name}: ${type.displayName()}`)
       .join(" , ");
     const returnType = this.returnType.displayName();
-    return `Function${
-      surroundWithIfNonEmpty(placeholdersList, "<", ">")
-    }(${parameters}) -> ${returnType}`;
+    return `Function(${parameters}) -> ${returnType}`;
   }
 }
 

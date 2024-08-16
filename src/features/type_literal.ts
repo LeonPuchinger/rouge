@@ -31,34 +31,31 @@ import { nothingType, WithOptionalAttributes } from "../util/type.ts";
 
 /* AST NODES */
 
-type TypeNameAstNode = FunctionTypeLiteralAstNode | CompositeTypeLiteralAstNode;
+type TypeLiteralAstNode =
+  | FunctionTypeLiteralAstNode
+  | CompositeTypeLiteralAstNode;
 
 export class FunctionTypeLiteralAstNode
   implements Partial<EvaluableAstNode<void, DescriptiveSymbolType>> {
   name!: Token<TokenKind>;
-  parameters!: TypeNameAstNode[];
-  placeholders!: TypeNameAstNode[];
-  returnType!: Option<TypeNameAstNode>;
-  closingBracket!: Option<Token<TokenKind>>;
+  parameters!: TypeLiteralAstNode[];
+  returnType!: Option<TypeLiteralAstNode>;
   closingParenthesis!: Option<Token<TokenKind>>;
 
   constructor(params: WithOptionalAttributes<FunctionTypeLiteralAstNode>) {
     Object.assign(this, params);
-    this.closingBracket = Some(params.closingBracket);
+    this.returnType = Some(params.returnType);
+    this.closingParenthesis = Some(params.closingParenthesis);
   }
 
   resolveType(): DescriptiveSymbolType {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
-    const placeholderTypes = this.placeholders.map((placeholder) =>
-      placeholder.resolveType()
-    );
     const returnType = this.returnType.map((node) => node.resolveType())
       .unwrapOr(nothingType);
     return new DescriptiveFunctionSymbolType({
       parameterTypes: parameterTypes,
-      placeholderTypes: placeholderTypes,
       returnType: returnType,
     });
   }
@@ -71,9 +68,6 @@ export class FunctionTypeLiteralAstNode
     for (const parameter of this.parameters) {
       findings = AnalysisFindings.merge(findings, parameter.analyze());
     }
-    for (const placeholder of this.placeholders) {
-      findings = AnalysisFindings.merge(findings, placeholder.analyze());
-    }
     return findings;
   }
 
@@ -83,11 +77,7 @@ export class FunctionTypeLiteralAstNode
       this.returnType
         .map((type) => type.tokenRange()[1])
         .unwrapOr(
-          this.closingParenthesis
-            .unwrapOr(
-              this.closingBracket
-                .unwrapOr(this.name),
-            ),
+          this.closingParenthesis.unwrapOr(this.name),
         ),
     ];
   }
@@ -96,7 +86,7 @@ export class FunctionTypeLiteralAstNode
 export class CompositeTypeLiteralAstNode
   implements Partial<EvaluableAstNode<void, DescriptiveSymbolType>> {
   name!: Token<TokenKind>;
-  placeholders!: CompositeTypeLiteralAstNode[];
+  placeholders!: TypeLiteralAstNode[];
   closingBracket!: Option<Token<TokenKind>>;
 
   constructor(params: WithOptionalAttributes<CompositeTypeLiteralAstNode>) {
@@ -149,7 +139,7 @@ export class CompositeTypeLiteralAstNode
 
 /* PARSER */
 
-export const typeLiteral = rule<TokenKind, TypeNameAstNode>();
+export const typeLiteral = rule<TokenKind, TypeLiteralAstNode>();
 
 const typeLiterals = apply(
   opt_sc(
@@ -167,7 +157,7 @@ const compositeTypeName = apply(
     opt_sc_default<
       [
         Token<TokenKind> | undefined,
-        TypeNameAstNode[],
+        TypeLiteralAstNode[],
         Token<TokenKind> | undefined,
       ]
     >(
@@ -193,21 +183,7 @@ const functionTypeLiteral = apply(
     opt_sc_default<
       [
         Token<TokenKind> | undefined,
-        TypeNameAstNode[],
-        Token<TokenKind> | undefined,
-      ]
-    >(
-      seq(
-        surround_with_breaking_whitespace(str("<")),
-        typeLiterals,
-        starts_with_breaking_whitespace(str(">")),
-      ),
-      [undefined, [], undefined],
-    ),
-    opt_sc_default<
-      [
-        Token<TokenKind> | undefined,
-        TypeNameAstNode[],
+        TypeLiteralAstNode[],
         Token<TokenKind> | undefined,
       ]
     >(
@@ -228,17 +204,14 @@ const functionTypeLiteral = apply(
   (
     [
       keyword,
-      [_openingBracket, placeholderList, closingBracket],
       [_openingParenthesis, parameterList, closingParenthesis],
       returnType,
     ],
   ) =>
     new FunctionTypeLiteralAstNode({
       name: keyword,
-      placeholders: placeholderList ?? [],
       parameters: parameterList ?? [],
       returnType: returnType,
-      closingBracket: closingBracket,
       closingParenthesis: closingParenthesis,
     }),
 );
