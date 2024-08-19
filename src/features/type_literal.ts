@@ -218,7 +218,7 @@ const functionTypeLiteral = apply(
 
 typeLiteral.setPattern(
   alt_sc(
-    compositeTypeName,
     functionTypeLiteral,
+    compositeTypeName,
   ),
 );
