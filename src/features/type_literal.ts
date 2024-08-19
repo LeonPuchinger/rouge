@@ -13,12 +13,7 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  DescriptiveCompositeSymbolType,
-  DescriptiveFunctionSymbolType,
-  DescriptiveSymbolType,
-  typeTable,
-} from "../type.ts";
+import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
 import { Option, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import {
@@ -35,8 +30,7 @@ type TypeLiteralAstNode =
   | FunctionTypeLiteralAstNode
   | CompositeTypeLiteralAstNode;
 
-export class FunctionTypeLiteralAstNode
-  implements Partial<EvaluableAstNode<void, DescriptiveSymbolType>> {
+export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
   name!: Token<TokenKind>;
   parameters!: TypeLiteralAstNode[];
   returnType!: Option<TypeLiteralAstNode>;
@@ -48,13 +42,13 @@ export class FunctionTypeLiteralAstNode
     this.closingParenthesis = Some(params.closingParenthesis);
   }
 
-  resolveType(): DescriptiveSymbolType {
+  resolveType(): SymbolType {
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
     const returnType = this.returnType.map((node) => node.resolveType())
       .unwrapOr(nothingType);
-    return new DescriptiveFunctionSymbolType({
+    return new FunctionSymbolType({
       parameterTypes: parameterTypes,
       returnType: returnType,
     });
@@ -83,8 +77,7 @@ export class FunctionTypeLiteralAstNode
   }
 }
 
-export class CompositeTypeLiteralAstNode
-  implements Partial<EvaluableAstNode<void, DescriptiveSymbolType>> {
+export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
   name!: Token<TokenKind>;
   placeholders!: TypeLiteralAstNode[];
   closingBracket!: Option<Token<TokenKind>>;
@@ -92,16 +85,6 @@ export class CompositeTypeLiteralAstNode
   constructor(params: WithOptionalAttributes<CompositeTypeLiteralAstNode>) {
     Object.assign(this, params);
     this.closingBracket = Some(params.closingBracket);
-  }
-
-  resolveType(): DescriptiveSymbolType {
-    const placeholderTypes = this.placeholders.map((placeholder) =>
-      placeholder.resolveType()
-    );
-    return new DescriptiveCompositeSymbolType({
-      id: this.name.text,
-      placeholders: placeholderTypes,
-    });
   }
 
   analyze(): AnalysisFindings {
@@ -130,6 +113,16 @@ export class CompositeTypeLiteralAstNode
       findings = AnalysisFindings.merge(findings, placeholder.analyze());
     }
     return findings;
+  }
+
+  resolveType(): SymbolType {
+    const placeholderTypes = this.placeholders
+      .map((placeholder) => placeholder.resolveType());
+    const resolvedType = typeTable
+      .findType(this.name.text)
+      .unwrap()
+      .fork(placeholderTypes);
+    return resolvedType;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

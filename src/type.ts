@@ -8,16 +8,16 @@ type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 interface SymbolTypeMismatchHandler {
   onIdMismatch?(params: { expected: string; found: string }): void;
   onFunctionReturnTypeMismatch?(params: {
-    expected: PrintableSymbolType;
-    found: PrintableSymbolType;
+    expected: SymbolType;
+    found: SymbolType;
   }): void;
   onFunctionParameterCountMismatch?(params: {
     expected: number;
     found: number;
   }): void;
   onFunctionParameterTypeMismatch?(params: {
-    expected: PrintableSymbolType;
-    found: PrintableSymbolType;
+    expected: SymbolType;
+    found: SymbolType;
     index: number;
   }): void;
   onPlaceholderCountMismatch?(params: {
@@ -27,8 +27,8 @@ interface SymbolTypeMismatchHandler {
   onPlaceholderNameMissing?(params: { expected: string }): void;
   onPlaceholderTypeMismatch?(
     params: {
-      expected: PrintableSymbolType;
-      found: PrintableSymbolType;
+      expected: SymbolType;
+      found: SymbolType;
       index: number;
     },
   ): void;
@@ -39,14 +39,12 @@ interface SymbolTypeMismatchHandler {
   onFieldNameMissing?(params: { expected: string }): void;
   onFieldTypeMismatch?(
     params: {
-      expected: PrintableSymbolType;
-      found: PrintableSymbolType;
+      expected: SymbolType;
+      found: SymbolType;
       index: number;
     },
   ): void;
 }
-
-type PrintableSymbolType = SymbolType | DescriptiveSymbolType;
 
 export interface SymbolType {
   typeCompatibleWith(
