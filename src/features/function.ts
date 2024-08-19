@@ -251,15 +251,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    const parameterTypes: Map<string, SymbolType> = new Map();
-    for (const parameter of this.parameters) {
-      parameterTypes.set(parameter.name.text, parameter.resolveType());
-    }
+    const parameterTypes = this.parameters.map((parameter) =>
+      parameter.resolveType()
+    );
     const returnType = this.returnType
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
     return new FunctionSymbolType({
-      parameters: parameterTypes,
+      parameterTypes: parameterTypes,
       returnType: returnType,
     });
   }

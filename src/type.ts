@@ -61,16 +61,10 @@ export interface SymbolType {
 }
 
 export class FunctionSymbolType implements SymbolType {
-  parameters!: Map<string, SymbolType>;
+  parameterTypes!: SymbolType[];
   returnType!: SymbolType;
-  placeholders!: Map<string, PlaceholderSymbolType>;
 
-  constructor(params: {
-    parameters: Map<string, SymbolType>;
-    returnType: SymbolType;
-    placeholders?: Map<string, PlaceholderSymbolType>;
-  }) {
-    params.placeholders ??= new Map();
+  constructor(params: Attributes<FunctionSymbolType>) {
     Object.assign(this, params);
   }
 
@@ -89,38 +83,6 @@ export class FunctionSymbolType implements SymbolType {
       });
       return false;
     }
-    if (this.placeholders.size !== other.placeholders.size) {
-      mismatchHandler?.onPlaceholderCountMismatch?.({
-        expected: this.placeholders.size,
-        found: other.placeholders.size,
-      });
-      return false;
-    }
-    const placeholderNames = Array.from(this.placeholders.keys());
-    const placeholderTypes = Array.from(this.placeholders.values());
-    const placeholderIndicies = Array.from(
-      placeholderNames,
-      (_, index) => index,
-    );
-    for (const index of placeholderIndicies) {
-      const placeholderName = placeholderNames[index];
-      const placeholderType = placeholderTypes[index];
-      const otherPlaceholder = other.placeholders.get(placeholderName);
-      if (otherPlaceholder === undefined) {
-        mismatchHandler?.onPlaceholderNameMissing?.({
-          expected: placeholderType.name,
-        });
-        return false;
-      }
-      if (!placeholderType.typeCompatibleWith(otherPlaceholder)) {
-        mismatchHandler?.onPlaceholderTypeMismatch?.({
-          expected: placeholderType,
-          found: otherPlaceholder,
-          index: index,
-        });
-        return false;
-      }
-    }
     const matchingReturnTypes = other.returnType
       .typeCompatibleWith(this.returnType);
     if (!matchingReturnTypes) {
@@ -130,21 +92,17 @@ export class FunctionSymbolType implements SymbolType {
       });
       return false;
     }
-    const otherParameterNames = Object.keys(other.parameters);
-    const thisParameterNames = Object.keys(this.parameters);
-    if (otherParameterNames.length !== thisParameterNames.length) {
+    if (other.parameterTypes.length !== this.parameterTypes.length) {
       mismatchHandler?.onFunctionParameterCountMismatch?.({
-        expected: thisParameterNames.length,
-        found: otherParameterNames.length,
+        expected: this.parameterTypes.length,
+        found: other.parameterTypes.length,
       });
       return false;
     }
-    const thisParameterTypes = Array.from(this.parameters.values());
-    const otherParameterTypes = Array.from(other.parameters.values());
-    return thisParameterTypes.reduce(
+    return this.parameterTypes.reduce(
       (previous, current, index) => {
         const thisType = current;
-        const otherType = otherParameterTypes.at(index)!;
+        const otherType = other.parameterTypes.at(index)!;
         const matching = thisType.typeCompatibleWith(otherType);
         if (!matching) {
           mismatchHandler?.onFunctionParameterTypeMismatch?.({
@@ -163,42 +121,24 @@ export class FunctionSymbolType implements SymbolType {
   }
 
   displayName(): string {
-    const placeholders = Array.from(this.placeholders.entries())
-      .map(([_name, type]) => type.displayName())
-      .join(" , ");
-    const parameters = Array.from(this.parameters.entries())
-      .map(([name, type]) => `${name}: ${type.displayName()}`)
+    const parameters = this.parameterTypes
+      .map((type) => type.displayName())
       .join(" , ");
     const returnType = this.returnType.displayName();
-    return `Function${
-      surroundWithIfNonEmpty(placeholders, "<", ">")
-    }(${parameters}) -> ${returnType}`;
+    return `Function(${parameters}) -> ${returnType}`;
   }
 
   complete(): boolean {
-    return Array.from(this.placeholders.entries())
-      .map(([_name, type]) => type.complete())
+    return this.parameterTypes
+      .map((type) => type.complete())
       .every((entry) => entry === true);
   }
 
-  fork(bindPlaceholders?: Map<string, SymbolType>): FunctionSymbolType {
-    bindPlaceholders ??= new Map();
+  fork(_bindPlaceholders?: Map<string, SymbolType>): FunctionSymbolType {
     const copy = new FunctionSymbolType({
-      parameters: this.parameters,
+      parameterTypes: this.parameterTypes,
       returnType: this.returnType,
-      placeholders: new Map(),
     });
-    for (const [name, placeholder] of this.placeholders) {
-      if (name in bindPlaceholders) {
-        const boundPlaceholder = new PlaceholderSymbolType({
-          name: name,
-          reference: copy.placeholders.get(name),
-        });
-        copy.placeholders.set(name, boundPlaceholder);
-      } else {
-        copy.placeholders.set(name, placeholder);
-      }
-    }
     return copy;
   }
 
