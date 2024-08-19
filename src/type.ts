@@ -55,7 +55,7 @@ export interface SymbolType {
   ): boolean;
   displayName(): string;
   complete(): boolean;
-  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType;
+  fork(): SymbolType;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
   isFunction(): boolean;
 }
@@ -134,7 +134,7 @@ export class FunctionSymbolType implements SymbolType {
       .every((entry) => entry === true);
   }
 
-  fork(_bindPlaceholders?: Map<string, SymbolType>): FunctionSymbolType {
+  fork(): FunctionSymbolType {
     const copy = new FunctionSymbolType({
       parameterTypes: this.parameterTypes,
       returnType: this.returnType,
@@ -266,23 +266,12 @@ export class CompositeSymbolType implements SymbolType {
       .every((entry) => entry === true);
   }
 
-  fork(bindPlaceholders?: Map<string, SymbolType>): CompositeSymbolType {
-    bindPlaceholders ??= new Map();
+  fork(): CompositeSymbolType {
     const copy = new CompositeSymbolType({
       id: this.id,
       fields: this.fields,
-      placeholders: new Map(),
+      placeholders: this.placeholders,
     });
-    for (const [name, placeholder] of this.placeholders) {
-      if (name in bindPlaceholders) {
-        copy.placeholders.set(
-          name,
-          placeholder.bind(bindPlaceholders.get(name)!),
-        );
-      } else {
-        copy.placeholders.set(name, placeholder);
-      }
-    }
     return copy;
   }
 
@@ -324,11 +313,10 @@ export class PlaceholderSymbolType implements SymbolType {
       .unwrapOr(false);
   }
 
-  fork(bindPlaceholders?: Map<string, SymbolType>): SymbolType {
-    bindPlaceholders ??= new Map();
+  fork(): SymbolType {
     return this.reference
-      .map((type) => type.fork(bindPlaceholders))
-      .unwrapOr(this);
+      .map((type) => type.fork())
+      .unwrapOr(new PlaceholderSymbolType({ name: this.name }));
   }
 
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
