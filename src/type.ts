@@ -181,7 +181,8 @@ export class FunctionSymbolType implements SymbolType {
       .every((entry) => entry === true);
   }
 
-  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType {
+  fork(bindPlaceholders?: Map<string, SymbolType>): FunctionSymbolType {
+    bindPlaceholders ??= new Map();
     const copy = new FunctionSymbolType({
       parameters: this.parameters,
       returnType: this.returnType,
@@ -325,7 +326,8 @@ export class CompositeSymbolType implements SymbolType {
       .every((entry) => entry === true);
   }
 
-  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType {
+  fork(bindPlaceholders?: Map<string, SymbolType>): CompositeSymbolType {
+    bindPlaceholders ??= new Map();
     const copy = new CompositeSymbolType({
       id: this.id,
       fields: this.fields,
@@ -382,7 +384,8 @@ export class PlaceholderSymbolType implements SymbolType {
       .unwrapOr(false);
   }
 
-  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType {
+  fork(bindPlaceholders?: Map<string, SymbolType>): SymbolType {
+    bindPlaceholders ??= new Map();
     return this.reference
       .map((type) => type.fork(bindPlaceholders))
       .unwrapOr(this);
