@@ -133,11 +133,10 @@ export class FunctionSymbolType implements SymbolType {
   }
 
   fork(_bindPlaceholders?: SymbolType[]): FunctionSymbolType {
-    const copy = new FunctionSymbolType({
-      parameterTypes: this.parameterTypes,
-      returnType: this.returnType,
+    return new FunctionSymbolType({
+      parameterTypes: this.parameterTypes.map((type) => type.fork()),
+      returnType: this.returnType.fork(),
     });
-    return copy;
   }
 
   isPrimitive(): boolean {
@@ -274,9 +273,12 @@ export class CompositeSymbolType implements SymbolType {
     bindPlaceholders ??= [];
     const copy = new CompositeSymbolType({
       id: this.id,
-      fields: this.fields,
+      fields: new Map(),
       placeholders: new Map(),
     });
+    for (const [fieldName, field] of this.fields) {
+      copy.fields.set(fieldName, field.fork());
+    }
     const placeholderNames = Array.from(this.placeholders.keys());
     bindPlaceholders.forEach((bindTo, index) => {
       const placeholderName = placeholderNames.at(index)!;
@@ -326,9 +328,14 @@ export class PlaceholderSymbolType implements SymbolType {
 
   fork(bindPlaceholders?: SymbolType[]): SymbolType {
     bindPlaceholders ??= [];
-    return this.reference
-      .map((type) => type.fork(bindPlaceholders))
-      .unwrapOr(this);
+    const forkedReference = this.reference
+      .map((reference) => reference.fork(bindPlaceholders));
+    return new PlaceholderSymbolType({
+      name: this.name,
+      reference: forkedReference.hasValue()
+        ? forkedReference.unwrap()
+        : undefined,
+    });
   }
 
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
