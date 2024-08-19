@@ -55,7 +55,7 @@ export interface SymbolType {
   ): boolean;
   displayName(): string;
   complete(): boolean;
-  fork(bindPlaceholders: Map<string, SymbolType>): SymbolType;
+  fork(bindPlaceholders?: SymbolType[]): SymbolType;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
   isFunction(): boolean;
 }
@@ -134,7 +134,7 @@ export class FunctionSymbolType implements SymbolType {
       .every((entry) => entry === true);
   }
 
-  fork(_bindPlaceholders?: Map<string, SymbolType>): FunctionSymbolType {
+  fork(_bindPlaceholders?: SymbolType[]): FunctionSymbolType {
     const copy = new FunctionSymbolType({
       parameterTypes: this.parameterTypes,
       returnType: this.returnType,
@@ -266,23 +266,25 @@ export class CompositeSymbolType implements SymbolType {
       .every((entry) => entry === true);
   }
 
-  fork(bindPlaceholders?: Map<string, SymbolType>): CompositeSymbolType {
-    bindPlaceholders ??= new Map();
+  fork(bindPlaceholders?: SymbolType[]): CompositeSymbolType {
+    if (bindPlaceholders && bindPlaceholders.length > this.placeholders.size) {
+      throw new InternalError(
+        "Tried to bind more placeholders on a type than available.",
+        `Available: ${this.placeholders.size}, Supplied: ${bindPlaceholders.length}.`,
+      );
+    }
+    bindPlaceholders ??= [];
     const copy = new CompositeSymbolType({
       id: this.id,
       fields: this.fields,
       placeholders: new Map(),
     });
-    for (const [name, placeholder] of this.placeholders) {
-      if (name in bindPlaceholders) {
-        copy.placeholders.set(
-          name,
-          placeholder.bind(bindPlaceholders.get(name)!),
-        );
-      } else {
-        copy.placeholders.set(name, placeholder);
-      }
-    }
+    const placeholderNames = Array.from(this.placeholders.keys());
+    bindPlaceholders.forEach((bindTo, index) => {
+      const placeholderName = placeholderNames.at(index)!;
+      const placeholder = this.placeholders.get(placeholderName)!;
+      placeholder.bind(bindTo);
+    });
     return copy;
   }
 
@@ -324,8 +326,8 @@ export class PlaceholderSymbolType implements SymbolType {
       .unwrapOr(false);
   }
 
-  fork(bindPlaceholders?: Map<string, SymbolType>): SymbolType {
-    bindPlaceholders ??= new Map();
+  fork(bindPlaceholders?: SymbolType[]): SymbolType {
+    bindPlaceholders ??= [];
     return this.reference
       .map((type) => type.fork(bindPlaceholders))
       .unwrapOr(this);
