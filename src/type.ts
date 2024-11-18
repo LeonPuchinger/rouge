@@ -1,4 +1,5 @@
 import { InternalError } from "./util/error.ts";
+import { globalAutoincrement } from "./util/increment.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { surroundWithIfNonEmpty } from "./util/string.ts";
 import { Attributes, WithOptionalAttributes } from "./util/type.ts";
@@ -364,6 +365,65 @@ export class PlaceholderSymbolType implements SymbolType {
 
   isBound(): boolean {
     return this.reference.hasValue();
+  }
+}
+
+/**
+ * A SymbolType that is only used during type comparisons of other SymbolTypes.
+ * This SymbolType contains an index that that is uniquely assigned to each instance during its instantiation.
+ * When two instances of this type are compared, they are considered equal in case their indices are equal.
+ * The only way two instances can have the same index is when one instance is forked.
+ *
+ * Usually, when two types are compared and one of them is a placeholder, the placeholder is bound to the other type.
+ * However, this approach cannot be used when both types are placeholders, in which case a `UniqueSymbolType` is used.
+ * Consider the following two function types that are being compared, where `T` and `Y` are placeholders.
+ * (It should be noted that the notation of the function types is used for demonstration purposes only
+ * and is not syntactically valid in the language.)
+ *
+ * A: `Function(T) -> T`
+ * B: `Function(Y) -> Y`
+ *
+ * During the type comparison, `T` and `Y` are` bound to the same instance of `UniqueSymbolType` when they are first encountered.
+ * The next time either one of the placeholders are encountered, the bound instance is used for comparison.
+ * In the above example, the comparison of the return types would yield `true` since both `T` and `Y` are bound to the same instance of `UniqueSymbolType`.
+ */
+export class UniqueSymbolType implements SymbolType {
+  index!: number;
+
+  constructor() {
+    this.index = globalAutoincrement();
+  }
+
+  typeCompatibleWith(
+    other: SymbolType,
+    _mismatchHandler?: SymbolTypeMismatchHandler,
+  ): boolean {
+    if (!(other instanceof UniqueSymbolType)) {
+      return false;
+    }
+    return this.index === other.index;
+  }
+
+  displayName(): string {
+    return `UniqueSymbolType(${this.index})`;
+  }
+
+  complete(): boolean {
+    return true;
+  }
+
+  fork(_bindPlaceholders?: SymbolType[]): SymbolType {
+    const copy = new UniqueSymbolType();
+    copy.index = this.index;
+    return copy;
+  }
+
+  isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
+    return false;
+  }
+
+  isFunction(): boolean {
+    return false;
   }
 }
 
