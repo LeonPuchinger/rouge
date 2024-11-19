@@ -54,6 +54,7 @@ export interface SymbolType {
   ): boolean;
   displayName(): string;
   complete(): boolean;
+  bound(): boolean;
   fork(bindPlaceholders?: SymbolType[]): SymbolType;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
   isFunction(): boolean;
@@ -131,6 +132,10 @@ export class FunctionSymbolType implements SymbolType {
     return this.parameterTypes
       .map((type) => type.complete())
       .every((entry) => entry === true);
+  }
+
+  bound(): boolean {
+    return true;
   }
 
   fork(_bindPlaceholders?: SymbolType[]): FunctionSymbolType {
@@ -264,6 +269,10 @@ export class CompositeSymbolType implements SymbolType {
       .every((entry) => entry === true);
   }
 
+  bound(): boolean {
+    return true;
+  }
+
   fork(bindPlaceholders?: SymbolType[]): CompositeSymbolType {
     if (bindPlaceholders && bindPlaceholders.length > this.placeholders.size) {
       throw new InternalError(
@@ -325,6 +334,10 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.reference
       .map((reference) => reference.complete())
       .unwrapOr(false);
+  }
+
+  bound(): boolean {
+    return this.reference.hasValue();
   }
 
   fork(bindPlaceholders?: SymbolType[]): SymbolType {
@@ -409,6 +422,10 @@ export class UniqueSymbolType implements SymbolType {
   }
 
   complete(): boolean {
+    return true;
+  }
+
+  bound(): boolean {
     return true;
   }
 
