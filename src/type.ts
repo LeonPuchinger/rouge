@@ -350,7 +350,7 @@ export class PlaceholderSymbolType implements SymbolType {
   }
 
   bind(to: SymbolType) {
-    if (this.isBound()) {
+    if (this.bound()) {
       throw new InternalError(
         "A PlaceholderSymbolType can only be bound to another type once.",
       );
@@ -383,10 +383,6 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.reference
       .map((reference) => reference.isFunction())
       .unwrapOr(false);
-  }
-
-  isBound(): boolean {
-    return this.reference.hasValue();
   }
 }
 
