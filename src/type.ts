@@ -265,17 +265,15 @@ export class CompositeSymbolType implements SymbolType {
   ): boolean {
     if (!(other instanceof CompositeSymbolType)) {
       mismatchHandler?.onIdMismatch?.({
-        expected: this.id,
-        // The only other possible SymbolType is FunctionSymbolType
-        // since PlaceholderSymbolType only delegates to a Composite- or FunctionSymbolType.
-        found: "Function",
+        expected: this.displayName(),
+        found: other.displayName()
       });
       return false;
     }
     if (this.id !== other.id) {
       mismatchHandler?.onIdMismatch?.({
-        expected: this.id,
-        found: other.id,
+        expected: this.displayName(),
+        found: other.displayName(),
       });
       return false;
     }
