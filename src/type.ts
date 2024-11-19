@@ -152,8 +152,8 @@ export class FunctionSymbolType implements SymbolType {
         [...other.parameterTypes, other.returnType],
       )
     ) {
-      const selfParameterBound = selfParameter.bound()
-      const otherParameterBound = otherParameter.bound()
+      const selfParameterBound = selfParameter.bound();
+      const otherParameterBound = otherParameter.bound();
       if (!selfParameterBound && otherParameterBound) {
         selfParameter.bind(otherParameter);
       }
