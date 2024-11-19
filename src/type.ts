@@ -6,6 +6,12 @@ import { Attributes, WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
+/**
+ * A type that allows callers of type comparisons to gain insight into why the type comparison failed.
+ * For instance, this can be handy when the caller needs to provide a reason for the type mismatch in an error message.
+ * An instance of this type can be passed to the type comparions.
+ * The caller only needs to implement the callbacks that are of initerest to them.
+ */
 interface SymbolTypeMismatchHandler {
   onIdMismatch?(params: { expected: string; found: string }): void;
   onFunctionReturnTypeMismatch?(params: {
