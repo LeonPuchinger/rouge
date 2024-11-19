@@ -401,8 +401,11 @@ export class PlaceholderSymbolType implements SymbolType {
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean {
     return this.reference
-      .map((reference) => reference.typeCompatibleWith(other, mismatchHandler))
-      .unwrapOr(true);
+      .map((reference) =>
+        reference == other ||
+        reference.typeCompatibleWith(other, mismatchHandler)
+      )
+      .unwrapOr(false);
   }
 
   displayName(): string {
