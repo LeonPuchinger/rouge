@@ -174,7 +174,7 @@ export class FunctionSymbolType implements SymbolType {
   }
 
   complete(): boolean {
-    return this.parameterTypes
+    return [...this.parameterTypes, this.returnType]
       .map((type) => type.complete())
       .every((entry) => entry === true);
   }
