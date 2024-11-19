@@ -2,6 +2,7 @@ import {
   alt,
   apply,
   kleft,
+  kmid,
   kright,
   list_sc,
   opt_sc,
@@ -24,6 +25,7 @@ import { Attributes } from "../util/type.ts";
 
 export class StructureDefinitonAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
+  placeholders!: Token<TokenKind>[];
   name!: Token<TokenKind>;
   fields!: [Token<TokenKind>, Token<TokenKind>][];
   closingBrace!: Token<TokenKind>;
@@ -102,6 +104,17 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
 
 /* PARSER */
 
+const placeholderNames = kleft(
+  list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
+  opt_sc(str(",")),
+);
+
+const placeholders = kmid(
+  str<TokenKind>("<"),
+  surround_with_breaking_whitespace(opt_sc(placeholderNames)),
+  str<TokenKind>(">"),
+);
+
 const field = kouter(
   tok(TokenKind.ident),
   str(":"),
@@ -124,7 +137,9 @@ const fields = kleft(
 export const structureDefinition = apply(
   seq(
     str<TokenKind>("structure"),
+    opt_sc(surround_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(tok(TokenKind.ident)),
+    opt_sc(surround_with_breaking_whitespace(placeholders)),
     seq(
       kright(
         str("{"),
@@ -133,9 +148,10 @@ export const structureDefinition = apply(
       str("}"),
     ),
   ),
-  ([keyword, typeName, [fields, closingBrace]]) =>
+  ([keyword, placeholdersA, typeName, placeholdersB, [fields, closingBrace]]) =>
     new StructureDefinitonAstNode({
       keyword: keyword,
+      placeholders: [...(placeholdersA ?? []), ...(placeholdersB ?? [])],
       name: typeName,
       fields: fields ?? [],
       closingBrace: closingBrace,

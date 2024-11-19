@@ -35,7 +35,6 @@ export interface SymbolValue<T = unknown> {
   valueType: SymbolType;
   value: T;
   map(fn: (value: T) => T): SymbolValue<T>;
-  typeCompatibleWith(other: SymbolValue<unknown>): boolean;
 }
 
 export class BooleanSymbolValue implements SymbolValue<boolean> {
@@ -45,10 +44,6 @@ export class BooleanSymbolValue implements SymbolValue<boolean> {
 
   map(fn: (value: boolean) => boolean): SymbolValue<boolean> {
     return new BooleanSymbolValue(fn(this.value));
-  }
-
-  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
-    return other.typeCompatibleWith(this);
   }
 }
 
@@ -60,10 +55,6 @@ export class NumericSymbolValue implements SymbolValue<number> {
   map(fn: (value: number) => number): SymbolValue<number> {
     return new NumericSymbolValue(fn(this.value));
   }
-
-  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
-    return other.typeCompatibleWith(this);
-  }
 }
 
 export class StringSymbolValue implements SymbolValue<string> {
@@ -74,14 +65,11 @@ export class StringSymbolValue implements SymbolValue<string> {
   map(fn: (value: string) => string): SymbolValue<string> {
     return new StringSymbolValue(fn(this.value));
   }
-
-  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
-    return other.typeCompatibleWith(this);
-  }
 }
 
 export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
   valueType: SymbolType;
+  parameterNames: string[];
 
   constructor(
     public value: StatementsAstNode,
@@ -89,19 +77,16 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
     returnType: SymbolType,
   ) {
     this.valueType = new FunctionSymbolType({
-      parameters: parameterTypes,
+      parameterTypes: Array.from(parameterTypes.values()),
       returnType: returnType,
     });
+    this.parameterNames = Array.from(parameterTypes.keys());
   }
 
   map(
     fn: (value: StatementsAstNode) => StatementsAstNode,
   ): SymbolValue<StatementsAstNode> {
     return { ...this, value: fn(this.value) };
-  }
-
-  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
-    return other.typeCompatibleWith(this);
   }
 }
 
@@ -130,10 +115,6 @@ export class CompositeSymbolValue
     fn: (value: Map<string, SymbolValue>) => Map<string, SymbolValue>,
   ): SymbolValue<Map<string, SymbolValue>> {
     return { ...this, value: fn(this.value) };
-  }
-
-  typeCompatibleWith(other: SymbolValue<unknown>): boolean {
-    return other.typeCompatibleWith(this);
   }
 }
 

@@ -1,6 +1,7 @@
 import {
   alt_sc,
   apply,
+  kleft,
   kmid,
   kright,
   list_sc,
@@ -97,6 +98,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
 
 export class FunctionDefinitionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
+  placeholders!: Token<TokenKind>[];
   returnType!: Option<Token<TokenKind>>;
   statements!: StatementsAstNode;
   functionKeywordToken!: Token<TokenKind>;
@@ -249,15 +251,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    const parameterTypes: Map<string, SymbolType> = new Map();
-    for (const parameter of this.parameters) {
-      parameterTypes.set(parameter.name.text, parameter.resolveType());
-    }
+    const parameterTypes = this.parameters.map((parameter) =>
+      parameter.resolveType()
+    );
     const returnType = this.returnType
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
     return new FunctionSymbolType({
-      parameters: parameterTypes,
+      parameterTypes: parameterTypes,
       returnType: returnType,
     });
   }
@@ -371,6 +372,17 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
 
 /* PARSER */
 
+const placeholderNames = kleft(
+  list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
+  opt_sc(str(",")),
+);
+
+const placeholders = kmid(
+  str<TokenKind>("<"),
+  surround_with_breaking_whitespace(opt_sc(placeholderNames)),
+  str<TokenKind>(">"),
+);
+
 export const parameter = apply(
   kouter(
     tok(TokenKind.ident),
@@ -400,6 +412,7 @@ const returnType = kright(
 functionDefinition.setPattern(apply(
   seq(
     str<TokenKind>("function"),
+    opt_sc(surround_with_breaking_whitespace(placeholders)),
     seq(
       kmid(
         surround_with_breaking_whitespace(str("(")),
@@ -416,10 +429,12 @@ functionDefinition.setPattern(apply(
   ),
   ([
     functionKeyword,
+    placeholders,
     [parameters, returnType, [_, statements, closingBrace]],
   ]) =>
     new FunctionDefinitionAstNode({
       parameters: parameters ?? [],
+      placeholders: placeholders ?? [],
       returnType: Some(returnType),
       statements: statements,
       functionKeywordToken: functionKeyword,

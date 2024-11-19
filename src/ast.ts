@@ -30,7 +30,7 @@ export interface AstNode {
  * This type of AST node is primarily used for expressions, which evaluate to a result.
  * In rare cases, the execution can produce side effects, however most of the time, the result should just be returned.
  */
-export interface EvaluableAstNode<R = SymbolValue<unknown>> extends AstNode {
+export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType> extends AstNode {
   /**
    * Executes the content of the AST node while yielding a result.
    */
@@ -44,7 +44,7 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>> extends AstNode {
    * Even though implementations of `resolveType` can assume that `analyze` has been called already,
    * an `InternalError` should still be thrown in case `analyze` has not been called and type resolving fails.
    */
-  resolveType(): SymbolType;
+  resolveType(): S;
 }
 
 /**

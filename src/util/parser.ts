@@ -7,7 +7,7 @@ import {
   Parser,
   rep_sc,
   seq,
-  tok
+  tok,
 } from "typescript-parsec";
 import { TokenKind } from "../lexer.ts";
 
@@ -146,5 +146,18 @@ export function surround_with_breaking_whitespace<T>(
     opt_sc(tok(TokenKind.breakingWhitespace)),
     p,
     opt_sc(tok(TokenKind.breakingWhitespace)),
+  );
+}
+
+/**
+ * Like `opt_sc(p)` from `typescript-parsec` but allows specifying a default value in case p fails.
+ */
+export function opt_sc_default<T>(
+  p: Parser<TokenKind, T>,
+  defaultValue: T,
+): Parser<TokenKind, T> {
+  return apply(
+    opt_sc(p),
+    (result) => result ?? defaultValue,
   );
 }

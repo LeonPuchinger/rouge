@@ -57,3 +57,14 @@ Array.prototype.first = function <T>(): T {
 Array.prototype.last = function <T>(): T {
   return this.slice(-1).at(0);
 };
+
+/**
+ * Combines two arrays into a new array so that each entry in the new array
+ * contains a tuple of the two corresponding values of the input arrays as well as an index.
+ * The size of the new array equals the size of the shorter input array.
+ */
+export function zip<T, U>(a: T[], b: U[]): [T, U, number][] {
+  const shortestArrayLength = Math.min(a.length, b.length);
+  const trimmedA = a.slice(0, shortestArrayLength);
+  return trimmedA.map((item, index) => [item, b[index], index]);
+}
