@@ -55,6 +55,7 @@ export interface SymbolType {
   displayName(): string;
   complete(): boolean;
   bound(): boolean;
+  bind(to: SymbolType): void;
   fork(bindPlaceholders?: SymbolType[]): SymbolType;
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
   isFunction(): boolean;
@@ -136,6 +137,10 @@ export class FunctionSymbolType implements SymbolType {
 
   bound(): boolean {
     return true;
+  }
+
+  bind(_to: SymbolType): void {
+    return;
   }
 
   fork(_bindPlaceholders?: SymbolType[]): FunctionSymbolType {
@@ -273,6 +278,10 @@ export class CompositeSymbolType implements SymbolType {
     return true;
   }
 
+  bind(_to: SymbolType): void {
+    return;
+  }
+
   fork(bindPlaceholders?: SymbolType[]): CompositeSymbolType {
     if (bindPlaceholders && bindPlaceholders.length > this.placeholders.size) {
       throw new InternalError(
@@ -340,6 +349,18 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.reference.hasValue();
   }
 
+  bind(to: SymbolType) {
+    if (this.isBound()) {
+      throw new InternalError(
+        "A PlaceholderSymbolType can only be bound to another type once.",
+      );
+    }
+    return new PlaceholderSymbolType({
+      name: this.name,
+      reference: to,
+    });
+  }
+
   fork(bindPlaceholders?: SymbolType[]): SymbolType {
     bindPlaceholders ??= [];
     const forkedReference = this.reference
@@ -362,18 +383,6 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.reference
       .map((reference) => reference.isFunction())
       .unwrapOr(false);
-  }
-
-  bind(to: SymbolType) {
-    if (this.isBound()) {
-      throw new InternalError(
-        "A PlaceholderSymbolType can only be bound to another type once.",
-      );
-    }
-    return new PlaceholderSymbolType({
-      name: this.name,
-      reference: to,
-    });
   }
 
   isBound(): boolean {
@@ -427,6 +436,10 @@ export class UniqueSymbolType implements SymbolType {
 
   bound(): boolean {
     return true;
+  }
+
+  bind(_to: SymbolType): void {
+    return;
   }
 
   fork(_bindPlaceholders?: SymbolType[]): SymbolType {
