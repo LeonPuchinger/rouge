@@ -411,6 +411,9 @@ export class PlaceholderSymbolType implements SymbolType {
   displayName(): string {
     return this.reference
       .map((reference) => reference.displayName())
+      // Use placeholder name in case the placeholder is bound to a `UniqueSymbolType`.
+      // A `UniqueSymbolType` can be recognized by its empty display name.
+      .map((name) => name === "" ? undefined : name)
       .unwrapOr(this.name);
   }
 
@@ -498,7 +501,11 @@ export class UniqueSymbolType implements SymbolType {
   }
 
   displayName(): string {
-    return `UniqueSymbolType(${this.index})`;
+    // Placeholders will recognize the empty name and
+    // substitute it with their own name instead.
+    // This is done to make sure that the name of the `UniqueSymbolType`
+    // does not end up in error or log messages.
+    return "";
   }
 
   complete(): boolean {
