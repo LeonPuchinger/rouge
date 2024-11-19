@@ -53,17 +53,55 @@ interface SymbolTypeMismatchHandler {
   ): void;
 }
 
+/**
+ * A `SymbolType` is used to describe data types within the language.
+ */
 export interface SymbolType {
+  /**
+   * Compares this type to another type.
+   * By passing an instance of `SymbolTypeMismatchHandler`,
+   * the caller can gain insight into why the type comparison failed.
+   */
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean;
+
+  /**
+   * Provides a pretty-printed representation of the type that can be shown to the user.
+   */
   displayName(): string;
+
+  /**
+   * Returns `true` in case the type (including all its subtypes) does not contain any unboud placeholders.
+   */
   complete(): boolean;
+
+  /**
+   * Returns `false` in case the type is an unbound placeholder.
+   * Returns `true` in any other case.
+   */
   bound(): boolean;
+
+  /**
+   * In case the type is a placeholder, allows binding it to another type.
+   * This method does not have any effect if called on any other type than a placeholder.
+   */
   bind(to: SymbolType): void;
+
+  /**
+   * Creates a deep copy of the type.
+   */
   fork(bindPlaceholders?: SymbolType[]): SymbolType;
+
+  /**
+   * Whether this type represents one of the primitive types.
+   */
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
+
+  /**
+   * Whether this type represents a function type.
+   */
   isFunction(): boolean;
 }
 
