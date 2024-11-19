@@ -1,3 +1,4 @@
+import { zip } from "./util/array.ts";
 import { InternalError } from "./util/error.ts";
 import { globalAutoincrement } from "./util/increment.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
@@ -121,48 +122,75 @@ export class FunctionSymbolType implements SymbolType {
     other: SymbolType,
     mismatchHandler?: Partial<SymbolTypeMismatchHandler>,
   ): boolean {
+    // only fork types if no placeholders need to be assumed
+    let self = this as FunctionSymbolType;
+    if (!self.complete()) {
+      self = self.fork();
+    }
+    if (!other.complete()) {
+      other = other.fork();
+    }
+    // trivial case
     if (!(other instanceof FunctionSymbolType)) {
       mismatchHandler?.onIdMismatch?.({
-        expected: this.displayName(),
+        expected: self.displayName(),
         found: other.displayName(),
       });
       return false;
     }
-    const matchingReturnTypes = other.returnType
-      .typeCompatibleWith(this.returnType);
-    if (!matchingReturnTypes) {
-      mismatchHandler?.onFunctionReturnTypeMismatch?.({
-        expected: this.returnType,
-        found: other.returnType,
-      });
-      return false;
-    }
-    if (other.parameterTypes.length !== this.parameterTypes.length) {
+    // prepare comparions of function parameters and return type
+    if (other.parameterTypes.length !== self.parameterTypes.length) {
       mismatchHandler?.onFunctionParameterCountMismatch?.({
-        expected: this.parameterTypes.length,
+        expected: self.parameterTypes.length,
         found: other.parameterTypes.length,
       });
       return false;
     }
-    return this.parameterTypes.reduce(
-      (previous, current, index) => {
-        const thisType = current;
-        const otherType = other.parameterTypes.at(index)!;
-        const matching = thisType.typeCompatibleWith(otherType);
-        if (!matching) {
-          mismatchHandler?.onFunctionParameterTypeMismatch?.({
-            expected: thisType,
-            found: otherType,
-            index: index,
-          });
-        }
-        if (previous === false) {
-          return false;
-        }
-        return matching;
-      },
-      true,
-    );
+    for (
+      const [selfParameter, otherParameter] of zip(
+        [...self.parameterTypes, self.returnType],
+        [...other.parameterTypes, other.returnType],
+      )
+    ) {
+      const selfParameterBound = selfParameter.bound()
+      const otherParameterBound = otherParameter.bound()
+      if (!selfParameterBound && otherParameterBound) {
+        selfParameter.bind(otherParameter);
+      }
+      if (selfParameterBound && !otherParameterBound) {
+        otherParameter.bind(selfParameter);
+      }
+      if (!selfParameterBound && !otherParameterBound) {
+        const uniqueType = new UniqueSymbolType();
+        selfParameter.bind(uniqueType);
+        otherParameter.bind(uniqueType);
+      }
+    }
+    // compare function parameters
+    for (
+      const [selfParameter, otherParameter, index] of zip(
+        self.parameterTypes,
+        other.parameterTypes,
+      )
+    ) {
+      if (!selfParameter.typeCompatibleWith(otherParameter)) {
+        mismatchHandler?.onFunctionParameterTypeMismatch?.({
+          index: index,
+          expected: selfParameter,
+          found: otherParameter,
+        });
+        return false;
+      }
+    }
+    // compare return type
+    if (!self.returnType.typeCompatibleWith(other.returnType)) {
+      mismatchHandler?.onFunctionReturnTypeMismatch?.({
+        expected: self.returnType,
+        found: other.returnType,
+      });
+      return false;
+    }
+    return true;
   }
 
   displayName(): string {
