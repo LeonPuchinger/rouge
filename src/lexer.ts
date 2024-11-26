@@ -3,6 +3,7 @@ import { InternalError } from "./util/error.ts";
 
 export enum TokenKind {
   breakingWhitespace,
+  lineComment,
   whitespace,
   numericLiteral,
   booleanLiteral,
@@ -16,6 +17,7 @@ export enum TokenKind {
 }
 
 const lexer = buildLexer([
+  [false, /^\/\/[^\n]*\n?/g, TokenKind.lineComment],
   [true, /^\s*\n\s*/g, TokenKind.breakingWhitespace],
   [false, /^\s+/g, TokenKind.whitespace],
   [true, /^[0-9]+(\.[0-9]+)?/g, TokenKind.numericLiteral],
