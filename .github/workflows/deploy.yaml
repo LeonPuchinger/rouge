@@ -66,9 +66,31 @@ jobs:
           path: ./dist
 
       # Create a temporary `.npmrc` file with credentials from the CI before publishing.
-      - name: Publish module
+      - name: Publish module to GH Packages
         run: |
           : > .npmrc
           echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          npm publish
+
+  publish-npm:
+    name: Publish to NPM
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: node:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist
+
+      - name: Publish module
+        run: |
+          : > .npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_PUBLISH_ACCESS_TOKEN }}" >> .npmrc
           npm publish
