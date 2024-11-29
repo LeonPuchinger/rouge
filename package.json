@@ -1,5 +1,5 @@
 {
-  "name": "@leonpuchinger/rouge",
+  "name": "@rouge/language",
   "module": "dist/rouge.es.js",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
