@@ -65,8 +65,36 @@ jobs:
           name: build-artifacts
           path: ./dist
 
+      - name: Upload metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-json
+          path: ./package.json
+
+  publish-gh-packages:
+    name: Publish to GitHub Packages
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: node:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist
+
+      - name: Download metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: package-json
+          path: package.json
+
       # Create a temporary `.npmrc` file with credentials from the CI before publishing.
-      - name: Publish module to GH Packages
+      - name: Publish module
         run: |
           : > .npmrc
           echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
@@ -89,6 +117,13 @@ jobs:
           name: build-artifacts
           path: dist
 
+      - name: Download metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: package-json
+          path: package.json
+
+      # Create a temporary `.npmrc` file with credentials from the CI before publishing.
       - name: Publish module
         run: |
           : > .npmrc
