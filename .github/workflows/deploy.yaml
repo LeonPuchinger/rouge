@@ -59,6 +59,12 @@ jobs:
       - name: Build module
         run: npm run build
 
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./dist
+
       # Create a temporary `.npmrc` file with credentials from the CI before publishing.
       - name: Publish module
         run: |
