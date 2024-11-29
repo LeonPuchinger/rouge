@@ -92,5 +92,6 @@ jobs:
       - name: Publish module
         run: |
           : > .npmrc
+          echo "registry=https://registry.npmjs.org/" >> .npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_PUBLISH_ACCESS_TOKEN }}" >> .npmrc
           npm publish
