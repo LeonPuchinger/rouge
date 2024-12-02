@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import dts from "vite-plugin-dts";
+import vite_dts from "vite-plugin-dts";
 
 export default defineConfig({
     build: {
@@ -12,7 +12,7 @@ export default defineConfig({
         },
     },
     plugins: [
-        dts({
+        vite_dts({
             rollupTypes: true,
             exclude: ["src/cli.ts"],
         }),
