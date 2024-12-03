@@ -5,6 +5,9 @@
     "type": "git",
     "url": "git+https://github.com/leonpuchinger/rouge.git"
   },
+  "files": [
+    "dist/"
+  ],
   "public": true,
   "type": "module",
   "license": "MIT",
