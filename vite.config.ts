@@ -7,6 +7,7 @@ export default defineConfig({
         outDir: "dist",
         lib: {
             entry: "src/main.ts",
+            formats: ["es"],
             name: "Rouge",
             fileName: (format) => `rouge.${format}.js`,
         },
