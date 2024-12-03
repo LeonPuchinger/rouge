@@ -1,6 +1,14 @@
 {
   "name": "@rougelang/language",
-  "module": "dist/rouge.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "dist/index.es.js",
+  "module": "dist/index.es.js",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/leonpuchinger/rouge.git"

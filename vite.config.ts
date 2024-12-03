@@ -9,7 +9,7 @@ export default defineConfig({
             entry: "src/main.ts",
             formats: ["es"],
             name: "Rouge",
-            fileName: (format) => `rouge.${format}.js`,
+            fileName: (format) => `index.${format}.js`,
         },
     },
     plugins: [
