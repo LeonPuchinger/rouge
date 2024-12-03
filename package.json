@@ -1,5 +1,5 @@
 {
-  "name": "@rouge/language",
+  "name": "@rougelang/language",
   "module": "dist/rouge.es.js",
   "repository": {
     "type": "git",
