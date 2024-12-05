@@ -1,15 +1,24 @@
 {
-  "name": "@leonpuchinger/rouge",
-  "module": "dist/rouge.es.js",
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
+  "name": "@rougelang/language",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "types": "./dist/index.d.ts"
+    }
   },
+  "main": "dist/index.es.js",
+  "module": "dist/index.es.js",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/leonpuchinger/rouge.git"
   },
-  "private": false,
+  "files": [
+    "dist/"
+  ],
+  "public": true,
   "type": "module",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -17,8 +26,9 @@
   },
   "devDependencies": {
     "@types/yargs": "^17.0.32",
-    "typescript": "^5.3.3",
-    "vite": "^5.2.12"
+    "typescript": "5.4.2",
+    "vite": "^6.0.2",
+    "vite-plugin-dts": "^4.3.0"
   },
   "dependencies": {
     "typescript-parsec": "^0.3.4",

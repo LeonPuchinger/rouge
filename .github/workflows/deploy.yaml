@@ -10,8 +10,30 @@ permissions:
   packages: write
 
 jobs:
+  get-overlapping-branches-from-tag:
+    # Output all branches that contain the tagged commit
+    name: List tagged branches
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.get_branches.outputs.branches }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get overlapping branches
+        id: get_branches
+        run: |
+          raw=$(git branch -r --contains ${{ github.ref }})
+          branches="$(echo ${raw//origin\//} | tr -d '\n')"
+          echo $branches
+          echo "branches=$branches" >> $GITHUB_OUTPUT
+
   build:
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    # Only continue with the build if the tagged commit is also on `main`
+    needs: get-overlapping-branches-from-tag
+    if: contains(needs.get-overlapping-branches-from-tag.outputs.branches, 'main')
     runs-on: ubuntu-latest
     container:
       image: node:lts
@@ -21,6 +43,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Survey Environment
+        # Useful output for debugging
         run: |
           ls -la
           git config --global --add safe.directory $(pwd)
@@ -59,10 +82,74 @@ jobs:
       - name: Build module
         run: npm run build
 
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./dist
+
+      - name: Upload metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-json
+          path: ./package.json
+
+  publish-gh-packages:
+    name: Publish to GitHub Packages
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: node:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist
+
+      - name: Download metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: package-json
+          path: package.json
+
       # Create a temporary `.npmrc` file with credentials from the CI before publishing.
       - name: Publish module
         run: |
           : > .npmrc
           echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          npm publish
+
+  publish-npm:
+    name: Publish to NPM
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: node:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist
+
+      - name: Download metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: package-json
+          path: package.json
+
+      # Create a temporary `.npmrc` file with credentials from the CI before publishing.
+      - name: Publish module
+        run: |
+          : > .npmrc
+          echo "registry=https://registry.npmjs.org/" >> .npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_PUBLISH_ACCESS_TOKEN }}" >> .npmrc
           npm publish
