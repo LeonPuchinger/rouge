@@ -154,4 +154,4 @@ jobs:
           echo "registry=https://registry.npmjs.org/" >> .npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_PUBLISH_ACCESS_TOKEN }}" >> .npmrc
           npm pkg set "publishConfig.registry"="https://registry.npmjs.org/"
-          npm publish
+          npm publish --access public
