@@ -123,6 +123,7 @@ jobs:
           echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
           npm pkg set "publishConfig.registry"="https://npm.pkg.github.com/"
+          npm pkg set "name"="@leonpuchinger/rouge"
           npm publish
 
   publish-npm:
@@ -154,4 +155,4 @@ jobs:
           echo "registry=https://registry.npmjs.org/" >> .npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_PUBLISH_ACCESS_TOKEN }}" >> .npmrc
           npm pkg set "publishConfig.registry"="https://registry.npmjs.org/"
-          npm publish
+          npm publish --access public
