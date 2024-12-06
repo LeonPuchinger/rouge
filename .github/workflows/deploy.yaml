@@ -114,7 +114,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: package-json
-          path: package.json
+          path: .
 
       # Create a temporary `.npmrc` file with credentials from the CI before publishing.
       - name: Publish module
