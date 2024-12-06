@@ -122,6 +122,7 @@ jobs:
           : > .npmrc
           echo "@${{ github.repository_owner }}:registry=https://npm.pkg.github.com" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          npm pkg set "publishConfig.registry"="https://npm.pkg.github.com/"
           npm publish
 
   publish-npm:
@@ -144,7 +145,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: package-json
-          path: package.json
+          path: .
 
       # Create a temporary `.npmrc` file with credentials from the CI before publishing.
       - name: Publish module
@@ -152,4 +153,5 @@ jobs:
           : > .npmrc
           echo "registry=https://registry.npmjs.org/" >> .npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_PUBLISH_ACCESS_TOKEN }}" >> .npmrc
+          npm pkg set "publishConfig.registry"="https://registry.npmjs.org/"
           npm publish
