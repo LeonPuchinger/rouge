@@ -13,3 +13,11 @@ export function run(source: string): AnalysisFindings {
   }
   return analysisFindings;
 }
+
+export function analyze(source: string): AnalysisFindings {
+  updateEnvironment({ source: source });
+  const tokenStream = tokenize(source);
+  const ast = parse(tokenStream);
+  const analysisFindings = ast.analyze();
+  return analysisFindings;
+}
