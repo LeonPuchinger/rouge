@@ -5,7 +5,7 @@ import { createSnippet } from "./util/snippet.ts";
 import { toMultiline } from "./util/string.ts";
 import { Attributes } from "./util/type.ts";
 
-type AnalysisFindingKind = "error" | "warning";
+export type AnalysisFindingKind = "error" | "warning";
 
 /**
  * Represents an issue with the users source code input.
