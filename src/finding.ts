@@ -1,3 +1,4 @@
+import { TokenPosition } from "typescript-parsec";
 import { AstNode } from "./ast.ts";
 import { accessEnvironment } from "./util/environment.ts";
 import { Option, Some } from "./util/monad/index.ts";
@@ -25,6 +26,16 @@ export interface AnalysisFinding {
    * Whether or not the interpretation can continue with this issue or not.
    */
   kind: AnalysisFindingKind;
+
+  /**
+   * The position of the first token that is affected by the finding.
+   */
+  begin: TokenPosition;
+
+  /**
+   * The position of the last token that is affected by the finding.
+   */
+  end: TokenPosition;
 
   /**
    * Converts the finding to a string representation that is supposed to be shown to the user.
@@ -71,6 +82,10 @@ function createAnalysisFinding(
     message: params.message,
     additionalMessage: Some(params.messageHighlight),
     kind: kind,
+    begin: params.beginHighlight.tokenRange()[0].pos,
+    end: params.endHighlight
+      .unwrapOr(params.beginHighlight)
+      .tokenRange()[1].pos,
     toString() {
       return toMultiline(
         params.message,
