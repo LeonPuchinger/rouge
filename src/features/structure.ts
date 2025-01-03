@@ -15,6 +15,7 @@ import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { CompositeSymbolType, SymbolType, typeTable } from "../type.ts";
+import { findDuplicates } from "../util/array.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None } from "../util/monad/option.ts";
 import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
@@ -88,6 +89,19 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
         }));
       }
       fieldNames.push(fieldName);
+    }
+    const placeholderDuplicates = findDuplicates(
+      this.placeholders.map((p) => p.text),
+    );
+    for (const [placeholder, indices] of placeholderDuplicates) {
+      const duplicateCount = indices.length;
+      findings.errors.push(AnalysisError({
+        message: "The names of placeholders have to be unique.",
+        beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
+        endHighlight: None(),
+        messageHighlight:
+          `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this struct.`,
+      }));
     }
     typeTable.setType(this.name.text, this.generateSymbolType());
     return findings;
