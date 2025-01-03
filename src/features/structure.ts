@@ -103,6 +103,19 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this struct.`,
       }));
     }
+    for (const placeholder of this.placeholders) {
+      typeTable.findType(placeholder.text)
+        .then(() => {
+          findings.errors.push(AnalysisError({
+            message:
+              "Placeholders cannot have the same name as types that already exist in an outer scope.",
+            beginHighlight: DummyAstNode.fromToken(placeholder),
+            endHighlight: None(),
+            messageHighlight:
+              `A type by the name "${placeholder.text}" already exists.`,
+          }));
+        });
+    }
     typeTable.setType(this.name.text, this.generateSymbolType());
     return findings;
   }
