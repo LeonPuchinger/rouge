@@ -43,8 +43,13 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   /**
    * Generates a composite symbol type of the struct with all its fields.
    */
-  generateSymbolType(): SymbolType {
-    const structureType = new CompositeSymbolType({ id: this.name.text });
+  generateSymbolType(
+    placeholderTypes?: Map<string, PlaceholderSymbolType>,
+  ): SymbolType {
+    const structureType = new CompositeSymbolType({
+      id: this.name.text,
+      placeholders: placeholderTypes,
+    });
     for (const field of this.fields) {
       const fieldName = field[0].text;
       const fieldType = typeTable.findType(field[1].text);
@@ -103,11 +108,17 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
         placeholder,
       );
     }
-    for (const placeholder of unproblematicPlaceholders) {
-      typeTable.setType(
-        placeholder,
-        new PlaceholderSymbolType({ name: placeholder }),
-      );
+    const unproblematicPlaceholderTypes = new Map(
+      unproblematicPlaceholders.map(
+        (
+          placeholder,
+        ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
+      ),
+    );
+    for (
+      const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
+    ) {
+      typeTable.setType(placeholerName, placeholderType);
     }
     const fieldNames: string[] = [];
     for (const field of this.fields) {
@@ -135,7 +146,10 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       }
       fieldNames.push(fieldName);
     }
-    typeTable.setType(this.name.text, this.generateSymbolType());
+    typeTable.setType(
+      this.name.text,
+      this.generateSymbolType(unproblematicPlaceholderTypes),
+    );
     return findings;
   }
 
