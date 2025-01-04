@@ -115,6 +115,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
         ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
       ),
     );
+    typeTable.pushScope();
     for (
       const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
     ) {
@@ -147,9 +148,13 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       fieldNames.push(fieldName);
     }
     if (!findings.isErroneous()) {
+      const structureType = this.generateSymbolType(
+        unproblematicPlaceholderTypes,
+      );
+      typeTable.popScope();
       typeTable.setType(
         this.name.text,
-        this.generateSymbolType(unproblematicPlaceholderTypes),
+        structureType,
       );
     }
     return findings;
@@ -166,14 +171,17 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
         ],
       ),
     );
+    typeTable.pushScope();
     for (const [placeholderName, placeholderType] of placeholderTypes) {
       typeTable.setType(placeholderName, placeholderType);
     }
+    const structureType = this.generateSymbolType(
+      placeholderTypes,
+    );
+    typeTable.popScope();
     typeTable.setType(
       this.name.text,
-      this.generateSymbolType(
-        placeholderTypes,
-      ),
+      structureType,
     );
   }
 
