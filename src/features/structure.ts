@@ -146,15 +146,35 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       }
       fieldNames.push(fieldName);
     }
-    typeTable.setType(
-      this.name.text,
-      this.generateSymbolType(unproblematicPlaceholderTypes),
-    );
+    if (!findings.isErroneous()) {
+      typeTable.setType(
+        this.name.text,
+        this.generateSymbolType(unproblematicPlaceholderTypes),
+      );
+    }
     return findings;
   }
 
   interpret(): void {
-    typeTable.setType(this.name.text, this.generateSymbolType());
+    const placeholderTypes = new Map(
+      this.placeholders.map(
+        (
+          placeholder,
+        ) => [
+          placeholder.text,
+          new PlaceholderSymbolType({ name: placeholder.text }),
+        ],
+      ),
+    );
+    for (const [placeholderName, placeholderType] of placeholderTypes) {
+      typeTable.setType(placeholderName, placeholderType);
+    }
+    typeTable.setType(
+      this.name.text,
+      this.generateSymbolType(
+        placeholderTypes,
+      ),
+    );
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
