@@ -7,6 +7,20 @@ export function range(n: number, m: number): number[] {
 }
 
 /**
+ * Removes all elements that are equal to `remove` from the given array.
+ * Returns a copy of the original array with the relevant items removed.
+ */
+export function removeAll<T>(array: T[], remove: T): T[] {
+  const filtered: T[] = [];
+  for (const element of array) {
+    if (element !== remove) {
+      filtered.push(element);
+    }
+  }
+  return filtered;
+}
+
+/**
  * Locates all duplicates in an array. Duplicates are returned as a map
  * where each duplicate input is mapped to an array of indices where they occur.
  *
