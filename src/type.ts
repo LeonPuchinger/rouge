@@ -391,6 +391,7 @@ export class PlaceholderSymbolType implements SymbolType {
   name!: string;
 
   constructor(params: WithOptionalAttributes<PlaceholderSymbolType>) {
+    Object.assign(this, params);
     this.reference = Some(params.reference);
   }
 
