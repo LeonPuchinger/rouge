@@ -115,6 +115,15 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   evaluate(): SymbolValue<Function> {
+    typeTable.pushScope();
+    for (const placeholder of this.placeholders) {
+      typeTable.setType(
+        placeholder.text,
+        new PlaceholderSymbolType({
+          name: placeholder.text,
+        }),
+      );
+    }
     const parameterTypes: Map<string, SymbolType> = new Map();
     for (const parameter of this.parameters) {
       parameterTypes.set(parameter.name.text, parameter.resolveType());
@@ -122,6 +131,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const returnType = this.returnType
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
+    typeTable.popScope();
     return new FunctionSymbolValue(this.statements, parameterTypes, returnType);
   }
 
@@ -305,12 +315,22 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
+    typeTable.pushScope();
+    for (const placeholder of this.placeholders) {
+      typeTable.setType(
+        placeholder.text,
+        new PlaceholderSymbolType({
+          name: placeholder.text,
+        }),
+      );
+    }
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
     const returnType = this.returnType
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
+    typeTable.popScope();
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
       returnType: returnType,
