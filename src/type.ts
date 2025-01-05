@@ -403,7 +403,7 @@ export class PlaceholderSymbolType implements SymbolType {
         reference == other ||
         reference.typeCompatibleWith(other, mismatchHandler)
       )
-      .unwrapOr(false);
+      .unwrapOr(this == other);
   }
 
   displayName(): string {
