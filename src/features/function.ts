@@ -24,7 +24,13 @@ import {
   StaticSymbol,
   SymbolValue,
 } from "../symbol.ts";
-import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
+import {
+  FunctionSymbolType,
+  PlaceholderSymbolType,
+  SymbolType,
+  typeTable,
+} from "../type.ts";
+import { findDuplicates, removeAll } from "../util/array.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
@@ -204,8 +210,55 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    analysisTable.pushScope();
     let findings = AnalysisFindings.empty();
+    let unproblematicPlaceholders: string[] = [];
+    for (const placeholder of this.placeholders) {
+      typeTable.findType(placeholder.text)
+        .then(() => {
+          findings.errors.push(AnalysisError({
+            message:
+              "Placeholders cannot have the same name as types that already exist in an outer scope.",
+            beginHighlight: DummyAstNode.fromToken(placeholder),
+            endHighlight: None(),
+            messageHighlight:
+              `A type by the name "${placeholder.text}" already exists.`,
+          }));
+        })
+        .onNone(() => {
+          unproblematicPlaceholders.push(placeholder.text);
+        });
+    }
+    const placeholderDuplicates = findDuplicates(
+      this.placeholders.map((p) => p.text),
+    );
+    for (const [placeholder, indices] of placeholderDuplicates) {
+      const duplicateCount = indices.length;
+      findings.errors.push(AnalysisError({
+        message: "The names of placeholders have to be unique.",
+        beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
+        endHighlight: None(),
+        messageHighlight:
+          `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this function.`,
+      }));
+      unproblematicPlaceholders = removeAll(
+        unproblematicPlaceholders,
+        placeholder,
+      );
+    }
+    const unproblematicPlaceholderTypes = new Map(
+      unproblematicPlaceholders.map(
+        (
+          placeholder,
+        ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
+      ),
+    );
+    typeTable.pushScope();
+    for (
+      const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
+    ) {
+      typeTable.setType(placeholerName, placeholderType);
+    }
+    analysisTable.pushScope();
     for (const parameter of this.parameters) {
       const parameterFindings = parameter.analyze();
       findings = AnalysisFindings.merge(findings, parameterFindings);
@@ -247,6 +300,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     }
     findings = AnalysisFindings.merge(findings, this.statements.analyze());
     analysisTable.popScope();
+    typeTable.popScope();
     return findings;
   }
 
