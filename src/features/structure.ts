@@ -101,7 +101,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
         beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
         endHighlight: None(),
         messageHighlight:
-          `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this struct.`,
+          `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this structure.`,
       }));
       unproblematicPlaceholders = removeAll(
         unproblematicPlaceholders,
