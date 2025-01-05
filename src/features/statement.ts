@@ -38,7 +38,10 @@ export class StatementsAstNode implements InterpretableAstNode {
   analyze(): AnalysisFindings {
     const findings = this.children
       .map((statement) => statement.analyze())
-      .reduce((previous, current) => AnalysisFindings.merge(previous, current));
+      .reduce(
+        (previous, current) => AnalysisFindings.merge(previous, current),
+        AnalysisFindings.empty(),
+      );
     typeTable.reset();
     return findings;
   }
