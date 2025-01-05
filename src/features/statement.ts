@@ -8,7 +8,6 @@ import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
-import { typeTable } from "../type.ts";
 import {} from "../util/array.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { ReturnStatementAstNode } from "./function.ts";
@@ -42,7 +41,6 @@ export class StatementsAstNode implements InterpretableAstNode {
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
-    typeTable.reset();
     return findings;
   }
 
