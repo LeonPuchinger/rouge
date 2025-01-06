@@ -46,10 +46,10 @@ export class ExpressionAstNode
 
 export const expression = apply(
   alt_sc(
+    invocation,
     booleanExpression,
     numericExpression,
     stringLiteral,
-    invocation,
     symbolExpression,
     functionDefinition,
   ),
