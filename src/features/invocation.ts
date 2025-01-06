@@ -1,4 +1,15 @@
-import { apply, list_sc, opt, seq, str, tok, Token } from "typescript-parsec";
+import {
+  apply,
+  kleft,
+  kmid,
+  list_sc,
+  opt,
+  opt_sc,
+  seq,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -34,6 +45,7 @@ import { invocation } from "./parser_declarations.ts";
 export class InvocationAstNode implements EvaluableAstNode {
   name!: Token<TokenKind>;
   parameters!: ExpressionAstNode[];
+  placeholders!: Token<TokenKind>[];
   openParenthesis!: Token<TokenKind>;
   closingParenthesis!: Token<TokenKind>;
 
@@ -247,6 +259,17 @@ export class InvocationAstNode implements EvaluableAstNode {
 
 /* PARSER */
 
+const placeholderNames = kleft(
+  list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
+  opt_sc(str(",")),
+);
+
+const placeholders = kmid(
+  str<TokenKind>("<"),
+  surround_with_breaking_whitespace(opt_sc(placeholderNames)),
+  str<TokenKind>(">"),
+);
+
 const parameters = list_sc(
   expression,
   surround_with_breaking_whitespace(str(",")),
@@ -255,14 +278,16 @@ const parameters = list_sc(
 invocation.setPattern(apply(
   seq(
     tok(TokenKind.ident),
+    opt_sc(starts_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(str("(")),
     opt(parameters),
     starts_with_breaking_whitespace(str(")")),
   ),
-  ([name, openParenthesis, parameters, closingParenthesis]) =>
+  ([name, placeholders, openParenthesis, parameters, closingParenthesis]) =>
     new InvocationAstNode({
       name: name,
       parameters: parameters ?? [],
+      placeholders: placeholders ?? [],
       openParenthesis: openParenthesis,
       closingParenthesis: closingParenthesis,
     }),
