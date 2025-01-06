@@ -132,7 +132,18 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
     typeTable.popScope();
-    return new FunctionSymbolValue(this.statements, parameterTypes, returnType);
+    const placeholders = new Map(
+      this.placeholders.map((placeholder) => [
+        placeholder.text,
+        new PlaceholderSymbolType({ name: placeholder.text }),
+      ]),
+    );
+    return new FunctionSymbolValue({
+      parameterTypes: parameterTypes,
+      placeholderTypes: placeholders,
+      returnType: returnType,
+      value: this.statements,
+    });
   }
 
   /**
@@ -331,8 +342,15 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
     typeTable.popScope();
+    const placeholders = new Map(
+      this.placeholders.map((placeholder) => [
+        placeholder.text,
+        new PlaceholderSymbolType({ name: placeholder.text }),
+      ]),
+    );
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
+      placeholders: placeholders,
       returnType: returnType,
     });
   }

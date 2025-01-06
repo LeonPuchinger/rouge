@@ -3,7 +3,7 @@ import { InternalError } from "./util/error.ts";
 import { globalAutoincrement } from "./util/increment.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { surroundWithIfNonEmpty } from "./util/string.ts";
-import { Attributes, WithOptionalAttributes } from "./util/type.ts";
+import { WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
@@ -221,11 +221,32 @@ export class FunctionSymbolType implements SymbolType {
     return;
   }
 
-  fork(_bindPlaceholders?: SymbolType[]): FunctionSymbolType {
-    return new FunctionSymbolType({
+  fork(bindPlaceholders?: SymbolType[]): FunctionSymbolType {
+    if (bindPlaceholders && bindPlaceholders.length > this.placeholders.size) {
+      throw new InternalError(
+        "Tried to bind more placeholders on a function than available.",
+        `Available: ${this.placeholders.size}, Supplied: ${bindPlaceholders.length}.`,
+      );
+    }
+    bindPlaceholders ??= [];
+    const copy = new FunctionSymbolType({
       parameterTypes: this.parameterTypes.map((type) => type.fork()),
+      placeholders: new Map(),
       returnType: this.returnType.fork(),
     });
+    for (const [placeholderName, placeholder] of this.placeholders) {
+      copy.placeholders.set(
+        placeholderName,
+        placeholder.fork() as PlaceholderSymbolType,
+      );
+    }
+    const placeholderNames = Array.from(this.placeholders.keys());
+    bindPlaceholders.forEach((bindTo, index) => {
+      const placeholderName = placeholderNames.at(index)!;
+      const placeholder = copy.placeholders.get(placeholderName)!;
+      placeholder.bind(bindTo);
+    });
+    return copy;
   }
 
   isPrimitive(): boolean {
@@ -272,7 +293,7 @@ export class CompositeSymbolType implements SymbolType {
     if (!(other instanceof CompositeSymbolType)) {
       mismatchHandler?.onIdMismatch?.({
         expected: this.displayName(),
-        found: other.displayName()
+        found: other.displayName(),
       });
       return false;
     }
@@ -372,12 +393,18 @@ export class CompositeSymbolType implements SymbolType {
       placeholders: new Map(),
     });
     for (const [fieldName, field] of this.fields) {
-      copy.fields.set(fieldName, field.fork());
+      copy.fields.set(fieldName, field.fork(bindPlaceholders));
+    }
+    for (const [placeholderName, placeholder] of this.placeholders) {
+      copy.placeholders.set(
+        placeholderName,
+        placeholder.fork() as PlaceholderSymbolType,
+      );
     }
     const placeholderNames = Array.from(this.placeholders.keys());
     bindPlaceholders.forEach((bindTo, index) => {
       const placeholderName = placeholderNames.at(index)!;
-      const placeholder = this.placeholders.get(placeholderName)!;
+      const placeholder = copy.placeholders.get(placeholderName)!;
       placeholder.bind(bindTo);
     });
     return copy;
