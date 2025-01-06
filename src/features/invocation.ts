@@ -113,6 +113,17 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
+    const expectedPlaceholders = structureType.placeholders;
+    if (expectedPlaceholders.size != this.placeholders.length) {
+      findings.errors.push(AnalysisError({
+        message:
+          `The structure expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
+        beginHighlight: DummyAstNode
+          .fromToken(this.placeholders.at(0) ?? this.name),
+        endHighlight: Some(this.placeholders.at(-1))
+          .map(DummyAstNode.fromToken),
+      }));
+    }
     for (
       let index = 0;
       index <
