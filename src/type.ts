@@ -108,9 +108,15 @@ export interface SymbolType {
 
 export class FunctionSymbolType implements SymbolType {
   parameterTypes!: SymbolType[];
+  placeholders!: Map<string, PlaceholderSymbolType>;
   returnType!: SymbolType;
 
-  constructor(params: Attributes<FunctionSymbolType>) {
+  constructor(params: {
+    parameterTypes: SymbolType[];
+    returnType: SymbolType;
+    placeholders?: Map<string, PlaceholderSymbolType>;
+  }) {
+    params.placeholders ??= new Map();
     Object.assign(this, params);
   }
 
