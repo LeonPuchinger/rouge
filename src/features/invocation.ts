@@ -53,6 +53,24 @@ export class InvocationAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
+  analyzePlaceholders(
+    invokedType: FunctionSymbolType | CompositeSymbolType,
+  ): AnalysisFindings {
+    const findings = AnalysisFindings.empty();
+    const expectedPlaceholders = invokedType.placeholders;
+    if (expectedPlaceholders.size != this.placeholders.length) {
+      findings.errors.push(AnalysisError({
+        message:
+          `The structure expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
+        beginHighlight: DummyAstNode
+          .fromToken(this.placeholders.at(0) ?? this.name),
+        endHighlight: Some(this.placeholders.at(-1))
+          .map(DummyAstNode.fromToken),
+      }));
+    }
+    return findings;
+  }
+
   analyzeFunctionInvocation(
     functionSymbol: StaticSymbol<FunctionSymbolType>,
   ): AnalysisFindings {
@@ -96,7 +114,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   analyzeStructureInvocation(
     structureType: CompositeSymbolType,
   ): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    let findings = AnalysisFindings.empty();
     const expectedFields = structureType.fields;
     const expectedFieldTypes = Array.from(expectedFields.values());
     const foundFields = this.parameters;
@@ -113,17 +131,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
-    const expectedPlaceholders = structureType.placeholders;
-    if (expectedPlaceholders.size != this.placeholders.length) {
-      findings.errors.push(AnalysisError({
-        message:
-          `The structure expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
-        beginHighlight: DummyAstNode
-          .fromToken(this.placeholders.at(0) ?? this.name),
-        endHighlight: Some(this.placeholders.at(-1))
-          .map(DummyAstNode.fromToken),
-      }));
-    }
+    findings = AnalysisFindings.merge(
+      findings,
+      this.analyzePlaceholders(structureType),
+    );
     for (
       let index = 0;
       index <
