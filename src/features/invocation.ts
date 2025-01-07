@@ -314,6 +314,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         calledSymbol.unwrap() as RuntimeSymbol<FunctionSymbolValue>,
       );
     }
+    // It can safely be assumed that the invocation is of a type
+    // since no function with the name was found in the symbol table
+    // and static analysis guarantees that either a function or type
+    // with the name exists.
     const calledStructure = typeTable.findType(this.name.text);
     return this.evaluateStructure(
       calledStructure.unwrap() as CompositeSymbolType,
