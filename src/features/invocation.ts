@@ -74,7 +74,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   analyzeFunctionInvocation(
     functionSymbol: StaticSymbol<FunctionSymbolType>,
   ): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    let findings = AnalysisFindings.empty();
     const expectedParameterTypes = functionSymbol.valueType.parameterTypes;
     const foundParameters = this.parameters;
     const foundParameterTypes = foundParameters
@@ -91,6 +91,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
+    findings = AnalysisFindings.merge(
+      findings,
+      this.analyzePlaceholders(functionSymbol.valueType),
+    );
     for (
       let index = 0;
       index <
