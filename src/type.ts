@@ -465,10 +465,7 @@ export class PlaceholderSymbolType implements SymbolType {
         "A PlaceholderSymbolType can only be bound to another type once.",
       );
     }
-    return new PlaceholderSymbolType({
-      name: this.name,
-      reference: to,
-    });
+    this.reference = Some(to);
   }
 
   fork(bindPlaceholders?: SymbolType[]): SymbolType {
