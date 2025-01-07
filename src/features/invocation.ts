@@ -67,7 +67,19 @@ export class InvocationAstNode implements EvaluableAstNode {
           .fromToken(this.placeholders.at(0) ?? this.name),
         endHighlight: Some(this.placeholders.at(-1))
           .map(DummyAstNode.fromToken),
+        messageHighlight: "",
       }));
+    }
+    for (const placeholder of this.placeholders) {
+      const placeholderName = placeholder.text;
+      if (!typeTable.findType(placeholderName).hasValue()) {
+        findings.errors.push(AnalysisError({
+          message: `The type called '${placeholderName}' could not be found.`,
+          beginHighlight: DummyAstNode.fromToken(placeholder),
+          endHighlight: None(),
+          messageHighlight: "",
+        }));
+      }
     }
     return findings;
   }
@@ -103,7 +115,6 @@ export class InvocationAstNode implements EvaluableAstNode {
     if (placeholdersFindings.isErroneous()) {
       return findings;
     }
-
     for (
       let index = 0;
       index <
