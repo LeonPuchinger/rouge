@@ -92,10 +92,18 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
+    const placeholdersFindings = this.analyzePlaceholders(
+      functionSymbol.valueType,
+      "function",
+    );
     findings = AnalysisFindings.merge(
       findings,
-      this.analyzePlaceholders(functionSymbol.valueType, "function"),
+      placeholdersFindings,
     );
+    if (placeholdersFindings.isErroneous()) {
+      return findings;
+    }
+
     for (
       let index = 0;
       index <
@@ -136,10 +144,17 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
+    const placeholdersFindings = this.analyzePlaceholders(
+      structureType,
+      "function",
+    );
     findings = AnalysisFindings.merge(
       findings,
-      this.analyzePlaceholders(structureType, "structure"),
+      placeholdersFindings,
     );
+    if (placeholdersFindings.isErroneous()) {
+      return findings;
+    }
     for (
       let index = 0;
       index <
