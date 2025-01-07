@@ -93,7 +93,7 @@ export interface SymbolType {
   /**
    * Creates a deep copy of the type.
    */
-  fork(bindPlaceholders?: SymbolType[]): SymbolType;
+  fork(): SymbolType;
 
   /**
    * Whether this type represents one of the primitive types.
@@ -221,30 +221,29 @@ export class FunctionSymbolType implements SymbolType {
     return;
   }
 
-  fork(bindPlaceholders?: SymbolType[]): FunctionSymbolType {
-    if (bindPlaceholders && bindPlaceholders.length > this.placeholders.size) {
-      throw new InternalError(
-        "Tried to bind more placeholders on a function than available.",
-        `Available: ${this.placeholders.size}, Supplied: ${bindPlaceholders.length}.`,
-      );
-    }
-    bindPlaceholders ??= [];
-    const copy = new FunctionSymbolType({
-      parameterTypes: this.parameterTypes.map((type) => type.fork()),
-      placeholders: new Map(),
-      returnType: this.returnType.fork(),
+  fork(): FunctionSymbolType {
+    const originalPlaceholders: SymbolType[] = Array.from(
+      this.placeholders.values(),
+    );
+    const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
+    const forkedParameters = this.parameterTypes.map((type) => {
+      const forkedParameter = type.fork();
+      if (originalPlaceholders.includes(type)) {
+        const forkedPlaceholder = forkedParameter as PlaceholderSymbolType;
+        forkedPlaceholders.set(forkedPlaceholder.name, forkedPlaceholder);
+      }
+      return forkedParameter;
     });
-    for (const [placeholderName, placeholder] of this.placeholders) {
-      copy.placeholders.set(
-        placeholderName,
-        placeholder.fork() as PlaceholderSymbolType,
-      );
+    // fork placeholders that are not utilized by a parameter
+    for (const [name, type] of this.placeholders) {
+      if (!forkedPlaceholders.has(name)) {
+        forkedPlaceholders.set(name, type.fork() as PlaceholderSymbolType);
+      }
     }
-    const placeholderNames = Array.from(this.placeholders.keys());
-    bindPlaceholders.forEach((bindTo, index) => {
-      const placeholderName = placeholderNames.at(index)!;
-      const placeholder = copy.placeholders.get(placeholderName)!;
-      placeholder.bind(bindTo);
+    const copy = new FunctionSymbolType({
+      parameterTypes: forkedParameters,
+      placeholders: forkedPlaceholders,
+      returnType: this.returnType.fork(),
     });
     return copy;
   }
@@ -379,34 +378,29 @@ export class CompositeSymbolType implements SymbolType {
     return;
   }
 
-  fork(bindPlaceholders?: SymbolType[]): CompositeSymbolType {
-    if (bindPlaceholders && bindPlaceholders.length > this.placeholders.size) {
-      throw new InternalError(
-        "Tried to bind more placeholders on a type than available.",
-        `Available: ${this.placeholders.size}, Supplied: ${bindPlaceholders.length}.`,
-      );
-    }
-    bindPlaceholders ??= [];
+  fork(): CompositeSymbolType {
     const copy = new CompositeSymbolType({
       id: this.id,
       fields: new Map(),
       placeholders: new Map(),
     });
+    const originalPlaceholders: SymbolType[] = Array.from(
+      this.placeholders.values(),
+    );
     for (const [fieldName, field] of this.fields) {
-      copy.fields.set(fieldName, field.fork(bindPlaceholders));
+      const forkedField = field.fork();
+      if (originalPlaceholders.includes(field)) {
+        const forkedPlaceholder = forkedField as PlaceholderSymbolType;
+        copy.placeholders.set(forkedPlaceholder.name, forkedPlaceholder);
+      }
+      copy.fields.set(fieldName, forkedField);
     }
-    for (const [placeholderName, placeholder] of this.placeholders) {
-      copy.placeholders.set(
-        placeholderName,
-        placeholder.fork() as PlaceholderSymbolType,
-      );
+    // fork placeholders that are not utilized by a field
+    for (const [name, type] of this.placeholders) {
+      if (!copy.placeholders.has(name)) {
+        copy.placeholders.set(name, type.fork() as PlaceholderSymbolType);
+      }
     }
-    const placeholderNames = Array.from(this.placeholders.keys());
-    bindPlaceholders.forEach((bindTo, index) => {
-      const placeholderName = placeholderNames.at(index)!;
-      const placeholder = copy.placeholders.get(placeholderName)!;
-      placeholder.bind(bindTo);
-    });
     return copy;
   }
 
@@ -468,10 +462,9 @@ export class PlaceholderSymbolType implements SymbolType {
     this.reference = Some(to);
   }
 
-  fork(bindPlaceholders?: SymbolType[]): SymbolType {
-    bindPlaceholders ??= [];
+  fork(): SymbolType {
     const forkedReference = this.reference
-      .map((reference) => reference.fork(bindPlaceholders));
+      .map((reference) => reference.fork());
     return new PlaceholderSymbolType({
       name: this.name,
       reference: forkedReference.hasValue()
@@ -549,7 +542,7 @@ export class UniqueSymbolType implements SymbolType {
     return;
   }
 
-  fork(_bindPlaceholders?: SymbolType[]): SymbolType {
+  fork(): SymbolType {
     const copy = new UniqueSymbolType();
     copy.index = this.index;
     return copy;
