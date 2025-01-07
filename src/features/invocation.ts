@@ -19,7 +19,6 @@ import {
   FunctionSymbolValue,
   RuntimeSymbol,
   runtimeTable,
-  StaticSymbol,
   SymbolValue,
 } from "../symbol.ts";
 import {
@@ -28,6 +27,7 @@ import {
   SymbolType,
   typeTable,
 } from "../type.ts";
+import { zip } from "../util/array.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Some } from "../util/monad/option.ts";
 import {
@@ -85,12 +85,12 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   analyzeFunctionInvocation(
-    functionSymbol: StaticSymbol<FunctionSymbolType>,
+    functionType: FunctionSymbolType,
   ): AnalysisFindings {
     let findings = AnalysisFindings.empty();
-    const expectedParameterTypes = functionSymbol.valueType.parameterTypes;
-    const foundParameters = this.parameters;
-    const foundParameterTypes = foundParameters
+    functionType = functionType.fork();
+    const expectedParameterTypes = functionType.parameterTypes;
+    const foundParameterTypes = this.parameters
       .map((parameter) => parameter.resolveType());
     if (expectedParameterTypes.length != foundParameterTypes.length) {
       findings.errors.push(AnalysisError({
@@ -105,7 +105,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       }));
     }
     const placeholdersFindings = this.analyzePlaceholders(
-      functionSymbol.valueType,
+      functionType,
       "function",
     );
     findings = AnalysisFindings.merge(
@@ -114,6 +114,17 @@ export class InvocationAstNode implements EvaluableAstNode {
     );
     if (placeholdersFindings.isErroneous()) {
       return findings;
+    }
+    // bind placeholdes to the supplied types
+    for (
+      const [placeholder, suppliedType] of zip(
+        Array.from(functionType.placeholders.values()),
+        this.placeholders.map((placeholder) =>
+          typeTable.findType(placeholder.text)
+        ),
+      )
+    ) {
+      placeholder.bind(suppliedType.unwrap());
     }
     for (
       let index = 0;
@@ -127,7 +138,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         findings.errors.push(AnalysisError({
           message:
             `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
-          beginHighlight: foundParameters[index],
+          beginHighlight: this.parameters[index],
           endHighlight: None(),
         }));
       }
@@ -165,6 +176,17 @@ export class InvocationAstNode implements EvaluableAstNode {
     );
     if (placeholdersFindings.isErroneous()) {
       return findings;
+    }
+    // bind placeholdes to the supplied types
+    for (
+      const [placeholder, suppliedType] of zip(
+        Array.from(structureType.placeholders.values()),
+        this.placeholders.map((placeholder) =>
+          typeTable.findType(placeholder.text)
+        ),
+      )
+    ) {
+      placeholder.bind(suppliedType.unwrap());
     }
     for (
       let index = 0;
@@ -224,7 +246,9 @@ export class InvocationAstNode implements EvaluableAstNode {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeFunctionInvocation(
-          calledSymbol.unwrap() as StaticSymbol<FunctionSymbolType>,
+          calledSymbol
+            .map((symbol) => symbol.valueType)
+            .unwrap() as FunctionSymbolType,
         ),
       );
     }
