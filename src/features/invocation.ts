@@ -55,13 +55,14 @@ export class InvocationAstNode implements EvaluableAstNode {
 
   analyzePlaceholders(
     invokedType: FunctionSymbolType | CompositeSymbolType,
+    construct: "structure" | "function",
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const expectedPlaceholders = invokedType.placeholders;
     if (expectedPlaceholders.size != this.placeholders.length) {
       findings.errors.push(AnalysisError({
         message:
-          `The structure expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
+          `The ${construct} expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
         beginHighlight: DummyAstNode
           .fromToken(this.placeholders.at(0) ?? this.name),
         endHighlight: Some(this.placeholders.at(-1))
@@ -93,7 +94,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     findings = AnalysisFindings.merge(
       findings,
-      this.analyzePlaceholders(functionSymbol.valueType),
+      this.analyzePlaceholders(functionSymbol.valueType, "function"),
     );
     for (
       let index = 0;
@@ -137,7 +138,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     findings = AnalysisFindings.merge(
       findings,
-      this.analyzePlaceholders(structureType),
+      this.analyzePlaceholders(structureType, "structure"),
     );
     for (
       let index = 0;
