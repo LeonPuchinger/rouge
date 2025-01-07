@@ -116,13 +116,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
 
   evaluate(): SymbolValue<Function> {
     typeTable.pushScope();
-    for (const placeholder of this.placeholders) {
-      typeTable.setType(
+    const placeholders = new Map(
+      this.placeholders.map((placeholder) => [
         placeholder.text,
-        new PlaceholderSymbolType({
-          name: placeholder.text,
-        }),
-      );
+        new PlaceholderSymbolType({ name: placeholder.text }),
+      ]),
+    );
+    for (const [placeholderName, placeholderType] of placeholders) {
+      typeTable.setType(placeholderName, placeholderType);
     }
     const parameterTypes: Map<string, SymbolType> = new Map();
     for (const parameter of this.parameters) {
@@ -132,12 +133,6 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
     typeTable.popScope();
-    const placeholders = new Map(
-      this.placeholders.map((placeholder) => [
-        placeholder.text,
-        new PlaceholderSymbolType({ name: placeholder.text }),
-      ]),
-    );
     return new FunctionSymbolValue({
       parameterTypes: parameterTypes,
       placeholderTypes: placeholders,
@@ -327,13 +322,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
 
   resolveType(): SymbolType {
     typeTable.pushScope();
-    for (const placeholder of this.placeholders) {
-      typeTable.setType(
+    const placeholders = new Map(
+      this.placeholders.map((placeholder) => [
         placeholder.text,
-        new PlaceholderSymbolType({
-          name: placeholder.text,
-        }),
-      );
+        new PlaceholderSymbolType({ name: placeholder.text }),
+      ]),
+    );
+    for (const [placeholderName, placeholderType] of placeholders) {
+      typeTable.setType(placeholderName, placeholderType);
     }
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
@@ -342,12 +338,6 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       .flatMap((token) => typeTable.findType(token.text))
       .unwrapOr(nothingType);
     typeTable.popScope();
-    const placeholders = new Map(
-      this.placeholders.map((placeholder) => [
-        placeholder.text,
-        new PlaceholderSymbolType({ name: placeholder.text }),
-      ]),
-    );
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
       placeholders: placeholders,
