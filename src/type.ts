@@ -234,6 +234,12 @@ export class FunctionSymbolType implements SymbolType {
       }
       return forkedParameter;
     });
+    const originalReturnType = this.returnType;
+    const forkedReturnType = originalReturnType.fork();
+    if (originalPlaceholders.includes(originalReturnType)) {
+      const forkedPlaceholder = forkedReturnType as PlaceholderSymbolType;
+      forkedPlaceholders.set(forkedPlaceholder.name, forkedPlaceholder);
+    }
     // fork placeholders that are not utilized by a parameter
     for (const [name, type] of this.placeholders) {
       if (!forkedPlaceholders.has(name)) {
