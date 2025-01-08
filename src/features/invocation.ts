@@ -327,7 +327,21 @@ export class InvocationAstNode implements EvaluableAstNode {
   resolveType(): SymbolType {
     return analysisTable
       .findSymbol(this.name.text)
-      .map((symbol) => symbol.valueType)
+      .map((symbol) => {
+        const functionType = (symbol.valueType as FunctionSymbolType).fork();
+        // bind placeholdes to the supplied types
+        for (
+          const [placeholder, suppliedType] of zip(
+            Array.from(functionType.placeholders.values()),
+            this.placeholders.map((placeholder) =>
+              typeTable.findType(placeholder.text)
+            ),
+          )
+        ) {
+          placeholder.bind(suppliedType.unwrap());
+        }
+        return functionType.returnType;
+      })
       .unwrapOrElse(
         typeTable.findType(this.name.text).unwrap,
       );
