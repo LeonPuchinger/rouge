@@ -128,6 +128,9 @@ export class FunctionSymbolType implements SymbolType {
     other: SymbolType,
     mismatchHandler?: Partial<SymbolTypeMismatchHandler>,
   ): boolean {
+    if (other instanceof PlaceholderSymbolType) {
+      return other.typeCompatibleWith(this, mismatchHandler);
+    }
     // only fork types if no placeholders need to be assumed
     let self = this as FunctionSymbolType;
     if (!self.complete()) {
@@ -236,7 +239,9 @@ export class FunctionSymbolType implements SymbolType {
     });
     const originalReturnType = this.returnType;
     let forkedReturnType = originalReturnType.fork();
-    const returnTypeIsPlaceholder = originalPlaceholders.includes(originalReturnType);
+    const returnTypeIsPlaceholder = originalPlaceholders.includes(
+      originalReturnType,
+    );
     if (returnTypeIsPlaceholder) {
       const forkedPlaceholder = forkedReturnType as PlaceholderSymbolType;
       const placeholderName = forkedPlaceholder.name;
@@ -302,6 +307,9 @@ export class CompositeSymbolType implements SymbolType {
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean {
+    if (other instanceof PlaceholderSymbolType) {
+      return other.typeCompatibleWith(this, mismatchHandler);
+    }
     if (!(other instanceof CompositeSymbolType)) {
       mismatchHandler?.onIdMismatch?.({
         expected: this.displayName(),
