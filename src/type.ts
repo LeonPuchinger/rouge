@@ -235,10 +235,17 @@ export class FunctionSymbolType implements SymbolType {
       return forkedParameter;
     });
     const originalReturnType = this.returnType;
-    const forkedReturnType = originalReturnType.fork();
-    if (originalPlaceholders.includes(originalReturnType)) {
+    let forkedReturnType = originalReturnType.fork();
+    const returnTypeIsPlaceholder = originalPlaceholders.includes(originalReturnType);
+    if (returnTypeIsPlaceholder) {
       const forkedPlaceholder = forkedReturnType as PlaceholderSymbolType;
-      forkedPlaceholders.set(forkedPlaceholder.name, forkedPlaceholder);
+      const placeholderName = forkedPlaceholder.name;
+      if (forkedPlaceholders.has(placeholderName)) {
+        // the placeholder has already been used for a parameter
+        forkedReturnType = forkedPlaceholders.get(placeholderName)!;
+      } else {
+        forkedPlaceholders.set(placeholderName, forkedPlaceholder);
+      }
     }
     // fork placeholders that are not utilized by a parameter
     for (const [name, type] of this.placeholders) {
@@ -249,7 +256,7 @@ export class FunctionSymbolType implements SymbolType {
     const copy = new FunctionSymbolType({
       parameterTypes: forkedParameters,
       placeholders: forkedPlaceholders,
-      returnType: this.returnType.fork(),
+      returnType: forkedReturnType,
     });
     return copy;
   }
