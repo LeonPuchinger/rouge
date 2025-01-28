@@ -54,6 +54,7 @@ import {
   statements,
   StatementsAstNode,
 } from "./statement.ts";
+import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* DATA TYPES */
 
@@ -105,7 +106,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
 export class FunctionDefinitionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   placeholders!: Token<TokenKind>[];
-  returnType!: Option<Token<TokenKind>>;
+  returnType!: Option<TypeLiteralAstNode>;
   statements!: StatementsAstNode;
   functionKeywordToken!: Token<TokenKind>;
   closingBraceToken!: Token<TokenKind>;
@@ -130,7 +131,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       parameterTypes.set(parameter.name.text, parameter.resolveType());
     }
     const returnType = this.returnType
-      .flatMap((token) => typeTable.findType(token.text))
+      .map((literal) => literal.resolveType())
       .unwrapOr(nothingType);
     typeTable.popScope();
     return new FunctionSymbolValue({
@@ -287,24 +288,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
         new StaticSymbol({ valueType: parameterType }),
       );
     }
-    let returnTypeResolvable = false;
-    if (this.returnType.kind === "some") {
-      const returnTypeName = this.returnType.unwrap().text;
-      returnTypeResolvable = typeTable
-        .findType(returnTypeName)
-        .map((_) => true)
-        .unwrapOr(false);
-      if (!returnTypeResolvable) {
-        findings.errors.push(AnalysisError({
-          message: "The return type specified for the function does not exist",
-          beginHighlight: DummyAstNode.fromToken(this.returnType.unwrap()),
-          endHighlight: None(),
-        }));
-      }
-    }
-    if (returnTypeResolvable) {
+    const returnTypeAnalysis = this.returnType
+      .map((literal) => literal.analyze());
+    const returnTypeFindings = returnTypeAnalysis
+      .unwrapOr(AnalysisFindings.empty());
+    findings = AnalysisFindings.merge(findings, returnTypeFindings);
+    returnTypeAnalysis.then((findings) => {
       const returnType = this.returnType
-        .flatMap((token) => typeTable.findType(token.text))
+        .map((literal) => literal.resolveType())
         .unwrapOr(nothingType);
       typeTable.setReturnType(returnType);
       if (!returnType.typeCompatibleWith(nothingType)) {
@@ -313,7 +304,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
           this.analyzeReturnPlacements(),
         );
       }
-    }
+    });
     findings = AnalysisFindings.merge(findings, this.statements.analyze());
     analysisTable.popScope();
     typeTable.popScope();
@@ -335,7 +326,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       parameter.resolveType()
     );
     const returnType = this.returnType
-      .flatMap((token) => typeTable.findType(token.text))
+      .map((literal) => literal.resolveType())
       .unwrapOr(nothingType);
     typeTable.popScope();
     return new FunctionSymbolType({
@@ -469,7 +460,7 @@ export const parameter = apply(
   kouter(
     tok(TokenKind.ident),
     surround_with_breaking_whitespace(str(":")),
-    tok(TokenKind.ident),
+    tok(TokenKind.ident), // TODO: replace with typeLiteral
   ),
   ([ident, type]) =>
     new ParameterAstNode({
@@ -488,7 +479,7 @@ const parameters = apply(
 
 const returnType = kright(
   ends_with_breaking_whitespace(str<TokenKind>("->")),
-  tok(TokenKind.ident),
+  typeLiteral,
 );
 
 functionDefinition.setPattern(apply(

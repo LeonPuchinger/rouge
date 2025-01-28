@@ -26,7 +26,7 @@ import { nothingType, WithOptionalAttributes } from "../util/type.ts";
 
 /* AST NODES */
 
-type TypeLiteralAstNode =
+export type TypeLiteralAstNode =
   | FunctionTypeLiteralAstNode
   | CompositeTypeLiteralAstNode;
 
