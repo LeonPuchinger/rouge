@@ -443,16 +443,48 @@ export class PlaceholderSymbolType implements SymbolType {
     this.reference = Some(params.reference);
   }
 
+  /**
+   * Placeholders may be chained to further placeholder
+   * that may or may not be bound to a type at some point.
+   * This method returns the last type in the chain,
+   * no matter if the type is an unbound placeholder
+   * or a "real" type that is bound to the last placeholder
+   * in the chain.
+   */
+  private dereferenceRecursive(): SymbolType {
+    return this.reference
+      .map((next) => {
+        if (next instanceof PlaceholderSymbolType) {
+          return next.dereferenceRecursive();
+        }
+        return next;
+      })
+      .unwrapOr(this);
+  }
+
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean {
-    return this.reference
-      .map((reference) =>
-        reference == other ||
-        reference.typeCompatibleWith(other, mismatchHandler)
-      )
-      .unwrapOr(this == other);
+    if (other instanceof PlaceholderSymbolType) {
+      other = other.dereferenceRecursive();
+    }
+    const self = this.dereferenceRecursive();
+    if (!(self instanceof PlaceholderSymbolType)) {
+      if (self.typeCompatibleWith(other) === true, mismatchHandler) {
+        return true;
+      }
+    }
+    if (self == other) {
+      return true;
+    }
+    if (
+      other instanceof PlaceholderSymbolType &&
+      self instanceof PlaceholderSymbolType
+    ) {
+      return other.name === this.name;
+    }
+    return false;
   }
 
   displayName(): string {
