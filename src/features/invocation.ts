@@ -150,6 +150,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     structureType: CompositeSymbolType,
   ): AnalysisFindings {
     let findings = AnalysisFindings.empty();
+    structureType = structureType.fork();
     const expectedFields = structureType.fields;
     const expectedFieldTypes = Array.from(expectedFields.values());
     const foundFields = this.parameters;
