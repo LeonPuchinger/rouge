@@ -13,7 +13,12 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
+import {
+  CompositeSymbolType,
+  FunctionSymbolType,
+  SymbolType,
+  typeTable,
+} from "../type.ts";
 import { Option, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import {
@@ -121,7 +126,13 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     const resolvedType = typeTable
       .findType(this.name.text)
       .unwrap()
-      .fork(placeholderTypes);
+      .fork() as CompositeSymbolType;
+    // positionally bind placeholders to the supplied types
+    for (let i = 0; i < placeholderTypes.length; i++) {
+      Array.from(resolvedType.placeholders.values())[i].bind(
+        placeholderTypes[i],
+      );
+    }
     return resolvedType;
   }
 
