@@ -74,6 +74,18 @@ export interface SymbolType {
   displayName(): string;
 
   /**
+   * Similar to `displayName`, but only returns the name of the type without any additional information.
+   * Take the following table as an example on the difference between `baseName` and `displayName`:
+   *
+   * | baseName() | displayName()       |
+   * |------------|---------------------|
+   * | Function   | Function<A>(A) -> A |
+   * | Bar        | Bar<T, U>           |
+   * | T          | T                   |
+   */
+  baseName(): string;
+
+  /**
    * Returns `true` in case the type (including all its subtypes) does not contain any unboud placeholders.
    */
   complete(): boolean;
@@ -214,6 +226,10 @@ export class FunctionSymbolType implements SymbolType {
       .join(" , ");
     const returnType = this.returnType.displayName();
     return `Function(${parameters}) -> ${returnType}`;
+  }
+
+  baseName(): string {
+    return "Function";
   }
 
   complete(): boolean {
@@ -395,6 +411,10 @@ export class CompositeSymbolType implements SymbolType {
     return `${this.id}${surroundWithIfNonEmpty(placeholders, "<", ">")}`;
   }
 
+  baseName(): string {
+    return this.id;
+  }
+
   complete(): boolean {
     return Array.from(this.placeholders.entries())
       .map(([_name, type]) => type.complete())
@@ -470,14 +490,12 @@ export class PlaceholderSymbolType implements SymbolType {
     const bothUnbound = !resolvedA.bound() && !resolvedB.bound();
     if (bothUnbound) {
       // compare the first placeholders in both chains
-      const firstNameMatch = (this as PlaceholderSymbolType).name ===
-        (other as PlaceholderSymbolType).name;
+      const firstNameMatch = this.baseName() === other.baseName();
       if (firstNameMatch) {
         return true;
       }
       // compare the last placeholders in both chains
-      const lastNameMatch = (resolvedA as PlaceholderSymbolType).name ===
-        (resolvedB as PlaceholderSymbolType).name;
+      const lastNameMatch = resolvedA.baseName() === resolvedB.baseName();
       if (lastNameMatch) {
         return true;
       }
@@ -494,6 +512,15 @@ export class PlaceholderSymbolType implements SymbolType {
       .map((reference) => reference.displayName())
       // Use placeholder name in case the placeholder is bound to a `UniqueSymbolType`.
       // A `UniqueSymbolType` can be recognized by its empty display name.
+      .map((name) => name === "" ? undefined : name)
+      .unwrapOr(this.name);
+  }
+
+  baseName(): string {
+    return this.reference
+      .map((reference) => reference.baseName())
+      // Use placeholder name in case the placeholder is bound to a `UniqueSymbolType`.
+      // A `UniqueSymbolType` can be recognized by its base empty name.
       .map((name) => name === "" ? undefined : name)
       .unwrapOr(this.name);
   }
@@ -584,6 +611,14 @@ export class UniqueSymbolType implements SymbolType {
   }
 
   displayName(): string {
+    // Placeholders will recognize the empty name and
+    // substitute it with their own name instead.
+    // This is done to make sure that the name of the `UniqueSymbolType`
+    // does not end up in error or log messages.
+    return "";
+  }
+
+  baseName(): string {
     // Placeholders will recognize the empty name and
     // substitute it with their own name instead.
     // This is done to make sure that the name of the `UniqueSymbolType`
