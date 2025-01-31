@@ -91,6 +91,12 @@ export interface SymbolType {
   bind(to: SymbolType): void;
 
   /**
+   * In case the type is a chain of placeholders, returns the last type in the chain.
+   * In case the type is not a placeholder, returns the type itself.
+   */
+  resolve(): SymbolType;
+
+  /**
    * Creates a deep copy of the type.
    */
   fork(): SymbolType;
@@ -222,6 +228,10 @@ export class FunctionSymbolType implements SymbolType {
 
   bind(_to: SymbolType): void {
     return;
+  }
+
+  resolve(): SymbolType {
+    return this;
   }
 
   fork(): FunctionSymbolType {
@@ -399,6 +409,10 @@ export class CompositeSymbolType implements SymbolType {
     return;
   }
 
+  resolve(): SymbolType {
+    return this;
+  }
+
   fork(): CompositeSymbolType {
     const copy = new CompositeSymbolType({
       id: this.id,
@@ -443,33 +457,14 @@ export class PlaceholderSymbolType implements SymbolType {
     this.reference = Some(params.reference);
   }
 
-  /**
-   * Placeholders may be chained to further placeholder
-   * that may or may not be bound to a type at some point.
-   * This method returns the last type in the chain,
-   * no matter if the type is an unbound placeholder
-   * or a "real" type that is bound to the last placeholder
-   * in the chain.
-   */
-  private dereferenceRecursive(): SymbolType {
-    return this.reference
-      .map((next) => {
-        if (next instanceof PlaceholderSymbolType) {
-          return next.dereferenceRecursive();
-        }
-        return next;
-      })
-      .unwrapOr(this);
-  }
-
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean {
     if (other instanceof PlaceholderSymbolType) {
-      other = other.dereferenceRecursive();
+      other = other.resolve();
     }
-    const self = this.dereferenceRecursive();
+    const self = this.resolve();
     if (!(self instanceof PlaceholderSymbolType)) {
       if (self.typeCompatibleWith(other) === true, mismatchHandler) {
         return true;
@@ -513,6 +508,12 @@ export class PlaceholderSymbolType implements SymbolType {
       );
     }
     this.reference = Some(to);
+  }
+
+  resolve(): SymbolType {
+    return this.reference
+      .map((reference) => reference.resolve())
+      .unwrapOr(this);
   }
 
   fork(): SymbolType {
@@ -593,6 +594,10 @@ export class UniqueSymbolType implements SymbolType {
 
   bind(_to: SymbolType): void {
     return;
+  }
+
+  resolve(): SymbolType {
+    return this;
   }
 
   fork(): SymbolType {
