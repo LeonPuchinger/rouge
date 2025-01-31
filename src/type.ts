@@ -461,24 +461,31 @@ export class PlaceholderSymbolType implements SymbolType {
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean {
-    if (other instanceof PlaceholderSymbolType) {
-      other = other.resolve();
+    const resolvedA = this.resolve();
+    const resolvedB = other.resolve();
+    const bothBound = resolvedA.bound() && resolvedB.bound();
+    if (bothBound) {
+      return resolvedA.typeCompatibleWith(resolvedB, mismatchHandler);
     }
-    const self = this.resolve();
-    if (!(self instanceof PlaceholderSymbolType)) {
-      if (self.typeCompatibleWith(other) === true, mismatchHandler) {
+    const bothUnbound = !resolvedA.bound() && !resolvedB.bound();
+    if (bothUnbound) {
+      // compare the first placeholders in both chains
+      const firstNameMatch = (this as PlaceholderSymbolType).name ===
+        (other as PlaceholderSymbolType).name;
+      if (firstNameMatch) {
+        return true;
+      }
+      // compare the last placeholders in both chains
+      const lastNameMatch = (resolvedA as PlaceholderSymbolType).name ===
+        (resolvedB as PlaceholderSymbolType).name;
+      if (lastNameMatch) {
         return true;
       }
     }
-    if (self == other) {
-      return true;
-    }
-    if (
-      other instanceof PlaceholderSymbolType &&
-      self instanceof PlaceholderSymbolType
-    ) {
-      return other.name === this.name;
-    }
+    mismatchHandler?.onIdMismatch?.({
+      expected: resolvedA.displayName(),
+      found: resolvedB.displayName(),
+    });
     return false;
   }
 
