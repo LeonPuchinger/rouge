@@ -70,20 +70,27 @@ export interface SymbolType {
 
   /**
    * Provides a pretty-printed representation of the type that can be shown to the user.
+   * In case the type is a (chain of) placeholder(s), the type is resolved first.
    */
   displayName(): string;
 
   /**
    * Similar to `displayName`, but only returns the name of the type without any additional information.
-   * Take the following table as an example on the difference between `baseName` and `displayName`:
+   * Take the following table as an example on the difference between `resolveId` and `displayName`:
    *
-   * | baseName() | displayName()       |
-   * |------------|---------------------|
-   * | Function   | Function<A>(A) -> A |
-   * | Bar        | Bar<T, U>           |
-   * | T          | T                   |
+   * | resolveId() | displayName()       |
+   * |-------------|---------------------|
+   * | Function    | Function<A>(A) -> A |
+   * | Bar         | Bar<T, U>           |
+   * | T           | T                   |
    */
-  baseName(): string;
+  resolveId(): string;
+
+  /**
+   * Similar to `resolveId`, but in case the type is a placeholder, does not resolve the type first.
+   * For instance, in case a placeholder called `T` is bound to `Number`, `resolveId` would return `T`.
+   */
+  unresolvedId(): string;
 
   /**
    * Returns `true` in case the type (including all its subtypes) does not contain any unboud placeholders.
@@ -228,8 +235,12 @@ export class FunctionSymbolType implements SymbolType {
     return `Function(${parameters}) -> ${returnType}`;
   }
 
-  baseName(): string {
+  resolveId(): string {
     return "Function";
+  }
+
+  unresolvedId(): string {
+    return this.resolveId();
   }
 
   complete(): boolean {
@@ -411,8 +422,12 @@ export class CompositeSymbolType implements SymbolType {
     return `${this.id}${surroundWithIfNonEmpty(placeholders, "<", ">")}`;
   }
 
-  baseName(): string {
+  resolveId(): string {
     return this.id;
+  }
+
+  unresolvedId(): string {
+    return this.resolveId();
   }
 
   complete(): boolean {
@@ -490,12 +505,12 @@ export class PlaceholderSymbolType implements SymbolType {
     const bothUnbound = !resolvedA.bound() && !resolvedB.bound();
     if (bothUnbound) {
       // compare the first placeholders in both chains
-      const firstNameMatch = this.baseName() === other.baseName();
+      const firstNameMatch = this.unresolvedId() === other.unresolvedId();
       if (firstNameMatch) {
         return true;
       }
       // compare the last placeholders in both chains
-      const lastNameMatch = resolvedA.baseName() === resolvedB.baseName();
+      const lastNameMatch = resolvedA.resolveId() === resolvedB.resolveId();
       if (lastNameMatch) {
         return true;
       }
@@ -516,13 +531,17 @@ export class PlaceholderSymbolType implements SymbolType {
       .unwrapOr(this.name);
   }
 
-  baseName(): string {
+  resolveId(): string {
     return this.reference
-      .map((reference) => reference.baseName())
+      .map((reference) => reference.resolveId())
       // Use placeholder name in case the placeholder is bound to a `UniqueSymbolType`.
-      // A `UniqueSymbolType` can be recognized by its base empty name.
+      // A `UniqueSymbolType` can be recognized by its empty id.
       .map((name) => name === "" ? undefined : name)
       .unwrapOr(this.name);
+  }
+
+  unresolvedId(): string {
+    return this.name;
   }
 
   complete(): boolean {
@@ -618,12 +637,16 @@ export class UniqueSymbolType implements SymbolType {
     return "";
   }
 
-  baseName(): string {
+  resolveId(): string {
     // Placeholders will recognize the empty name and
     // substitute it with their own name instead.
     // This is done to make sure that the name of the `UniqueSymbolType`
     // does not end up in error or log messages.
     return "";
+  }
+
+  unresolvedId(): string {
+    return this.resolveId();
   }
 
   complete(): boolean {
