@@ -21,11 +21,11 @@ import {
   typeTable,
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
-import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None } from "../util/monad/option.ts";
 import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes } from "../util/type.ts";
+import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */
 
@@ -33,7 +33,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
   name!: Token<TokenKind>;
-  fields!: [Token<TokenKind>, Token<TokenKind>][];
+  fields!: [Token<TokenKind>, TypeLiteralAstNode][];
   closingBrace!: Token<TokenKind>;
 
   constructor(params: Attributes<StructureDefinitonAstNode>) {
@@ -50,20 +50,17 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       id: this.name.text,
       placeholders: placeholderTypes,
     });
-    for (const field of this.fields) {
-      const fieldName = field[0].text;
-      const fieldType = typeTable.findType(field[1].text);
-      structureType.fields.set(
-        fieldName,
-        fieldType.unwrapOrThrow(UnresolvableSymbolTypeError()),
-      );
+    for (const [fieldNameToken, fieldTypeNode] of this.fields) {
+      const fieldName = fieldNameToken.text;
+      const fieldType = fieldTypeNode.resolveType();
+      structureType.fields.set(fieldName, fieldType);
     }
     typeTable.setType(this.name.text, structureType);
     return structureType;
   }
 
   analyze(): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
       .then(() => {
         findings.errors.push(AnalysisError({
@@ -122,24 +119,14 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       typeTable.setType(placeholerName, placeholderType);
     }
     const fieldNames: string[] = [];
-    for (const field of this.fields) {
-      const fieldType = typeTable.findType(field[1].text);
-      fieldType.onNone(() => {
-        findings.errors.push(AnalysisError({
-          message:
-            `The field called "${this.name.text}" has a type that does not exist.`,
-          beginHighlight: DummyAstNode.fromToken(field[1]),
-          endHighlight: None(),
-          messageHighlight: `The type called "${
-            field[1].text
-          }" could not be found.`,
-        }));
-      });
-      const fieldName = field[0].text;
+    for (const [fieldNameToken, fieldTypeNode] of this.fields) {
+      const fieldTypeFindings = fieldTypeNode.analyze();
+      findings = AnalysisFindings.merge(findings, fieldTypeFindings);
+      const fieldName = fieldNameToken.text;
       if (fieldNames.includes(fieldName)) {
         findings.errors.push(AnalysisError({
           message: "Fields inside of a structure have to have a unique name.",
-          beginHighlight: DummyAstNode.fromToken(field[0]),
+          beginHighlight: DummyAstNode.fromToken(fieldNameToken),
           endHighlight: None(),
           messageHighlight:
             `The field called "${fieldName}" already exists in the structure.`,
@@ -206,7 +193,7 @@ const placeholders = kmid(
 const field = kouter(
   tok(TokenKind.ident),
   str(":"),
-  tok(TokenKind.ident),
+  typeLiteral,
 );
 
 const fieldSeparator = alt(
