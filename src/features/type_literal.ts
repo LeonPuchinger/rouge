@@ -123,10 +123,30 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
   resolveType(): SymbolType {
     const placeholderTypes = this.placeholders
       .map((placeholder) => placeholder.resolveType());
-    const resolvedType = typeTable
+    let resolvedType = typeTable
       .findType(this.name.text)
-      .unwrap()
-      .fork() as CompositeSymbolType;
+      .unwrap() as CompositeSymbolType;
+    if (placeholderTypes.length !== 0) {
+      /* Only fork the type in case it can be modified by parameterizing it with placeholders
+      (e.g. types that don't allow placeholders or placeholders themselves).
+      The same placeholders often appear in multiple places, but have to be bound via
+      the same reference. This behavior ensures that placeholders are not unnecessarily
+      forked, breaking the reference to the original instance.
+      Example:
+
+      ```structure Bar<T> {
+        foo: T;
+      }```
+
+      This type definition results in a `CompositeSymbolType` with a placeholder.
+      `CompositeSymbolType`s keep a list of the placeholders that are used in the type so they
+      can be bound positionally. When the type literal `T` for the field `foo` is resolved and forked,
+      the placeholder stored in the `CompositeSymbolType` is not the same reference anymore as the type stored
+      for the field `foo`. When `T` is bound globally for the type `Bar`, the type for `foo` is not updated
+      accordingly anymore. Therefore, in case a type literal is not parametrized with placeholders, it
+      should not be forked. */
+      resolvedType = resolvedType.fork();
+    }
     // positionally bind placeholders to the supplied types
     for (let i = 0; i < placeholderTypes.length; i++) {
       Array.from(resolvedType.placeholders.values())[i].bind(
