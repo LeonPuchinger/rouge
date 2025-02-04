@@ -6,6 +6,43 @@ export function range(n: number, m: number): number[] {
   return result;
 }
 
+/**
+ * Removes all elements that are equal to `remove` from the given array.
+ * Returns a copy of the original array with the relevant items removed.
+ */
+export function removeAll<T>(array: T[], remove: T): T[] {
+  const filtered: T[] = [];
+  for (const element of array) {
+    if (element !== remove) {
+      filtered.push(element);
+    }
+  }
+  return filtered;
+}
+
+/**
+ * Locates all duplicates in an array. Duplicates are returned as a map
+ * where each duplicate input is mapped to an array of indices where they occur.
+ *
+ * Example:
+ *
+ * input: [1, 2, 3, 1, 2, 4, 2]
+ * output: Map { 1 => [0, 3], 2 => [1, 4, 6] }
+ */
+export function findDuplicates<T>(array: T[]): Map<T, number[]> {
+  const ocurrences = new Map<T, number[]>();
+  for (const [index, item] of array.entries()) {
+    const locations = ocurrences.get(item) ?? [];
+    ocurrences.set(item, [...locations, index]);
+  }
+  const duplicates = new Map<T, number[]>(
+    Array.from(ocurrences.entries()).filter(([, indices]) =>
+      indices.length > 1
+    ),
+  );
+  return duplicates;
+}
+
 declare global {
   interface Array<T> {
     /**

@@ -14,12 +14,18 @@ import {
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { CompositeSymbolType, SymbolType, typeTable } from "../type.ts";
-import { UnresolvableSymbolTypeError } from "../util/error.ts";
+import {
+  CompositeSymbolType,
+  PlaceholderSymbolType,
+  SymbolType,
+  typeTable,
+} from "../type.ts";
+import { findDuplicates, removeAll } from "../util/array.ts";
 import { None } from "../util/monad/option.ts";
 import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes } from "../util/type.ts";
+import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */
 
@@ -27,7 +33,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
   name!: Token<TokenKind>;
-  fields!: [Token<TokenKind>, Token<TokenKind>][];
+  fields!: [Token<TokenKind>, TypeLiteralAstNode][];
   closingBrace!: Token<TokenKind>;
 
   constructor(params: Attributes<StructureDefinitonAstNode>) {
@@ -37,22 +43,24 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   /**
    * Generates a composite symbol type of the struct with all its fields.
    */
-  generateSymbolType(): SymbolType {
-    const structureType = new CompositeSymbolType({ id: this.name.text });
-    for (const field of this.fields) {
-      const fieldName = field[0].text;
-      const fieldType = typeTable.findType(field[1].text);
-      structureType.fields.set(
-        fieldName,
-        fieldType.unwrapOrThrow(UnresolvableSymbolTypeError()),
-      );
+  generateSymbolType(
+    placeholderTypes?: Map<string, PlaceholderSymbolType>,
+  ): SymbolType {
+    const structureType = new CompositeSymbolType({
+      id: this.name.text,
+      placeholders: placeholderTypes,
+    });
+    for (const [fieldNameToken, fieldTypeNode] of this.fields) {
+      const fieldName = fieldNameToken.text;
+      const fieldType = fieldTypeNode.resolveType();
+      structureType.fields.set(fieldName, fieldType);
     }
     typeTable.setType(this.name.text, structureType);
     return structureType;
   }
 
   analyze(): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
       .then(() => {
         findings.errors.push(AnalysisError({
@@ -63,25 +71,62 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
             `A structure by the name "${this.name.text}" already exists.`,
         }));
       });
+    let unproblematicPlaceholders: string[] = [];
+    for (const placeholder of this.placeholders) {
+      typeTable.findType(placeholder.text)
+        .then(() => {
+          findings.errors.push(AnalysisError({
+            message:
+              "Placeholders cannot have the same name as types that already exist in an outer scope.",
+            beginHighlight: DummyAstNode.fromToken(placeholder),
+            endHighlight: None(),
+            messageHighlight:
+              `A type by the name "${placeholder.text}" already exists.`,
+          }));
+        })
+        .onNone(() => {
+          unproblematicPlaceholders.push(placeholder.text);
+        });
+    }
+    const placeholderDuplicates = findDuplicates(
+      this.placeholders.map((p) => p.text),
+    );
+    for (const [placeholder, indices] of placeholderDuplicates) {
+      const duplicateCount = indices.length;
+      findings.errors.push(AnalysisError({
+        message: "The names of placeholders have to be unique.",
+        beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
+        endHighlight: None(),
+        messageHighlight:
+          `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this structure.`,
+      }));
+      unproblematicPlaceholders = removeAll(
+        unproblematicPlaceholders,
+        placeholder,
+      );
+    }
+    const unproblematicPlaceholderTypes = new Map(
+      unproblematicPlaceholders.map(
+        (
+          placeholder,
+        ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
+      ),
+    );
+    typeTable.pushScope();
+    for (
+      const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
+    ) {
+      typeTable.setType(placeholerName, placeholderType);
+    }
     const fieldNames: string[] = [];
-    for (const field of this.fields) {
-      const fieldType = typeTable.findType(field[1].text);
-      fieldType.onNone(() => {
-        findings.errors.push(AnalysisError({
-          message:
-            `The field called "${this.name.text}" has a type that does not exist.`,
-          beginHighlight: DummyAstNode.fromToken(field[1]),
-          endHighlight: None(),
-          messageHighlight: `The type called "${
-            field[1].text
-          }" could not be found.`,
-        }));
-      });
-      const fieldName = field[0].text;
+    for (const [fieldNameToken, fieldTypeNode] of this.fields) {
+      const fieldTypeFindings = fieldTypeNode.analyze();
+      findings = AnalysisFindings.merge(findings, fieldTypeFindings);
+      const fieldName = fieldNameToken.text;
       if (fieldNames.includes(fieldName)) {
         findings.errors.push(AnalysisError({
           message: "Fields inside of a structure have to have a unique name.",
-          beginHighlight: DummyAstNode.fromToken(field[0]),
+          beginHighlight: DummyAstNode.fromToken(fieldNameToken),
           endHighlight: None(),
           messageHighlight:
             `The field called "${fieldName}" already exists in the structure.`,
@@ -89,12 +134,42 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       }
       fieldNames.push(fieldName);
     }
-    typeTable.setType(this.name.text, this.generateSymbolType());
+    if (!findings.isErroneous()) {
+      const structureType = this.generateSymbolType(
+        unproblematicPlaceholderTypes,
+      );
+      typeTable.popScope();
+      typeTable.setType(
+        this.name.text,
+        structureType,
+      );
+    }
     return findings;
   }
 
   interpret(): void {
-    typeTable.setType(this.name.text, this.generateSymbolType());
+    const placeholderTypes = new Map(
+      this.placeholders.map(
+        (
+          placeholder,
+        ) => [
+          placeholder.text,
+          new PlaceholderSymbolType({ name: placeholder.text }),
+        ],
+      ),
+    );
+    typeTable.pushScope();
+    for (const [placeholderName, placeholderType] of placeholderTypes) {
+      typeTable.setType(placeholderName, placeholderType);
+    }
+    const structureType = this.generateSymbolType(
+      placeholderTypes,
+    );
+    typeTable.popScope();
+    typeTable.setType(
+      this.name.text,
+      structureType,
+    );
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -118,7 +193,7 @@ const placeholders = kmid(
 const field = kouter(
   tok(TokenKind.ident),
   str(":"),
-  tok(TokenKind.ident),
+  typeLiteral,
 );
 
 const fieldSeparator = alt(

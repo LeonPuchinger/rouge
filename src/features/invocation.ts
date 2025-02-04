@@ -1,4 +1,15 @@
-import { apply, list_sc, opt, seq, str, tok, Token } from "typescript-parsec";
+import {
+  apply,
+  kleft,
+  kmid,
+  list_sc,
+  opt,
+  opt_sc,
+  seq,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -8,7 +19,6 @@ import {
   FunctionSymbolValue,
   RuntimeSymbol,
   runtimeTable,
-  StaticSymbol,
   SymbolValue,
 } from "../symbol.ts";
 import {
@@ -17,6 +27,7 @@ import {
   SymbolType,
   typeTable,
 } from "../type.ts";
+import { zip } from "../util/array.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Some } from "../util/monad/option.ts";
 import {
@@ -34,6 +45,7 @@ import { invocation } from "./parser_declarations.ts";
 export class InvocationAstNode implements EvaluableAstNode {
   name!: Token<TokenKind>;
   parameters!: ExpressionAstNode[];
+  placeholders!: Token<TokenKind>[];
   openParenthesis!: Token<TokenKind>;
   closingParenthesis!: Token<TokenKind>;
 
@@ -41,13 +53,44 @@ export class InvocationAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  analyzeFunctionInvocation(
-    functionSymbol: StaticSymbol<FunctionSymbolType>,
+  analyzePlaceholders(
+    invokedType: FunctionSymbolType | CompositeSymbolType,
+    construct: "structure" | "function",
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
-    const expectedParameterTypes = functionSymbol.valueType.parameterTypes;
-    const foundParameters = this.parameters;
-    const foundParameterTypes = foundParameters
+    const expectedPlaceholders = invokedType.placeholders;
+    if (expectedPlaceholders.size != this.placeholders.length) {
+      findings.errors.push(AnalysisError({
+        message:
+          `The ${construct} expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
+        beginHighlight: DummyAstNode
+          .fromToken(this.placeholders.at(0) ?? this.name),
+        endHighlight: Some(this.placeholders.at(-1))
+          .map(DummyAstNode.fromToken),
+        messageHighlight: "",
+      }));
+    }
+    for (const placeholder of this.placeholders) {
+      const placeholderName = placeholder.text;
+      if (!typeTable.findType(placeholderName).hasValue()) {
+        findings.errors.push(AnalysisError({
+          message: `The type called '${placeholderName}' could not be found.`,
+          beginHighlight: DummyAstNode.fromToken(placeholder),
+          endHighlight: None(),
+          messageHighlight: "",
+        }));
+      }
+    }
+    return findings;
+  }
+
+  analyzeFunctionInvocation(
+    functionType: FunctionSymbolType,
+  ): AnalysisFindings {
+    let findings = AnalysisFindings.empty();
+    functionType = functionType.fork();
+    const expectedParameterTypes = functionType.parameterTypes;
+    const foundParameterTypes = this.parameters
       .map((parameter) => parameter.resolveType());
     if (expectedParameterTypes.length != foundParameterTypes.length) {
       findings.errors.push(AnalysisError({
@@ -61,6 +104,28 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
+    const placeholdersFindings = this.analyzePlaceholders(
+      functionType,
+      "function",
+    );
+    findings = AnalysisFindings.merge(
+      findings,
+      placeholdersFindings,
+    );
+    if (placeholdersFindings.isErroneous()) {
+      return findings;
+    }
+    // bind placeholdes to the supplied types
+    for (
+      const [placeholder, suppliedType] of zip(
+        Array.from(functionType.placeholders.values()),
+        this.placeholders.map((placeholder) =>
+          typeTable.findType(placeholder.text)
+        ),
+      )
+    ) {
+      placeholder.bind(suppliedType.unwrap());
+    }
     for (
       let index = 0;
       index <
@@ -73,7 +138,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         findings.errors.push(AnalysisError({
           message:
             `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
-          beginHighlight: foundParameters[index],
+          beginHighlight: this.parameters[index],
           endHighlight: None(),
         }));
       }
@@ -84,7 +149,8 @@ export class InvocationAstNode implements EvaluableAstNode {
   analyzeStructureInvocation(
     structureType: CompositeSymbolType,
   ): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    let findings = AnalysisFindings.empty();
+    structureType = structureType.fork();
     const expectedFields = structureType.fields;
     const expectedFieldTypes = Array.from(expectedFields.values());
     const foundFields = this.parameters;
@@ -100,6 +166,28 @@ export class InvocationAstNode implements EvaluableAstNode {
             DummyAstNode.fromToken(this.closingParenthesis),
         ),
       }));
+    }
+    const placeholdersFindings = this.analyzePlaceholders(
+      structureType,
+      "function",
+    );
+    findings = AnalysisFindings.merge(
+      findings,
+      placeholdersFindings,
+    );
+    if (placeholdersFindings.isErroneous()) {
+      return findings;
+    }
+    // bind placeholdes to the supplied types
+    for (
+      const [placeholder, suppliedType] of zip(
+        Array.from(structureType.placeholders.values()),
+        this.placeholders.map((placeholder) =>
+          typeTable.findType(placeholder.text)
+        ),
+      )
+    ) {
+      placeholder.bind(suppliedType.unwrap());
     }
     for (
       let index = 0;
@@ -159,7 +247,9 @@ export class InvocationAstNode implements EvaluableAstNode {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeFunctionInvocation(
-          calledSymbol.unwrap() as StaticSymbol<FunctionSymbolType>,
+          calledSymbol
+            .map((symbol) => symbol.valueType)
+            .unwrap() as FunctionSymbolType,
         ),
       );
     }
@@ -225,6 +315,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         calledSymbol.unwrap() as RuntimeSymbol<FunctionSymbolValue>,
       );
     }
+    // It can safely be assumed that the invocation is of a type
+    // since no function with the name was found in the symbol table
+    // and static analysis guarantees that either a function or type
+    // with the name exists.
     const calledStructure = typeTable.findType(this.name.text);
     return this.evaluateStructure(
       calledStructure.unwrap() as CompositeSymbolType,
@@ -234,7 +328,21 @@ export class InvocationAstNode implements EvaluableAstNode {
   resolveType(): SymbolType {
     return analysisTable
       .findSymbol(this.name.text)
-      .map((symbol) => symbol.valueType)
+      .map((symbol) => {
+        const functionType = (symbol.valueType as FunctionSymbolType).fork();
+        // bind placeholdes to the supplied types
+        for (
+          const [placeholder, suppliedType] of zip(
+            Array.from(functionType.placeholders.values()),
+            this.placeholders.map((placeholder) =>
+              typeTable.findType(placeholder.text)
+            ),
+          )
+        ) {
+          placeholder.bind(suppliedType.unwrap());
+        }
+        return functionType.returnType;
+      })
       .unwrapOrElse(
         typeTable.findType(this.name.text).unwrap,
       );
@@ -247,6 +355,17 @@ export class InvocationAstNode implements EvaluableAstNode {
 
 /* PARSER */
 
+const placeholderNames = kleft(
+  list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
+  opt_sc(str(",")),
+);
+
+const placeholders = kmid(
+  str<TokenKind>("<"),
+  surround_with_breaking_whitespace(opt_sc(placeholderNames)),
+  str<TokenKind>(">"),
+);
+
 const parameters = list_sc(
   expression,
   surround_with_breaking_whitespace(str(",")),
@@ -255,14 +374,16 @@ const parameters = list_sc(
 invocation.setPattern(apply(
   seq(
     tok(TokenKind.ident),
+    opt_sc(starts_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(str("(")),
     opt(parameters),
     starts_with_breaking_whitespace(str(")")),
   ),
-  ([name, openParenthesis, parameters, closingParenthesis]) =>
+  ([name, placeholders, openParenthesis, parameters, closingParenthesis]) =>
     new InvocationAstNode({
       name: name,
       parameters: parameters ?? [],
+      placeholders: placeholders ?? [],
       openParenthesis: openParenthesis,
       closingParenthesis: closingParenthesis,
     }),

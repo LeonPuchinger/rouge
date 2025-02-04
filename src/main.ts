@@ -1,6 +1,7 @@
 import { AnalysisFindings } from "./finding.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
+import { typeTable } from "./type.ts";
 import { updateEnvironment } from "./util/environment.ts";
 
 export type {
@@ -15,6 +16,7 @@ export function run(source: string): AnalysisFindings {
   const tokenStream = tokenize(source);
   const ast = parse(tokenStream);
   const analysisFindings = ast.analyze();
+  typeTable.reset();
   if (analysisFindings.errors.length == 0) {
     ast.interpret();
   }

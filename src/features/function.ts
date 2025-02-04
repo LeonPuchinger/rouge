@@ -24,7 +24,13 @@ import {
   StaticSymbol,
   SymbolValue,
 } from "../symbol.ts";
-import { FunctionSymbolType, SymbolType, typeTable } from "../type.ts";
+import {
+  FunctionSymbolType,
+  PlaceholderSymbolType,
+  SymbolType,
+  typeTable,
+} from "../type.ts";
+import { findDuplicates, removeAll } from "../util/array.ts";
 import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
@@ -48,6 +54,7 @@ import {
   statements,
   StatementsAstNode,
 } from "./statement.ts";
+import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* DATA TYPES */
 
@@ -99,7 +106,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
 export class FunctionDefinitionAstNode implements EvaluableAstNode {
   parameters!: ParameterAstNode[];
   placeholders!: Token<TokenKind>[];
-  returnType!: Option<Token<TokenKind>>;
+  returnType!: Option<TypeLiteralAstNode>;
   statements!: StatementsAstNode;
   functionKeywordToken!: Token<TokenKind>;
   closingBraceToken!: Token<TokenKind>;
@@ -109,14 +116,30 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   evaluate(): SymbolValue<Function> {
+    typeTable.pushScope();
+    const placeholders = new Map(
+      this.placeholders.map((placeholder) => [
+        placeholder.text,
+        new PlaceholderSymbolType({ name: placeholder.text }),
+      ]),
+    );
+    for (const [placeholderName, placeholderType] of placeholders) {
+      typeTable.setType(placeholderName, placeholderType);
+    }
     const parameterTypes: Map<string, SymbolType> = new Map();
     for (const parameter of this.parameters) {
       parameterTypes.set(parameter.name.text, parameter.resolveType());
     }
     const returnType = this.returnType
-      .flatMap((token) => typeTable.findType(token.text))
+      .map((literal) => literal.resolveType())
       .unwrapOr(nothingType);
-    return new FunctionSymbolValue(this.statements, parameterTypes, returnType);
+    typeTable.popScope();
+    return new FunctionSymbolValue({
+      parameterTypes: parameterTypes,
+      placeholderTypes: placeholders,
+      returnType: returnType,
+      value: this.statements,
+    });
   }
 
   /**
@@ -204,8 +227,55 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    analysisTable.pushScope();
     let findings = AnalysisFindings.empty();
+    let unproblematicPlaceholders: string[] = [];
+    for (const placeholder of this.placeholders) {
+      typeTable.findType(placeholder.text)
+        .then(() => {
+          findings.errors.push(AnalysisError({
+            message:
+              "Placeholders cannot have the same name as types that already exist in an outer scope.",
+            beginHighlight: DummyAstNode.fromToken(placeholder),
+            endHighlight: None(),
+            messageHighlight:
+              `A type by the name "${placeholder.text}" already exists.`,
+          }));
+        })
+        .onNone(() => {
+          unproblematicPlaceholders.push(placeholder.text);
+        });
+    }
+    const placeholderDuplicates = findDuplicates(
+      this.placeholders.map((p) => p.text),
+    );
+    for (const [placeholder, indices] of placeholderDuplicates) {
+      const duplicateCount = indices.length;
+      findings.errors.push(AnalysisError({
+        message: "The names of placeholders have to be unique.",
+        beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
+        endHighlight: None(),
+        messageHighlight:
+          `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this function.`,
+      }));
+      unproblematicPlaceholders = removeAll(
+        unproblematicPlaceholders,
+        placeholder,
+      );
+    }
+    const unproblematicPlaceholderTypes = new Map(
+      unproblematicPlaceholders.map(
+        (
+          placeholder,
+        ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
+      ),
+    );
+    typeTable.pushScope();
+    for (
+      const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
+    ) {
+      typeTable.setType(placeholerName, placeholderType);
+    }
+    analysisTable.pushScope();
     for (const parameter of this.parameters) {
       const parameterFindings = parameter.analyze();
       findings = AnalysisFindings.merge(findings, parameterFindings);
@@ -218,24 +288,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
         new StaticSymbol({ valueType: parameterType }),
       );
     }
-    let returnTypeResolvable = false;
-    if (this.returnType.kind === "some") {
-      const returnTypeName = this.returnType.unwrap().text;
-      returnTypeResolvable = typeTable
-        .findType(returnTypeName)
-        .map((_) => true)
-        .unwrapOr(false);
-      if (!returnTypeResolvable) {
-        findings.errors.push(AnalysisError({
-          message: "The return type specified for the function does not exist",
-          beginHighlight: DummyAstNode.fromToken(this.returnType.unwrap()),
-          endHighlight: None(),
-        }));
-      }
-    }
-    if (returnTypeResolvable) {
+    const returnTypeAnalysis = this.returnType
+      .map((literal) => literal.analyze());
+    const returnTypeFindings = returnTypeAnalysis
+      .unwrapOr(AnalysisFindings.empty());
+    findings = AnalysisFindings.merge(findings, returnTypeFindings);
+    returnTypeAnalysis.then((findings) => {
       const returnType = this.returnType
-        .flatMap((token) => typeTable.findType(token.text))
+        .map((literal) => literal.resolveType())
         .unwrapOr(nothingType);
       typeTable.setReturnType(returnType);
       if (!returnType.typeCompatibleWith(nothingType)) {
@@ -244,21 +304,34 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
           this.analyzeReturnPlacements(),
         );
       }
-    }
+    });
     findings = AnalysisFindings.merge(findings, this.statements.analyze());
     analysisTable.popScope();
+    typeTable.popScope();
     return findings;
   }
 
   resolveType(): SymbolType {
+    typeTable.pushScope();
+    const placeholders = new Map(
+      this.placeholders.map((placeholder) => [
+        placeholder.text,
+        new PlaceholderSymbolType({ name: placeholder.text }),
+      ]),
+    );
+    for (const [placeholderName, placeholderType] of placeholders) {
+      typeTable.setType(placeholderName, placeholderType);
+    }
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType()
     );
     const returnType = this.returnType
-      .flatMap((token) => typeTable.findType(token.text))
+      .map((literal) => literal.resolveType())
       .unwrapOr(nothingType);
+    typeTable.popScope();
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
+      placeholders: placeholders,
       returnType: returnType,
     });
   }
@@ -387,7 +460,7 @@ export const parameter = apply(
   kouter(
     tok(TokenKind.ident),
     surround_with_breaking_whitespace(str(":")),
-    tok(TokenKind.ident),
+    tok(TokenKind.ident), // TODO: replace with typeLiteral
   ),
   ([ident, type]) =>
     new ParameterAstNode({
@@ -406,7 +479,7 @@ const parameters = apply(
 
 const returnType = kright(
   ends_with_breaking_whitespace(str<TokenKind>("->")),
-  tok(TokenKind.ident),
+  typeLiteral,
 );
 
 functionDefinition.setPattern(apply(

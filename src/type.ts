@@ -3,7 +3,7 @@ import { InternalError } from "./util/error.ts";
 import { globalAutoincrement } from "./util/increment.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { surroundWithIfNonEmpty } from "./util/string.ts";
-import { Attributes, WithOptionalAttributes } from "./util/type.ts";
+import { WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
@@ -70,8 +70,27 @@ export interface SymbolType {
 
   /**
    * Provides a pretty-printed representation of the type that can be shown to the user.
+   * In case the type is a (chain of) placeholder(s), the type is resolved first.
    */
   displayName(): string;
+
+  /**
+   * Similar to `displayName`, but only returns the name of the type without any additional information.
+   * Take the following table as an example on the difference between `resolveId` and `displayName`:
+   *
+   * | resolveId() | displayName()       |
+   * |-------------|---------------------|
+   * | Function    | Function<A>(A) -> A |
+   * | Bar         | Bar<T, U>           |
+   * | T           | T                   |
+   */
+  resolveId(): string;
+
+  /**
+   * Similar to `resolveId`, but in case the type is a placeholder, does not resolve the type first.
+   * For instance, in case a placeholder called `T` is bound to `Number`, `resolveId` would return `T`.
+   */
+  unresolvedId(): string;
 
   /**
    * Returns `true` in case the type (including all its subtypes) does not contain any unboud placeholders.
@@ -91,9 +110,15 @@ export interface SymbolType {
   bind(to: SymbolType): void;
 
   /**
+   * In case the type is a chain of placeholders, returns the last type in the chain.
+   * In case the type is not a placeholder, returns the type itself.
+   */
+  resolve(): SymbolType;
+
+  /**
    * Creates a deep copy of the type.
    */
-  fork(bindPlaceholders?: SymbolType[]): SymbolType;
+  fork(): SymbolType;
 
   /**
    * Whether this type represents one of the primitive types.
@@ -108,9 +133,15 @@ export interface SymbolType {
 
 export class FunctionSymbolType implements SymbolType {
   parameterTypes!: SymbolType[];
+  placeholders!: Map<string, PlaceholderSymbolType>;
   returnType!: SymbolType;
 
-  constructor(params: Attributes<FunctionSymbolType>) {
+  constructor(params: {
+    parameterTypes: SymbolType[];
+    returnType: SymbolType;
+    placeholders?: Map<string, PlaceholderSymbolType>;
+  }) {
+    params.placeholders ??= new Map();
     Object.assign(this, params);
   }
 
@@ -122,6 +153,9 @@ export class FunctionSymbolType implements SymbolType {
     other: SymbolType,
     mismatchHandler?: Partial<SymbolTypeMismatchHandler>,
   ): boolean {
+    if (other instanceof PlaceholderSymbolType) {
+      return other.typeCompatibleWith(this, mismatchHandler);
+    }
     // only fork types if no placeholders need to be assumed
     let self = this as FunctionSymbolType;
     if (!self.complete()) {
@@ -201,6 +235,14 @@ export class FunctionSymbolType implements SymbolType {
     return `Function(${parameters}) -> ${returnType}`;
   }
 
+  resolveId(): string {
+    return "Function";
+  }
+
+  unresolvedId(): string {
+    return this.resolveId();
+  }
+
   complete(): boolean {
     return [...this.parameterTypes, this.returnType]
       .map((type) => type.complete())
@@ -215,11 +257,50 @@ export class FunctionSymbolType implements SymbolType {
     return;
   }
 
-  fork(_bindPlaceholders?: SymbolType[]): FunctionSymbolType {
-    return new FunctionSymbolType({
-      parameterTypes: this.parameterTypes.map((type) => type.fork()),
-      returnType: this.returnType.fork(),
+  resolve(): SymbolType {
+    return this;
+  }
+
+  fork(): FunctionSymbolType {
+    const originalPlaceholders: SymbolType[] = Array.from(
+      this.placeholders.values(),
+    );
+    const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
+    const forkedParameters = this.parameterTypes.map((type) => {
+      const forkedParameter = type.fork();
+      if (originalPlaceholders.includes(type)) {
+        const forkedPlaceholder = forkedParameter as PlaceholderSymbolType;
+        forkedPlaceholders.set(forkedPlaceholder.name, forkedPlaceholder);
+      }
+      return forkedParameter;
     });
+    const originalReturnType = this.returnType;
+    let forkedReturnType = originalReturnType.fork();
+    const returnTypeIsPlaceholder = originalPlaceholders.includes(
+      originalReturnType,
+    );
+    if (returnTypeIsPlaceholder) {
+      const forkedPlaceholder = forkedReturnType as PlaceholderSymbolType;
+      const placeholderName = forkedPlaceholder.name;
+      if (forkedPlaceholders.has(placeholderName)) {
+        // the placeholder has already been used for a parameter
+        forkedReturnType = forkedPlaceholders.get(placeholderName)!;
+      } else {
+        forkedPlaceholders.set(placeholderName, forkedPlaceholder);
+      }
+    }
+    // fork placeholders that are not utilized by a parameter
+    for (const [name, type] of this.placeholders) {
+      if (!forkedPlaceholders.has(name)) {
+        forkedPlaceholders.set(name, type.fork() as PlaceholderSymbolType);
+      }
+    }
+    const copy = new FunctionSymbolType({
+      parameterTypes: forkedParameters,
+      placeholders: forkedPlaceholders,
+      returnType: forkedReturnType,
+    });
+    return copy;
   }
 
   isPrimitive(): boolean {
@@ -263,10 +344,13 @@ export class CompositeSymbolType implements SymbolType {
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean {
+    if (other instanceof PlaceholderSymbolType) {
+      return other.typeCompatibleWith(this, mismatchHandler);
+    }
     if (!(other instanceof CompositeSymbolType)) {
       mismatchHandler?.onIdMismatch?.({
         expected: this.displayName(),
-        found: other.displayName()
+        found: other.displayName(),
       });
       return false;
     }
@@ -338,6 +422,14 @@ export class CompositeSymbolType implements SymbolType {
     return `${this.id}${surroundWithIfNonEmpty(placeholders, "<", ">")}`;
   }
 
+  resolveId(): string {
+    return this.id;
+  }
+
+  unresolvedId(): string {
+    return this.resolveId();
+  }
+
   complete(): boolean {
     return Array.from(this.placeholders.entries())
       .map(([_name, type]) => type.complete())
@@ -352,28 +444,33 @@ export class CompositeSymbolType implements SymbolType {
     return;
   }
 
-  fork(bindPlaceholders?: SymbolType[]): CompositeSymbolType {
-    if (bindPlaceholders && bindPlaceholders.length > this.placeholders.size) {
-      throw new InternalError(
-        "Tried to bind more placeholders on a type than available.",
-        `Available: ${this.placeholders.size}, Supplied: ${bindPlaceholders.length}.`,
-      );
-    }
-    bindPlaceholders ??= [];
+  resolve(): SymbolType {
+    return this;
+  }
+
+  fork(): CompositeSymbolType {
     const copy = new CompositeSymbolType({
       id: this.id,
       fields: new Map(),
       placeholders: new Map(),
     });
+    const originalPlaceholders: SymbolType[] = Array.from(
+      this.placeholders.values(),
+    );
     for (const [fieldName, field] of this.fields) {
-      copy.fields.set(fieldName, field.fork());
+      const forkedField = field.fork();
+      if (originalPlaceholders.includes(field)) {
+        const forkedPlaceholder = forkedField as PlaceholderSymbolType;
+        copy.placeholders.set(forkedPlaceholder.name, forkedPlaceholder);
+      }
+      copy.fields.set(fieldName, forkedField);
     }
-    const placeholderNames = Array.from(this.placeholders.keys());
-    bindPlaceholders.forEach((bindTo, index) => {
-      const placeholderName = placeholderNames.at(index)!;
-      const placeholder = this.placeholders.get(placeholderName)!;
-      placeholder.bind(bindTo);
-    });
+    // fork placeholders that are not utilized by a field
+    for (const [name, type] of this.placeholders) {
+      if (!copy.placeholders.has(name)) {
+        copy.placeholders.set(name, type.fork() as PlaceholderSymbolType);
+      }
+    }
     return copy;
   }
 
@@ -391,6 +488,7 @@ export class PlaceholderSymbolType implements SymbolType {
   name!: string;
 
   constructor(params: WithOptionalAttributes<PlaceholderSymbolType>) {
+    Object.assign(this, params);
     this.reference = Some(params.reference);
   }
 
@@ -398,12 +496,30 @@ export class PlaceholderSymbolType implements SymbolType {
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean {
-    return this.reference
-      .map((reference) =>
-        reference == other ||
-        reference.typeCompatibleWith(other, mismatchHandler)
-      )
-      .unwrapOr(false);
+    const resolvedA = this.resolve();
+    const resolvedB = other.resolve();
+    const bothBound = resolvedA.bound() && resolvedB.bound();
+    if (bothBound) {
+      return resolvedA.typeCompatibleWith(resolvedB, mismatchHandler);
+    }
+    const bothUnbound = !resolvedA.bound() && !resolvedB.bound();
+    if (bothUnbound) {
+      // compare the first placeholders in both chains
+      const firstNameMatch = this.unresolvedId() === other.unresolvedId();
+      if (firstNameMatch) {
+        return true;
+      }
+      // compare the last placeholders in both chains
+      const lastNameMatch = resolvedA.resolveId() === resolvedB.resolveId();
+      if (lastNameMatch) {
+        return true;
+      }
+    }
+    mismatchHandler?.onIdMismatch?.({
+      expected: resolvedA.displayName(),
+      found: resolvedB.displayName(),
+    });
+    return false;
   }
 
   displayName(): string {
@@ -413,6 +529,19 @@ export class PlaceholderSymbolType implements SymbolType {
       // A `UniqueSymbolType` can be recognized by its empty display name.
       .map((name) => name === "" ? undefined : name)
       .unwrapOr(this.name);
+  }
+
+  resolveId(): string {
+    return this.reference
+      .map((reference) => reference.resolveId())
+      // Use placeholder name in case the placeholder is bound to a `UniqueSymbolType`.
+      // A `UniqueSymbolType` can be recognized by its empty id.
+      .map((name) => name === "" ? undefined : name)
+      .unwrapOr(this.name);
+  }
+
+  unresolvedId(): string {
+    return this.name;
   }
 
   complete(): boolean {
@@ -431,16 +560,18 @@ export class PlaceholderSymbolType implements SymbolType {
         "A PlaceholderSymbolType can only be bound to another type once.",
       );
     }
-    return new PlaceholderSymbolType({
-      name: this.name,
-      reference: to,
-    });
+    this.reference = Some(to);
   }
 
-  fork(bindPlaceholders?: SymbolType[]): SymbolType {
-    bindPlaceholders ??= [];
+  resolve(): SymbolType {
+    return this.reference
+      .map((reference) => reference.resolve())
+      .unwrapOr(this);
+  }
+
+  fork(): SymbolType {
     const forkedReference = this.reference
-      .map((reference) => reference.fork(bindPlaceholders));
+      .map((reference) => reference.fork());
     return new PlaceholderSymbolType({
       name: this.name,
       reference: forkedReference.hasValue()
@@ -506,6 +637,18 @@ export class UniqueSymbolType implements SymbolType {
     return "";
   }
 
+  resolveId(): string {
+    // Placeholders will recognize the empty name and
+    // substitute it with their own name instead.
+    // This is done to make sure that the name of the `UniqueSymbolType`
+    // does not end up in error or log messages.
+    return "";
+  }
+
+  unresolvedId(): string {
+    return this.resolveId();
+  }
+
   complete(): boolean {
     return true;
   }
@@ -518,7 +661,11 @@ export class UniqueSymbolType implements SymbolType {
     return;
   }
 
-  fork(_bindPlaceholders?: SymbolType[]): SymbolType {
+  resolve(): SymbolType {
+    return this;
+  }
+
+  fork(): SymbolType {
     const copy = new UniqueSymbolType();
     copy.index = this.index;
     return copy;

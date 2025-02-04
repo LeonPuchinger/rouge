@@ -1,6 +1,11 @@
 import { AstNode } from "./ast.ts";
 import { StatementsAstNode } from "./features/statement.ts";
-import { CompositeSymbolType, FunctionSymbolType, SymbolType } from "./type.ts";
+import {
+  CompositeSymbolType,
+  FunctionSymbolType,
+  PlaceholderSymbolType,
+  SymbolType,
+} from "./type.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { WithOptionalAttributes } from "./util/type.ts";
@@ -68,19 +73,24 @@ export class StringSymbolValue implements SymbolValue<string> {
 }
 
 export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
+  value: StatementsAstNode;
   valueType: SymbolType;
   parameterNames: string[];
 
-  constructor(
-    public value: StatementsAstNode,
-    parameterTypes: Map<string, SymbolType>,
-    returnType: SymbolType,
-  ) {
+  constructor(params: {
+    value: StatementsAstNode;
+    parameterTypes: Map<string, SymbolType>;
+    placeholderTypes?: Map<string, PlaceholderSymbolType>;
+    returnType: SymbolType;
+  }) {
+    params.placeholderTypes ??= new Map();
+    this.value = params.value;
     this.valueType = new FunctionSymbolType({
-      parameterTypes: Array.from(parameterTypes.values()),
-      returnType: returnType,
+      parameterTypes: Array.from(params.parameterTypes.values()),
+      placeholders: params.placeholderTypes,
+      returnType: params.returnType,
     });
-    this.parameterNames = Array.from(parameterTypes.keys());
+    this.parameterNames = Array.from(params.parameterTypes.keys());
   }
 
   map(
