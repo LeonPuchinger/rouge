@@ -2,6 +2,11 @@
 
 Teach your grandmother how to program.
 
+## State of development
+
+Rouge is in active development (WIP) with many core features still missing.
+Until its initial 1.0 release, breaking changes may occur without warning.
+
 ## Build
 
 The language can be compiled into a single ES-module.
