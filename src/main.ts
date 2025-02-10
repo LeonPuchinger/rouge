@@ -28,6 +28,8 @@ export function run(source: string): AnalysisFindings {
 }
 
 export function analyze(source: string): AnalysisFindings {
+  const stdlibAst = parseStdlib();
+  analyzeStdlib(stdlibAst);
   updateEnvironment({ source: source });
   const tokenStream = tokenize(source);
   const ast = parse(tokenStream);
