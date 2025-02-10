@@ -7,7 +7,7 @@ import { InternalError } from "./util/error.ts";
 const stdlib = `
     print = function(message: String) {
         // do nothing for now
-    };
+    }
 `;
 
 /**
