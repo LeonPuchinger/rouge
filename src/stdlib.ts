@@ -32,9 +32,20 @@ export function analyzeStdlib(stdlibAst: AST) {
     // TODO: once a runtime is immplemented,
     // clear runtime bindings from the symbol table, but
     // leave stdlib members in the symbol table.
+    updateEnvironment({ source: "" });
     if (analysisFindings.errors.length !== 0) {
         throw new InternalError(
             "The standard library contains static analysis errors.",
         );
     }
+}
+
+/**
+ * Loads the standard library into the symbol and type table.
+ * It is assumed that both tables are set to the global scope.
+ */
+export function injectStdlib(stdlibAst: AST) {
+    updateEnvironment({ source: stdlib });
+    stdlibAst.interpret();
+    updateEnvironment({ source: "" });
 }
