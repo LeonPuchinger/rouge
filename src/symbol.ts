@@ -130,7 +130,12 @@ export class CompositeSymbolValue
 
 // Symbol Table
 
-type Scope<S extends Symbol> = Map<string, S>;
+type SymbolEntry<S extends Symbol> = {
+  symbol: S;
+  readonly: boolean;
+};
+
+type Scope<S extends Symbol> = Map<string, SymbolEntry<S>>;
 
 export type InterpreterSymbolTable = SymbolTable<RuntimeSymbol>;
 export type AnalysisSymbolTable = SymbolTable<StaticSymbol>;
@@ -156,8 +161,9 @@ export class SymbolTable<S extends Symbol> {
     name: string,
     scope: Scope<S>,
   ): Option<S> {
-    const symbol = scope.get(name);
-    return Some(symbol);
+    const entry = scope.get(name);
+    return Some(entry)
+      .map((entry) => entry.symbol);
   }
 
   findSymbolInCurrentScope(
@@ -181,9 +187,22 @@ export class SymbolTable<S extends Symbol> {
     return None();
   }
 
-  setSymbol(name: string, symbol: S) {
+  setSymbol(
+    name: string,
+    symbol: S,
+    readonly: boolean = false,
+  ) {
     const currentScope = this.scopes[this.scopes.length - 1];
-    currentScope.set(name, symbol);
+    const existingEntry = Some(currentScope.get(name));
+    existingEntry.then((entry) => {
+      if (entry.readonly) {
+        throw new InternalError(
+          `Attempted to reassign the existing symbol with the name "${name}".`,
+          `However, the symbol is flagged as readonly.`,
+        );
+      }
+    });
+    currentScope.set(name, { symbol, readonly });
   }
 }
 
