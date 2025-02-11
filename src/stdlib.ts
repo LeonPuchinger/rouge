@@ -1,6 +1,8 @@
 import { AST } from "./ast.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
+import { analysisTable, runtimeTable } from "./symbol.ts";
+import { typeTable } from "./type.ts";
 import { updateEnvironment } from "./util/environment.ts";
 import { InternalError } from "./util/error.ts";
 
@@ -28,11 +30,15 @@ export function parseStdlib() {
  */
 export function analyzeStdlib(stdlibAst: AST) {
     updateEnvironment({ source: stdlib });
+    analysisTable.setGlobalFlagOverrides({ readonly: true });
+    typeTable.setGlobalFlagOverrides({ readonly: true });
     const analysisFindings = stdlibAst.analyze();
     // TODO: once a runtime is immplemented,
     // clear runtime bindings from the symbol table, but
     // leave stdlib members in the symbol table.
     updateEnvironment({ source: "" });
+    analysisTable.setGlobalFlagOverrides({ readonly: "notset" });
+    typeTable.setGlobalFlagOverrides({ readonly: "notset" });
     if (analysisFindings.errors.length !== 0) {
         throw new InternalError(
             "The standard library contains static analysis errors.",
@@ -46,6 +52,10 @@ export function analyzeStdlib(stdlibAst: AST) {
  */
 export function injectStdlib(stdlibAst: AST) {
     updateEnvironment({ source: stdlib });
+    runtimeTable.setGlobalFlagOverrides({ readonly: true});
+    typeTable.setGlobalFlagOverrides({ readonly: true });
     stdlibAst.interpret();
+    runtimeTable.setGlobalFlagOverrides({ readonly: "notset" });
+    typeTable.setGlobalFlagOverrides({ readonly: "notset" });
     updateEnvironment({ source: "" });
 }
