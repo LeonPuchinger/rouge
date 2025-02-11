@@ -145,6 +145,20 @@ export type AnalysisSymbolTable = SymbolTable<StaticSymbol>;
 
 export class SymbolTable<S extends Symbol> {
   private scopes: Scope<S>[] = [new Map()];
+  /**
+   * When a flag is set globally as an override, it is automatically
+   * applied to all symbols that are inserted into the table.
+   * This becomes useful, for instance, when initializing the stdlib.
+   * There, the `readonly` flag can be set for all symbols contained in the stdlib.
+   * When an override is set to `"notset"`, it is not applied to any symbol.
+   * Also, in case a flag is explicitly set when a symbol is inserted
+   * into the table, the global flag is ignored.
+   */
+  private globalFlagOverrides: {
+    [K in keyof SymbolFlags]: SymbolFlags[K] | "notset";
+  } = {
+    readonly: "notset",
+  };
 
   pushScope() {
     this.scopes.push(new Map());
@@ -212,7 +226,36 @@ export class SymbolTable<S extends Symbol> {
         );
       }
     });
-    currentScope.set(name, { symbol, readonly });
+    currentScope.set(name, {
+      symbol,
+      readonly: readonly ?? this.getGlobalFlagOverride("readonly"),
+    });
+  }
+
+  /**
+   * See the `globalFlagOverrides` attribute for more information.
+   */
+  getGlobalFlagOverride(
+    flag: keyof SymbolFlags,
+  ): SymbolFlags[keyof SymbolFlags] {
+    const override = this.globalFlagOverrides[flag];
+    if (override === "notset") {
+      return false;
+    }
+    return override;
+  }
+
+  /**
+   * When a flag is set globally as an override, that flag is automatically
+   * applied to all symbols that are inserted into the table.
+   * Look at the `globalFlagOverrides` attribute for more information.
+   */
+  setGlobalFlagOverrides(
+    flags: { [K in keyof SymbolFlags]?: SymbolFlags[K] | "notset" },
+  ) {
+    for (const [key, value] of Object.entries(flags)) {
+      this.globalFlagOverrides[key as keyof SymbolFlags] = value;
+    }
   }
 }
 
