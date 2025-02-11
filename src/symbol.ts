@@ -214,7 +214,7 @@ export class SymbolTable<S extends Symbol> {
   setSymbol(
     name: string,
     symbol: S,
-    readonly: boolean = false,
+    readonly?: boolean,
   ) {
     const currentScope = this.scopes[this.scopes.length - 1];
     const existingEntry = Some(currentScope.get(name));
