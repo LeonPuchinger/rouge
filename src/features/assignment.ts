@@ -34,7 +34,8 @@ export class AssignmentAstNode implements InterpretableAstNode {
   analyze(): AnalysisFindings {
     const findings = this.child.analyze();
     const ident = this.token.text;
-    const isInitialAssignment = !analysisTable.findSymbol(ident).hasValue();
+    const existingSymbol = analysisTable.findSymbol(ident);
+    const isInitialAssignment = !existingSymbol.hasValue();
     const expressionFindingsErroneous = findings.isErroneous();
     if (isInitialAssignment) {
       this.typeAnnotation.then((annotationName) => {
@@ -69,6 +70,21 @@ export class AssignmentAstNode implements InterpretableAstNode {
         }
       });
     } else {
+      const readonly = existingSymbol
+        .map(([_symbol, flags]) => flags.readonly)
+        .unwrapOr(false);
+      if (readonly) {
+        findings.errors.push(
+          AnalysisError({
+            message:
+              "This variable cannot be reassigned because it is part of the language.",
+            beginHighlight: this,
+            endHighlight: None(),
+            messageHighlight: "",
+          }),
+        );
+        return findings;
+      }
       this.typeAnnotation.then((annotationName) => {
         findings.errors.push(AnalysisError({
           message:
