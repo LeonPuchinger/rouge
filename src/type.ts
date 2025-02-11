@@ -680,13 +680,35 @@ export class UniqueSymbolType implements SymbolType {
   }
 }
 
+type TypeFlags = {
+  readonly: boolean;
+};
+
+type TypeEntry = TypeFlags & {
+  type: SymbolType;
+};
+
 type Scope = {
-  types: Map<string, SymbolType>;
+  types: Map<string, TypeEntry>;
   returnType: Option<SymbolType>;
 };
 
 export class TypeTable {
   private scopes: Scope[] = [];
+  /**
+   * When a flag is set globally as an override, it is automatically
+   * applied to all types that are inserted into the table.
+   * This becomes useful, for instance, when initializing the stdlib.
+   * There, the `readonly` flag can be set for all types contained in the stdlib.
+   * When an override is set to `"notset"`, it is not applied to any type.
+   * Also, in case a flag is explicitly set when a type is inserted
+   * into the table, the global flag is ignored.
+   */
+  private globalFlagOverrides: {
+    [K in keyof TypeFlags]: TypeFlags[K] | "notset";
+  } = {
+    readonly: "notset",
+  };
 
   constructor() {
     this.reset();
@@ -706,39 +728,64 @@ export class TypeTable {
     }
   }
 
-  private findTypeInScope(
+  private findTypeEntryInScope(
     name: string,
     scope: Scope,
-  ): Option<SymbolType> {
+  ): Option<TypeEntry> {
     return Some(scope.types.get(name));
   }
 
-  findTypeInCurrentScope(name: string): Option<SymbolType> {
+  findTypeInCurrentScope(name: string): Option<[SymbolType, TypeFlags]> {
     const current = this.scopes.at(-1);
     if (current !== undefined) {
-      return this.findTypeInScope(name, current);
+      return this.findTypeEntryInScope(name, current)
+        .map((entry) => {
+          const { type, ...flags } = entry;
+          return [type, flags];
+        });
     }
     return None();
   }
 
-  findType(name: string): Option<SymbolType> {
+  findType(name: string): Option<[SymbolType, TypeFlags]> {
     for (const currentScope of this.scopes.toReversed()) {
-      const symbolType = this.findTypeInScope(name, currentScope);
-      if (symbolType.kind === "none") {
+      const typeEntry = this.findTypeEntryInScope(name, currentScope)
+        .map((entry) => {
+          const { type, ...flags } = entry;
+          return [type, flags];
+        });
+      if (!typeEntry.hasValue()) {
         continue;
       }
-      return symbolType;
+      return typeEntry as Option<[SymbolType, TypeFlags]>;
     }
     return None();
   }
 
   typeResolvable(name: string): boolean {
-    return this.findType(name).kind === "some";
+    return this.findType(name).hasValue();
   }
 
-  setType(name: string, symbolType: SymbolType) {
+  setType(
+    name: string,
+    symbolType: SymbolType,
+    flags: Partial<TypeFlags> = {},
+  ) {
     const currentScope = this.scopes[this.scopes.length - 1];
-    currentScope.types.set(name, symbolType);
+    const existingEntry = Some(currentScope.types.get(name));
+    existingEntry.then((entry) => {
+      if (entry.readonly) {
+        throw new InternalError(
+          `Attempted to reassign the existing type with the name "${name}".`,
+          `However, the type is flagged as readonly.`,
+        );
+      }
+    });
+    const entry: TypeEntry = {
+      type: symbolType,
+      readonly: flags.readonly ?? this.getGlobalFlagOverride("readonly"),
+    };
+    currentScope.types.set(name, entry);
   }
 
   setReturnType(returnType: SymbolType) {
@@ -763,15 +810,31 @@ export class TypeTable {
   }
 
   initializeStandardLibraryTypes() {
-    this.setType("Number", new CompositeSymbolType({ id: "Number" }));
-    this.setType("Boolean", new CompositeSymbolType({ id: "Boolean" }));
-    this.setType("String", new CompositeSymbolType({ id: "String" }));
+    this.setType(
+      "Number",
+      new CompositeSymbolType({ id: "Number" }),
+      { readonly: true },
+    );
+    this.setType(
+      "Boolean",
+      new CompositeSymbolType({ id: "Boolean" }),
+      { readonly: true },
+    );
+    this.setType(
+      "String",
+      new CompositeSymbolType({ id: "String" }),
+      { readonly: true },
+    );
 
     /* ~~~ TEMPORARY ~~~ */
 
     // will be replaced by stdlib implementation in the future
 
-    this.setType("Nothing", new CompositeSymbolType({ id: "Nothing" }));
+    this.setType(
+      "Nothing",
+      new CompositeSymbolType({ id: "Nothing" }),
+      { readonly: true },
+    );
 
     /* ~~~ TEMPORARY ~~~ */
   }
@@ -780,6 +843,30 @@ export class TypeTable {
     this.scopes = [];
     this.pushScope();
     this.initializeStandardLibraryTypes();
+  }
+
+  /**
+   * See the `globalFlagOverrides` attribute for more information.
+   */
+  getGlobalFlagOverride(flag: keyof TypeFlags): TypeFlags[keyof TypeFlags] {
+    const override = this.globalFlagOverrides[flag];
+    if (override === "notset") {
+      return false;
+    }
+    return override;
+  }
+
+  /**
+   * When a flag is set globally as an override, that flag is automatically
+   * applied to all symbols that are inserted into the table.
+   * Look at the `globalFlagOverrides` attribute for more information.
+   */
+  setGlobalFlagOverrides(
+    flags: { [K in keyof TypeFlags]?: TypeFlags[K] | "notset" },
+  ) {
+    for (const [key, value] of Object.entries(flags)) {
+      this.globalFlagOverrides[key as keyof TypeFlags] = value;
+    }
   }
 }
 

@@ -73,7 +73,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   analyze(): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const existingSymbol = analysisTable.findSymbol(this.name.text);
-    if (existingSymbol.kind === "some") {
+    if (existingSymbol.hasValue()) {
       findings.errors.push(AnalysisError({
         message:
           "Function parameter names have to be unique. Parameters can not share names with other variables.",
@@ -83,7 +83,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
         endHighlight: None(),
       }));
     }
-    if (typeTable.findType(this.type.text).kind === "none") {
+    if (!typeTable.findType(this.type.text).hasValue()) {
       findings.errors.push(AnalysisError({
         message: `The type called "${this.type.text}" could not be found.`,
         beginHighlight: DummyAstNode.fromToken(this.type),
@@ -94,7 +94,8 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   }
 
   resolveType(): SymbolType {
-    const parameterType = typeTable.findType(this.type.text);
+    const parameterType = typeTable.findType(this.type.text)
+      .map(([type, _flags]) => type);
     return parameterType.unwrapOrThrow(UnresolvableSymbolTypeError());
   }
 

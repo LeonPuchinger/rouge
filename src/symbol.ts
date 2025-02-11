@@ -130,13 +130,35 @@ export class CompositeSymbolValue
 
 // Symbol Table
 
-type Scope<S extends Symbol> = Map<string, S>;
+type SymbolFlags = {
+  readonly: boolean;
+};
+
+type SymbolEntry<S extends Symbol> = SymbolFlags & {
+  symbol: S;
+};
+
+type Scope<S extends Symbol> = Map<string, SymbolEntry<S>>;
 
 export type InterpreterSymbolTable = SymbolTable<RuntimeSymbol>;
 export type AnalysisSymbolTable = SymbolTable<StaticSymbol>;
 
 export class SymbolTable<S extends Symbol> {
   private scopes: Scope<S>[] = [new Map()];
+  /**
+   * When a flag is set globally as an override, it is automatically
+   * applied to all symbols that are inserted into the table.
+   * This becomes useful, for instance, when initializing the stdlib.
+   * There, the `readonly` flag can be set for all symbols contained in the stdlib.
+   * When an override is set to `"notset"`, it is not applied to any symbol.
+   * Also, in case a flag is explicitly set when a symbol is inserted
+   * into the table, the global flag is ignored.
+   */
+  private globalFlagOverrides: {
+    [K in keyof SymbolFlags]: SymbolFlags[K] | "notset";
+  } = {
+    readonly: "notset",
+  };
 
   pushScope() {
     this.scopes.push(new Map());
@@ -152,38 +174,88 @@ export class SymbolTable<S extends Symbol> {
     }
   }
 
-  private findSymbolInScope(
+  private findSymbolEntryInScope(
     name: string,
     scope: Scope<S>,
-  ): Option<S> {
-    const symbol = scope.get(name);
-    return Some(symbol);
+  ): Option<SymbolEntry<S>> {
+    const entry = scope.get(name);
+    return Some(entry);
   }
 
   findSymbolInCurrentScope(
     name: string,
-  ): Option<S> {
+  ): Option<[S, SymbolFlags]> {
     const current = this.scopes.toReversed().at(0);
     if (current !== undefined) {
-      return this.findSymbolInScope(name, current);
+      return this.findSymbolEntryInScope(name, current)
+        .map((entry) => {
+          const { symbol, ...flags } = entry;
+          return [symbol, flags];
+        });
     }
     return None();
   }
 
-  findSymbol(name: string): Option<S> {
+  findSymbol(name: string): Option<[S, SymbolFlags]> {
     for (const currentScope of this.scopes.toReversed()) {
-      const symbol = this.findSymbolInScope(name, currentScope);
-      if (symbol.kind === "none") {
+      const entry = this.findSymbolEntryInScope(name, currentScope)
+        .map((entry) => {
+          const { symbol, ...flags } = entry;
+          return [symbol, flags];
+        });
+      if (!entry.hasValue()) {
         continue;
       }
-      return symbol;
+      return entry as Option<[S, SymbolFlags]>;
     }
     return None();
   }
 
-  setSymbol(name: string, symbol: S) {
+  setSymbol(
+    name: string,
+    symbol: S,
+    readonly?: boolean,
+  ) {
     const currentScope = this.scopes[this.scopes.length - 1];
-    currentScope.set(name, symbol);
+    const existingEntry = Some(currentScope.get(name));
+    existingEntry.then((entry) => {
+      if (entry.readonly) {
+        throw new InternalError(
+          `Attempted to reassign the existing symbol with the name "${name}".`,
+          `However, the symbol is flagged as readonly.`,
+        );
+      }
+    });
+    currentScope.set(name, {
+      symbol,
+      readonly: readonly ?? this.getGlobalFlagOverride("readonly"),
+    });
+  }
+
+  /**
+   * See the `globalFlagOverrides` attribute for more information.
+   */
+  getGlobalFlagOverride(
+    flag: keyof SymbolFlags,
+  ): SymbolFlags[keyof SymbolFlags] {
+    const override = this.globalFlagOverrides[flag];
+    if (override === "notset") {
+      return false;
+    }
+    return override;
+  }
+
+  /**
+   * When a flag is set globally as an override, that flag is automatically
+   * applied to all symbols that are inserted into the table.
+   * Look at the `globalFlagOverrides` attribute for more information.
+   */
+  setGlobalFlagOverrides(
+    flags: { [K in keyof SymbolFlags]?: SymbolFlags[K] | "notset" },
+  ) {
+    for (const [key, value] of Object.entries(flags)) {
+      this.globalFlagOverrides[key as keyof SymbolFlags] = value;
+    }
   }
 }
 

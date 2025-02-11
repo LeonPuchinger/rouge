@@ -94,7 +94,8 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
 
   analyze(): AnalysisFindings {
     let findings = AnalysisFindings.empty();
-    const type = typeTable.findType(this.name.text);
+    const type = typeTable.findType(this.name.text)
+      .map(([type, _flags]) => type);
     if (!type.hasValue()) {
       findings.errors.push(AnalysisError({
         beginHighlight: DummyAstNode.fromToken(this.name),
@@ -125,6 +126,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       .map((placeholder) => placeholder.resolveType());
     let resolvedType = typeTable
       .findType(this.name.text)
+      .map(([type, _flags]) => type)
       .unwrap() as CompositeSymbolType;
     if (placeholderTypes.length !== 0) {
       /* Only fork the type in case it can be modified by parameterizing it with placeholders

@@ -121,6 +121,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         Array.from(functionType.placeholders.values()),
         this.placeholders.map((placeholder) =>
           typeTable.findType(placeholder.text)
+            .map(([type, _flags]) => type)
         ),
       )
     ) {
@@ -184,6 +185,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         Array.from(structureType.placeholders.values()),
         this.placeholders.map((placeholder) =>
           typeTable.findType(placeholder.text)
+            .map(([type, _flags]) => type)
         ),
       )
     ) {
@@ -218,9 +220,10 @@ export class InvocationAstNode implements EvaluableAstNode {
       );
     const calledSymbol = analysisTable.findSymbol(this.name.text);
     const [isFunction, symbolExists] = calledSymbol
-      .map((symbol) => [symbol.valueType.isFunction(), true])
+      .map(([symbol, _flags]) => [symbol.valueType.isFunction(), true])
       .unwrapOr([false, false]);
-    const calledType = typeTable.findType(this.name.text);
+    const calledType = typeTable.findType(this.name.text)
+      .map(([type, _flags]) => type);
     const isType = calledType.hasValue();
     if (symbolExists && isType) {
       throw new InternalError(
@@ -248,7 +251,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         findings,
         this.analyzeFunctionInvocation(
           calledSymbol
-            .map((symbol) => symbol.valueType)
+            .map(([symbol, _flags]) => symbol.valueType)
             .unwrap() as FunctionSymbolType,
         ),
       );
@@ -311,15 +314,17 @@ export class InvocationAstNode implements EvaluableAstNode {
   evaluate(): SymbolValue<unknown> {
     const calledSymbol = runtimeTable.findSymbol(this.name.text);
     if (calledSymbol.hasValue()) {
+      const [symbol, _flags] = calledSymbol.unwrap();
       return this.evaluateFunction(
-        calledSymbol.unwrap() as RuntimeSymbol<FunctionSymbolValue>,
+        symbol as RuntimeSymbol<FunctionSymbolValue>,
       );
     }
     // It can safely be assumed that the invocation is of a type
     // since no function with the name was found in the symbol table
     // and static analysis guarantees that either a function or type
     // with the name exists.
-    const calledStructure = typeTable.findType(this.name.text);
+    const calledStructure = typeTable.findType(this.name.text)
+      .map(([type, _flags]) => type);
     return this.evaluateStructure(
       calledStructure.unwrap() as CompositeSymbolType,
     );
@@ -328,7 +333,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   resolveType(): SymbolType {
     return analysisTable
       .findSymbol(this.name.text)
-      .map((symbol) => {
+      .map(([symbol, _flags]) => {
         const functionType = (symbol.valueType as FunctionSymbolType).fork();
         // bind placeholdes to the supplied types
         for (
@@ -336,6 +341,7 @@ export class InvocationAstNode implements EvaluableAstNode {
             Array.from(functionType.placeholders.values()),
             this.placeholders.map((placeholder) =>
               typeTable.findType(placeholder.text)
+                .map(([type, _flags]) => type)
             ),
           )
         ) {
@@ -344,7 +350,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         return functionType.returnType;
       })
       .unwrapOrElse(
-        typeTable.findType(this.name.text).unwrap,
+        typeTable
+          .findType(this.name.text)
+          .map(([type, _flags]) => type)
+          .unwrap,
       );
   }
 
