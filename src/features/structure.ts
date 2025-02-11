@@ -62,14 +62,24 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   analyze(): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
-      .then(() => {
-        findings.errors.push(AnalysisError({
-          message: "Names for structures have to be unique.",
-          beginHighlight: DummyAstNode.fromToken(this.name),
-          endHighlight: None(),
-          messageHighlight:
-            `A structure by the name "${this.name.text}" already exists.`,
-        }));
+      .then(([_type, flags]) => {
+        if (flags.readonly) {
+          findings.errors.push(AnalysisError({
+            message:
+              "This name cannot be used because it is part of the language.",
+            beginHighlight: DummyAstNode.fromToken(this.name),
+            endHighlight: None(),
+            messageHighlight: "",
+          }));
+        } else {
+          findings.errors.push(AnalysisError({
+            message: "Names for structures have to be unique.",
+            beginHighlight: DummyAstNode.fromToken(this.name),
+            endHighlight: None(),
+            messageHighlight:
+              `A structure by the name "${this.name.text}" already exists.`,
+          }));
+        }
       });
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
