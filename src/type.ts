@@ -788,15 +788,15 @@ export class TypeTable {
   }
 
   initializeStandardLibraryTypes() {
-    this.setType("Number", new CompositeSymbolType({ id: "Number" }));
-    this.setType("Boolean", new CompositeSymbolType({ id: "Boolean" }));
-    this.setType("String", new CompositeSymbolType({ id: "String" }));
+    this.setType("Number", new CompositeSymbolType({ id: "Number" }), true);
+    this.setType("Boolean", new CompositeSymbolType({ id: "Boolean" }), true);
+    this.setType("String", new CompositeSymbolType({ id: "String" }), true);
 
     /* ~~~ TEMPORARY ~~~ */
 
     // will be replaced by stdlib implementation in the future
 
-    this.setType("Nothing", new CompositeSymbolType({ id: "Nothing" }));
+    this.setType("Nothing", new CompositeSymbolType({ id: "Nothing" }), true);
 
     /* ~~~ TEMPORARY ~~~ */
   }
