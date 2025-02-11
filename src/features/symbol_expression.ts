@@ -20,7 +20,7 @@ export class SymbolExpressionAstNode implements EvaluableAstNode {
     const ident = this.identifierToken.text;
     return runtimeTable
       .findSymbol(ident)
-      .map((symbol) => symbol.value)
+      .map(([symbol, _flags]) => symbol.value)
       .unwrapOrThrow(
         new InternalError(
           `Unable to resolve symbol ${ident} in the symbol table.`,
@@ -49,7 +49,7 @@ export class SymbolExpressionAstNode implements EvaluableAstNode {
   resolveType(): SymbolType {
     return analysisTable
       .findSymbol(this.identifierToken.text)
-      .map((symbol) => symbol.valueType)
+      .map(([symbol, _flags]) => symbol.valueType)
       .unwrapOrThrow(
         new InternalError(
           "Unable to resolve a symbol in the symbol table.",

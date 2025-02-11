@@ -73,7 +73,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
   analyze(): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const existingSymbol = analysisTable.findSymbol(this.name.text);
-    if (existingSymbol.kind === "some") {
+    if (existingSymbol.hasValue()) {
       findings.errors.push(AnalysisError({
         message:
           "Function parameter names have to be unique. Parameters can not share names with other variables.",

@@ -130,9 +130,12 @@ export class CompositeSymbolValue
 
 // Symbol Table
 
-type SymbolEntry<S extends Symbol> = {
-  symbol: S;
+type SymbolFlags = {
   readonly: boolean;
+};
+
+type SymbolEntry<S extends Symbol> = SymbolFlags & {
+  symbol: S;
 };
 
 type Scope<S extends Symbol> = Map<string, SymbolEntry<S>>;
@@ -157,32 +160,39 @@ export class SymbolTable<S extends Symbol> {
     }
   }
 
-  private findSymbolInScope(
+  private findSymbolEntryInScope(
     name: string,
     scope: Scope<S>,
-  ): Option<S> {
+  ): Option<SymbolEntry<S>> {
     const entry = scope.get(name);
-    return Some(entry)
-      .map((entry) => entry.symbol);
+    return Some(entry);
   }
 
   findSymbolInCurrentScope(
     name: string,
-  ): Option<S> {
+  ): Option<[S, SymbolFlags]> {
     const current = this.scopes.toReversed().at(0);
     if (current !== undefined) {
-      return this.findSymbolInScope(name, current);
+      return this.findSymbolEntryInScope(name, current)
+        .map((entry) => {
+          const { symbol, ...flags } = entry;
+          return [symbol, flags];
+        });
     }
     return None();
   }
 
-  findSymbol(name: string): Option<S> {
+  findSymbol(name: string): Option<[S, SymbolFlags]> {
     for (const currentScope of this.scopes.toReversed()) {
-      const symbol = this.findSymbolInScope(name, currentScope);
-      if (symbol.kind === "none") {
+      const entry = this.findSymbolEntryInScope(name, currentScope)
+        .map((entry) => {
+          const { symbol, ...flags } = entry;
+          return [symbol, flags];
+        });
+      if (!entry.hasValue()) {
         continue;
       }
-      return symbol;
+      return entry as Option<[S, SymbolFlags]>;
     }
     return None();
   }
