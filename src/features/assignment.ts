@@ -55,6 +55,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
       const expressionType = this.child.resolveType();
       this.typeAnnotation.then((annotationName) => {
         const resolvedAnnotation = typeTable.findType(annotationName.text)
+          .map(([type, _flags]) => type)
           .unwrap();
         if (!resolvedAnnotation.typeCompatibleWith(expressionType)) {
           findings.errors.push(AnalysisError({

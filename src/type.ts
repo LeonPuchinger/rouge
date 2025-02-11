@@ -680,8 +680,16 @@ export class UniqueSymbolType implements SymbolType {
   }
 }
 
+type TypeFlags = {
+  readonly: boolean;
+};
+
+type TypeEntry = TypeFlags & {
+  type: SymbolType;
+};
+
 type Scope = {
-  types: Map<string, SymbolType>;
+  types: Map<string, TypeEntry>;
   returnType: Option<SymbolType>;
 };
 
@@ -706,39 +714,56 @@ export class TypeTable {
     }
   }
 
-  private findTypeInScope(
+  private findTypeEntryInScope(
     name: string,
     scope: Scope,
-  ): Option<SymbolType> {
+  ): Option<TypeEntry> {
     return Some(scope.types.get(name));
   }
 
-  findTypeInCurrentScope(name: string): Option<SymbolType> {
+  findTypeInCurrentScope(name: string): Option<[SymbolType, TypeFlags]> {
     const current = this.scopes.at(-1);
     if (current !== undefined) {
-      return this.findTypeInScope(name, current);
+      return this.findTypeEntryInScope(name, current)
+        .map((entry) => {
+          const { type, ...flags } = entry;
+          return [type, flags];
+        });
     }
     return None();
   }
 
-  findType(name: string): Option<SymbolType> {
+  findType(name: string): Option<[SymbolType, TypeFlags]> {
     for (const currentScope of this.scopes.toReversed()) {
-      const symbolType = this.findTypeInScope(name, currentScope);
-      if (symbolType.kind === "none") {
+      const typeEntry = this.findTypeEntryInScope(name, currentScope)
+        .map((entry) => {
+          const { type, ...flags } = entry;
+          return [type, flags];
+        });
+      if (!typeEntry.hasValue()) {
         continue;
       }
-      return symbolType;
+      return typeEntry as Option<[SymbolType, TypeFlags]>;
     }
     return None();
   }
 
   typeResolvable(name: string): boolean {
-    return this.findType(name).kind === "some";
+    return this.findType(name).hasValue();
   }
 
-  setType(name: string, symbolType: SymbolType) {
+  setType(name: string, symbolType: SymbolType, readonly: boolean = false) {
     const currentScope = this.scopes[this.scopes.length - 1];
-    currentScope.types.set(name, symbolType);
+    const existingEntry = Some(currentScope.types.get(name));
+    existingEntry.then((entry) => {
+      if (entry.readonly) {
+        throw new InternalError(
+          `Attempted to reassign the existing type with the name "${name}".`,
+          `However, the type is flagged as readonly.`,
+        );
+      }
+    });
+    currentScope.types.set(name, { type: symbolType, readonly });
   }
 
   setReturnType(returnType: SymbolType) {

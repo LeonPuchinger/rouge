@@ -121,6 +121,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         Array.from(functionType.placeholders.values()),
         this.placeholders.map((placeholder) =>
           typeTable.findType(placeholder.text)
+            .map(([type, _flags]) => type)
         ),
       )
     ) {
@@ -184,6 +185,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         Array.from(structureType.placeholders.values()),
         this.placeholders.map((placeholder) =>
           typeTable.findType(placeholder.text)
+            .map(([type, _flags]) => type)
         ),
       )
     ) {
@@ -220,7 +222,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     const [isFunction, symbolExists] = calledSymbol
       .map(([symbol, _flags]) => [symbol.valueType.isFunction(), true])
       .unwrapOr([false, false]);
-    const calledType = typeTable.findType(this.name.text);
+    const calledType = typeTable.findType(this.name.text)
+      .map(([type, _flags]) => type);
     const isType = calledType.hasValue();
     if (symbolExists && isType) {
       throw new InternalError(
@@ -320,7 +323,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     // since no function with the name was found in the symbol table
     // and static analysis guarantees that either a function or type
     // with the name exists.
-    const calledStructure = typeTable.findType(this.name.text);
+    const calledStructure = typeTable.findType(this.name.text)
+      .map(([type, _flags]) => type);
     return this.evaluateStructure(
       calledStructure.unwrap() as CompositeSymbolType,
     );
@@ -337,6 +341,7 @@ export class InvocationAstNode implements EvaluableAstNode {
             Array.from(functionType.placeholders.values()),
             this.placeholders.map((placeholder) =>
               typeTable.findType(placeholder.text)
+                .map(([type, _flags]) => type)
             ),
           )
         ) {
@@ -345,7 +350,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         return functionType.returnType;
       })
       .unwrapOrElse(
-        typeTable.findType(this.name.text).unwrap,
+        typeTable
+          .findType(this.name.text)
+          .map(([type, _flags]) => type)
+          .unwrap,
       );
   }
 

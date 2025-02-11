@@ -47,6 +47,7 @@ export type WithOptionalAttributes<T> = ConvertOptionals<Attributes<T>>;
  */
 export const nothingType = typeTable
   .findType("Nothing")
+  .map(([type, _flags]) => type)
   .unwrapOrThrow(
     new InternalError(
       "The type called `Nothing` from the standard library could not be located.",
