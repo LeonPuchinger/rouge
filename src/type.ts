@@ -680,8 +680,23 @@ export class UniqueSymbolType implements SymbolType {
   }
 }
 
+/**
+ * Additional flags that apply to types only
+ * when they areinserted into the type table.
+ */
 type TypeFlags = {
+  /**
+   * Whether the type is readonly.
+   * Mainly used to protect stdlib contents from being reassigned.
+   */
   readonly: boolean;
+  /**
+   * Marks types that are part of the runtime.
+   * These types are not supposed to be exposed to the user.
+   * If the `ignoreRuntimeBindings` attribute in the table is set to `true`,
+   * the table will act as if the runtime types do not exist.
+   */
+  runtimeBinding: boolean;
 };
 
 type TypeEntry = TypeFlags & {
@@ -708,6 +723,7 @@ export class TypeTable {
     [K in keyof TypeFlags]: TypeFlags[K] | "notset";
   } = {
     readonly: "notset",
+    runtimeBinding: "notset",
   };
 
   constructor() {
