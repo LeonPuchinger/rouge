@@ -48,8 +48,18 @@ export class RuntimeStatementAstNode implements InterpretableAstNode {
         return AnalysisFindings.empty();
     }
 
+    /**
+     * It is assumed that this method is never going to be called.
+     * A `RuntimeStatementAstNode` is supposed to be the only child
+     * of a `StatementsAstNode` when it is used as a runtime binding.
+     * The `analyze` method of the `RuntimeStatementAstNode` will never
+     * yield any findings, which means that no snippet of this AST node
+     * ever has to be generated. Therefore, the token range is never accessed.
+     */
     tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-        throw new Error("Method not implemented.");
+        throw new InternalError(
+            "The token range for a RuntimeStatementAstNode should never be accessed.",
+        );
     }
 }
 
