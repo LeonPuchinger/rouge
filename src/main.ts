@@ -1,6 +1,7 @@
 import { AnalysisFindings } from "./finding.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
+import { injectRuntimeBindings } from "./runtime.ts";
 import { analyzeStdlib, parseStdlib } from "./stdlib.ts";
 import { typeTable } from "./type.ts";
 import { updateEnvironment } from "./util/environment.ts";
@@ -13,6 +14,7 @@ export type {
 export type { Option, Result } from "./util/monad/index.ts";
 
 export function run(source: string): AnalysisFindings {
+  injectRuntimeBindings();
   const stdlibAst = parseStdlib();
   analyzeStdlib(stdlibAst);
   updateEnvironment({ source: source });
@@ -28,6 +30,7 @@ export function run(source: string): AnalysisFindings {
 }
 
 export function analyze(source: string): AnalysisFindings {
+  // TODO: inject runtime bindings
   const stdlibAst = parseStdlib();
   analyzeStdlib(stdlibAst);
   updateEnvironment({ source: source });
