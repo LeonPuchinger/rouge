@@ -2,7 +2,7 @@ import { AnalysisFindings } from "./finding.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { injectRuntimeBindings } from "./runtime.ts";
-import { analyzeStdlib, parseStdlib } from "./stdlib.ts";
+import { analyzeStdlib, injectStdlib, parseStdlib } from "./stdlib.ts";
 import { typeTable } from "./type.ts";
 import { updateEnvironment } from "./util/environment.ts";
 
@@ -23,7 +23,7 @@ export function run(source: string): AnalysisFindings {
   const analysisFindings = ast.analyze();
   typeTable.reset();
   if (analysisFindings.errors.length == 0) {
-    stdlibAst.interpret();
+    injectStdlib(stdlibAst);
     ast.interpret();
   }
   return analysisFindings;
