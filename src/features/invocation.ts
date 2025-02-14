@@ -246,13 +246,6 @@ export class InvocationAstNode implements EvaluableAstNode {
         endHighlight: None(),
       }));
     }
-    const partOfStdlib = calledSymbol
-      .map(([_symbol, flags]) => flags.stdlib)
-      .unwrapOr(false);
-    if (partOfStdlib) {
-      // grant the invocation access to the runtime
-      analysisTable.ignoreRuntimeBindings = false;
-    }
     if (isFunction && !findings.isErroneous()) {
       findings = AnalysisFindings.merge(
         findings,
@@ -271,7 +264,6 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       );
     }
-    analysisTable.ignoreRuntimeBindings = true;
     return findings;
   }
 

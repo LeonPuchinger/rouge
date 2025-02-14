@@ -31,14 +31,18 @@ export function parseStdlib() {
 export function analyzeStdlib(stdlibAst: AST) {
     updateEnvironment({ source: stdlib });
     analysisTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
+    analysisTable.ignoreRuntimeBindings = false;
     typeTable.setGlobalFlagOverrides({ readonly: true });
+    typeTable.ignoreRuntimeTypes = false;
     const analysisFindings = stdlibAst.analyze();
     updateEnvironment({ source: "" });
     analysisTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
     });
+    analysisTable.ignoreRuntimeBindings = true;
     typeTable.setGlobalFlagOverrides({ readonly: "notset" });
+    typeTable.ignoreRuntimeTypes = true;
     if (analysisFindings.errors.length !== 0) {
         throw new InternalError(
             "The standard library contains static analysis errors.",
