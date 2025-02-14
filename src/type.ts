@@ -727,7 +727,7 @@ export class TypeTable {
    * When set to `true`, the table will act as if types stored
    * in the `runtimeTypes` namespace do not exists.
    */
-  private ignoreRuntimeTypes = true;
+  ignoreRuntimeTypes = true;
 
   constructor() {
     this.reset();

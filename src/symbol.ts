@@ -161,7 +161,7 @@ export class SymbolTable<S extends Symbol> {
    * When set to `true`, the table will act as if symbols stored
    * in the `runtimeBindings` namespace do not exist.
    */
-  private ignoreRuntimeBindings = true;
+  ignoreRuntimeBindings = true;
   /**
    * When a flag is set globally as an override, it is automatically
    * applied to all symbols that are inserted into the table.
