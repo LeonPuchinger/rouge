@@ -146,6 +146,17 @@ export type AnalysisSymbolTable = SymbolTable<StaticSymbol>;
 export class SymbolTable<S extends Symbol> {
   private scopes: Scope<S>[] = [new Map()];
   /**
+   * Symbols that belong to the runtime are kept in a separate namespace.
+   * When looking up symbols via their name, runtime bindings are considered first.
+   * This behavior can be disabled by setting `ignoreRuntimeBindings` to `true`.
+   */
+  private runtimeBindings = new Map<string, S>();
+  /**
+   * When set to `true`, the table will act as if symbols stored
+   * in the `runtimeBindings` namespace do not exist.
+   */
+  private ignoreRuntimeBindings = true;
+  /**
    * When a flag is set globally as an override, it is automatically
    * applied to all symbols that are inserted into the table.
    * This becomes useful, for instance, when initializing the stdlib.
@@ -185,6 +196,12 @@ export class SymbolTable<S extends Symbol> {
   findSymbolInCurrentScope(
     name: string,
   ): Option<[S, SymbolFlags]> {
+    if (!this.ignoreRuntimeBindings) {
+      const runtimeBinding = this.runtimeBindings.get(name);
+      if (runtimeBinding !== undefined) {
+        return Some([runtimeBinding, { readonly: true }]);
+      }
+    }
     const current = this.scopes.toReversed().at(0);
     if (current !== undefined) {
       return this.findSymbolEntryInScope(name, current)
@@ -197,6 +214,12 @@ export class SymbolTable<S extends Symbol> {
   }
 
   findSymbol(name: string): Option<[S, SymbolFlags]> {
+    if (!this.ignoreRuntimeBindings) {
+      const runtimeBinding = this.runtimeBindings.get(name);
+      if (runtimeBinding !== undefined) {
+        return Some([runtimeBinding, { readonly: true }]);
+      }
+    }
     for (const currentScope of this.scopes.toReversed()) {
       const entry = this.findSymbolEntryInScope(name, currentScope)
         .map((entry) => {
@@ -230,6 +253,10 @@ export class SymbolTable<S extends Symbol> {
       symbol,
       readonly: readonly ?? this.getGlobalFlagOverride("readonly"),
     });
+  }
+
+  setRuntimeBinding(name: string, symbol: S) {
+    this.runtimeBindings.set(name, symbol);
   }
 
   /**
