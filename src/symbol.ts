@@ -132,6 +132,12 @@ export class CompositeSymbolValue
 
 type SymbolFlags = {
   readonly: boolean;
+  /**
+   * Whether the symbol is part of the standard library.
+   * This flag is used primarly to identify functions that require
+   * access to runtime bindings and types.
+   */
+  stdlib: boolean;
 };
 
 type SymbolEntry<S extends Symbol> = SymbolFlags & {
@@ -169,6 +175,7 @@ export class SymbolTable<S extends Symbol> {
     [K in keyof SymbolFlags]: SymbolFlags[K] | "notset";
   } = {
     readonly: "notset",
+    stdlib: "notset",
   };
 
   pushScope() {
@@ -199,7 +206,7 @@ export class SymbolTable<S extends Symbol> {
     if (!this.ignoreRuntimeBindings) {
       const runtimeBinding = this.runtimeBindings.get(name);
       if (runtimeBinding !== undefined) {
-        return Some([runtimeBinding, { readonly: true }]);
+        return Some([runtimeBinding, { readonly: true, stdlib: false }]);
       }
     }
     const current = this.scopes.toReversed().at(0);
@@ -217,7 +224,7 @@ export class SymbolTable<S extends Symbol> {
     if (!this.ignoreRuntimeBindings) {
       const runtimeBinding = this.runtimeBindings.get(name);
       if (runtimeBinding !== undefined) {
-        return Some([runtimeBinding, { readonly: true }]);
+        return Some([runtimeBinding, { readonly: true, stdlib: false }]);
       }
     }
     for (const currentScope of this.scopes.toReversed()) {
@@ -238,6 +245,7 @@ export class SymbolTable<S extends Symbol> {
     name: string,
     symbol: S,
     readonly?: boolean,
+    stdlib?: boolean,
   ) {
     const currentScope = this.scopes[this.scopes.length - 1];
     const existingEntry = Some(currentScope.get(name));
@@ -252,6 +260,7 @@ export class SymbolTable<S extends Symbol> {
     currentScope.set(name, {
       symbol,
       readonly: readonly ?? this.getGlobalFlagOverride("readonly"),
+      stdlib: stdlib ?? this.getGlobalFlagOverride("stdlib"),
     });
   }
 
