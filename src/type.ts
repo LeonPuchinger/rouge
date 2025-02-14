@@ -883,7 +883,9 @@ export class TypeTable {
   /**
    * See the `globalFlagOverrides` attribute for more information.
    */
-  getGlobalFlagOverride(flag: keyof TypeFlags): TypeFlags[keyof TypeFlags] {
+  private getGlobalFlagOverride(
+    flag: keyof TypeFlags,
+  ): TypeFlags[keyof TypeFlags] {
     const override = this.globalFlagOverrides[flag];
     if (override === "notset") {
       return false;

@@ -271,7 +271,7 @@ export class SymbolTable<S extends Symbol> {
   /**
    * See the `globalFlagOverrides` attribute for more information.
    */
-  getGlobalFlagOverride(
+  private getGlobalFlagOverride(
     flag: keyof SymbolFlags,
   ): SymbolFlags[keyof SymbolFlags] {
     const override = this.globalFlagOverrides[flag];
