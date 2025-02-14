@@ -318,14 +318,14 @@ export class InvocationAstNode implements EvaluableAstNode {
       .unwrapOr(false);
     if (partOfStdlib) {
       // grant the invocation access to the runtime
-      analysisTable.ignoreRuntimeBindings = false;
+      runtimeTable.ignoreRuntimeBindings = false;
     }
     if (calledSymbol.hasValue()) {
       const [symbol, _flags] = calledSymbol.unwrap();
       const result = this.evaluateFunction(
         symbol as RuntimeSymbol<FunctionSymbolValue>,
       );
-      analysisTable.ignoreRuntimeBindings = true;
+      runtimeTable.ignoreRuntimeBindings = true;
       return result;
     }
     // It can safely be assumed that the invocation is of a type
@@ -337,7 +337,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     const result = this.evaluateStructure(
       calledStructure.unwrap() as CompositeSymbolType,
     );
-    analysisTable.ignoreRuntimeBindings = true;
+    runtimeTable.ignoreRuntimeBindings = true;
     return result;
   }
 
