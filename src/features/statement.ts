@@ -13,6 +13,7 @@ import { ConditionAstNode } from "./condition.ts";
 import { ReturnStatementAstNode } from "./function.ts";
 import { condition, returnStatement } from "./parser_declarations.ts";
 import { structureDefinition, StructureDefinitonAstNode } from "./structure.ts";
+import { RuntimeStatementAstNode } from "../runtime.ts";
 
 /* AST NODES */
 
@@ -21,7 +22,8 @@ export type StatementAstNode =
   | ConditionAstNode
   | ReturnStatementAstNode
   | StructureDefinitonAstNode
-  | AssignmentAstNode;
+  | AssignmentAstNode
+  | RuntimeStatementAstNode;
 
 export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];

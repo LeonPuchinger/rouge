@@ -1,4 +1,8 @@
+import { Token } from "typescript-parsec";
+import { InterpretableAstNode } from "./ast.ts";
 import { StatementsAstNode } from "./features/statement.ts";
+import { AnalysisFindings } from "./finding.ts";
+import { TokenKind } from "./lexer.ts";
 import {
     analysisTable,
     FunctionSymbolValue,
@@ -9,9 +13,35 @@ import {
 import { FunctionSymbolType, SymbolType } from "./type.ts";
 import { nothingType } from "./util/type.ts";
 
+export class RuntimeStatementAstNode implements InterpretableAstNode {
+    private hook!: () => void;
+
+    constructor(params: { hook: () => void }) {
+        Object.assign(this, params);
+    }
+
+    interpret(): void {
+        this.hook();
+    }
+
+    analyze(): AnalysisFindings {
+        return AnalysisFindings.empty();
+    }
+
+    tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+        throw new Error("Method not implemented.");
+    }
+}
+
 export function injectRuntimeBindings() {
     const statements = new StatementsAstNode({
-        children: [],
+        children: [
+            new RuntimeStatementAstNode({
+                hook: () => {
+                    console.log("hello from print!");
+                },
+            }),
+        ],
     });
 
     const parameterTypes = new Map<string, SymbolType>();
