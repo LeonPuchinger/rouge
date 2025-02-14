@@ -16,21 +16,20 @@ export function injectRuntimeBindings() {
 
     const parameterTypes = new Map<string, SymbolType>();
     const returnType = nothingType;
-    const fnType = new FunctionSymbolType({
-        parameterTypes: Array.from(parameterTypes.values()),
-        returnType: returnType,
-    });
 
     const symbolValue = new FunctionSymbolValue({
         value: statements,
         parameterTypes: parameterTypes,
         returnType: nothingType,
     });
-
     const rtSymbol = new RuntimeSymbol({
         value: symbolValue,
     });
 
+    const fnType = new FunctionSymbolType({
+        parameterTypes: Array.from(parameterTypes.values()),
+        returnType: returnType,
+    });
     const stSymbol = new StaticSymbol({
         valueType: fnType,
     });
