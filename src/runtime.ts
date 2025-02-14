@@ -11,7 +11,27 @@ import {
     StaticSymbol,
 } from "./symbol.ts";
 import { FunctionSymbolType, SymbolType } from "./type.ts";
+import { InternalError } from "./util/error.ts";
 import { nothingType } from "./util/type.ts";
+
+/**
+ * Runtime bindings can be parametrized by pushing the parameter
+ * values onto the symbol table. This function retrieves the underlying
+ * values from the corresponding symbol stored in the table via a name.
+ */
+function retrieveRuntimeParameter<T>(
+    name: string,
+): T {
+    const symbol = runtimeTable.findSymbol(name)
+        .map(([symbol, _flags]) => symbol)
+        .unwrapOrThrow(
+            new InternalError(
+                "The underlying hook for a runtime binding tried to access a parameter that should have been supplied to the runtime binding.",
+                `However, the parameter called "${name}" could not be found in the symbol table.`,
+            ),
+        );
+    return symbol.value.value as T;
+}
 
 export class RuntimeStatementAstNode implements InterpretableAstNode {
     private hook!: () => void;
