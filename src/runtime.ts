@@ -37,6 +37,16 @@ function resolveRuntimeParameter(
     return symbol.value;
 }
 
+/**
+ * This AST node is the key as to how runtime bindings are implemented.
+ * From the perspective of the interpreter, this AST node allows injecting
+ * native behavior into its `interpret` method via the `hook` callback.
+ * From the perspective of the language, this AST node represents a regular
+ * statement. When a runtime binding is created, a function is created that only
+ * contains a single statement, which is an instance of this AST node.
+ * Therefore, when this artificial runtime function is invocated, the language
+ * actually invokes the provided `hook`.
+ */
 export class RuntimeStatementAstNode implements InterpretableAstNode {
     private hook!: () => void;
 
