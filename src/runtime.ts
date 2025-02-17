@@ -1,5 +1,6 @@
 import { Token } from "typescript-parsec";
 import { InterpretableAstNode } from "./ast.ts";
+import { ReturnValueContainer } from "./features/function.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
@@ -13,7 +14,7 @@ import {
 } from "./symbol.ts";
 import { CompositeSymbolType, FunctionSymbolType, SymbolType } from "./type.ts";
 import { InternalError } from "./util/error.ts";
-import { nothingType } from "./util/type.ts";
+import { nothingInstance, nothingType } from "./util/type.ts";
 
 /**
  * Runtime bindings can be parametrized by pushing the parameter
@@ -64,11 +65,11 @@ export class RuntimeStatementAstNode implements InterpretableAstNode {
     }
 }
 
-function createSingleParameterNoReturnTypeRuntimeBinding<T>(
+function createSingleParameterRuntimeBinding<PARAM>(
     parameterName: string,
     languageParameterTypeId: string,
-    hook: (param: T) => void,
-): RuntimeSymbol<SymbolValue<T>> {
+    hook: (param: PARAM) => SymbolValue | void,
+): RuntimeSymbol<SymbolValue<PARAM>> {
     const parameterTypes = new Map<string, SymbolType>([
         [
             parameterName,
@@ -80,8 +81,11 @@ function createSingleParameterNoReturnTypeRuntimeBinding<T>(
         children: [
             new RuntimeStatementAstNode({
                 hook: () => {
-                    const param = retrieveRuntimeParameter<T>(parameterName);
-                    hook(param);
+                    const param = retrieveRuntimeParameter<PARAM>(
+                        parameterName,
+                    );
+                    const returnValue = hook(param) ?? nothingInstance;
+                    throw new ReturnValueContainer(returnValue);
                 },
             }),
         ],
@@ -96,15 +100,16 @@ function createSingleParameterNoReturnTypeRuntimeBinding<T>(
     });
 }
 
-function createSingleParameterNoReturnTypeStaticSymbol(
+function createSingleParameterStaticSymbol(
     languageParameterTypeId: string,
+    returnType: SymbolType = nothingType,
 ): StaticSymbol {
     return new StaticSymbol({
         valueType: new FunctionSymbolType({
             parameterTypes: [
                 new CompositeSymbolType({ id: languageParameterTypeId }),
             ],
-            returnType: nothingType,
+            returnType: returnType,
         }),
     });
 }
@@ -112,7 +117,7 @@ function createSingleParameterNoReturnTypeStaticSymbol(
 export function injectRuntimeBindings() {
     runtimeTable.setRuntimeBinding(
         "runtime_print_newline",
-        createSingleParameterNoReturnTypeRuntimeBinding<string>(
+        createSingleParameterRuntimeBinding<string>(
             "message",
             "String",
             (message) => {
@@ -122,6 +127,6 @@ export function injectRuntimeBindings() {
     );
     analysisTable.setRuntimeBinding(
         "runtime_print_newline",
-        createSingleParameterNoReturnTypeStaticSymbol("String"),
+        createSingleParameterStaticSymbol("String"),
     );
 }
