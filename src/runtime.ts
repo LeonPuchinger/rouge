@@ -72,11 +72,15 @@ type HookParameter = {
     symbolType: SymbolType;
 };
 
-function createRuntimeBinding<PARAM>(
+/**
+ * Responsible for creating the runtime symbol for a runtime binding
+ * that will end up in the runtime table.
+ */
+function createRuntimeBindingRuntimeSymbol(
     parameters: HookParameter[],
     returnType: SymbolType,
     hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
-): RuntimeSymbol<SymbolValue<PARAM>> {
+): RuntimeSymbol<SymbolValue> {
     const parameterTypes = new Map<string, SymbolType>(
         parameters.map((param) => [param.name, param.symbolType]),
     );
@@ -107,6 +111,10 @@ function createRuntimeBinding<PARAM>(
     });
 }
 
+/**
+ * Responsible for creating the static symbol for a runtime binding
+ * that will end up in the analysis table.
+ */
 function createRuntimeBindingStaticSymbol(
     parameters: HookParameter[],
     returnType: SymbolType = nothingType,
@@ -120,49 +128,65 @@ function createRuntimeBindingStaticSymbol(
     });
 }
 
-export function injectRuntimeBindings() {
+/**
+ * Creates a new runtime binding and injects it into the symbol table with the
+ * given `name`. The `hook` defines the behavior of the binding. Finally,
+ * the `onlyAnalysis` flag can be used to only inject the binding only into the
+ * analysis table.
+ */
+function createRuntimeBinding(
+    name: string,
+    parameters: HookParameter[],
+    returnType: SymbolType,
+    hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
+    onlyAnalysis: boolean = false,
+) {
     runtimeTable.setRuntimeBinding(
-        "runtime_print_newline",
-        createRuntimeBinding<string>(
-            [{
-                name: "message",
-                symbolType: new CompositeSymbolType({ id: "String" }),
-            }],
-            nothingType,
-            (params) => {
-                const message = params.get("message")!.value as string;
-                console.log(message);
-            },
-        ),
+        name,
+        createRuntimeBindingRuntimeSymbol(parameters, returnType, hook),
     );
-    analysisTable.setRuntimeBinding(
-        "runtime_print_newline",
-        createRuntimeBindingStaticSymbol([{
+    if (!onlyAnalysis) {
+        analysisTable.setRuntimeBinding(
+            name,
+            createRuntimeBindingStaticSymbol(parameters, returnType),
+        );
+    }
+}
+
+/**
+ * Creates all the necessary runtime bindings for the stdlib to function properly.
+ * The `onlyAnalysis` flag can be used to only inject the bindings into the
+ * analysis table.
+ */
+export function injectRuntimeBindings(
+    onlyAnalysis: boolean = false,
+) {
+    createRuntimeBinding(
+        "runtime_print",
+        [{
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
-        }]),
+        }],
+        nothingType,
+        (params) => {
+            const message = params.get("message")!.value as string;
+            console.log(message);
+        },
+        onlyAnalysis,
     );
 
-    runtimeTable.setRuntimeBinding(
-        "runtime_reverse_string",
-        createRuntimeBinding<string>(
-            [{
-                name: "message",
-                symbolType: new CompositeSymbolType({ id: "String" }),
-            }],
-            new CompositeSymbolType({ id: "String" }),
-            (parameters) => {
-                const message = parameters.get("message")!.value as string;
-                const reversed = message.split("").reverse().join("");
-                return new StringSymbolValue(reversed);
-            },
-        ),
-    );
-    analysisTable.setRuntimeBinding(
-        "runtime_reverse_string",
-        createRuntimeBindingStaticSymbol([{
+    createRuntimeBinding(
+        "runtime_reverse",
+        [{
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
-        }], new CompositeSymbolType({ id: "String" })),
+        }],
+        new CompositeSymbolType({ id: "String" }),
+        (params) => {
+            const message = params.get("message")!.value as string;
+            const reversed = message.split("").reverse().join("");
+            return new StringSymbolValue(reversed);
+        },
+        onlyAnalysis,
     );
 }
