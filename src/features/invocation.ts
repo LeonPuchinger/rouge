@@ -313,11 +313,20 @@ export class InvocationAstNode implements EvaluableAstNode {
 
   evaluate(): SymbolValue<unknown> {
     const calledSymbol = runtimeTable.findSymbol(this.name.text);
+    const partOfStdlib = calledSymbol
+      .map(([_symbol, flags]) => flags.stdlib)
+      .unwrapOr(false);
+    if (partOfStdlib) {
+      // grant the invocation access to the runtime
+      runtimeTable.ignoreRuntimeBindings = false;
+    }
     if (calledSymbol.hasValue()) {
       const [symbol, _flags] = calledSymbol.unwrap();
-      return this.evaluateFunction(
+      const result = this.evaluateFunction(
         symbol as RuntimeSymbol<FunctionSymbolValue>,
       );
+      runtimeTable.ignoreRuntimeBindings = true;
+      return result;
     }
     // It can safely be assumed that the invocation is of a type
     // since no function with the name was found in the symbol table
@@ -325,9 +334,11 @@ export class InvocationAstNode implements EvaluableAstNode {
     // with the name exists.
     const calledStructure = typeTable.findType(this.name.text)
       .map(([type, _flags]) => type);
-    return this.evaluateStructure(
+    const result = this.evaluateStructure(
       calledStructure.unwrap() as CompositeSymbolType,
     );
+    runtimeTable.ignoreRuntimeBindings = true;
+    return result;
   }
 
   resolveType(): SymbolType {

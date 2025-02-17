@@ -8,7 +8,11 @@ import { InternalError } from "./util/error.ts";
 
 const stdlib = `
     print = function(message: String) {
-        // do nothing for now
+        runtime_print_newline(message)
+    }
+
+    reverse = function(message: String) -> String {
+        return runtime_reverse_string(message)
     }
 `;
 
@@ -30,15 +34,19 @@ export function parseStdlib() {
  */
 export function analyzeStdlib(stdlibAst: AST) {
     updateEnvironment({ source: stdlib });
-    analysisTable.setGlobalFlagOverrides({ readonly: true });
+    analysisTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
+    analysisTable.ignoreRuntimeBindings = false;
     typeTable.setGlobalFlagOverrides({ readonly: true });
+    typeTable.ignoreRuntimeTypes = false;
     const analysisFindings = stdlibAst.analyze();
-    // TODO: once a runtime is immplemented,
-    // clear runtime bindings from the symbol table, but
-    // leave stdlib members in the symbol table.
     updateEnvironment({ source: "" });
-    analysisTable.setGlobalFlagOverrides({ readonly: "notset" });
+    analysisTable.setGlobalFlagOverrides({
+        readonly: "notset",
+        stdlib: "notset",
+    });
+    analysisTable.ignoreRuntimeBindings = true;
     typeTable.setGlobalFlagOverrides({ readonly: "notset" });
+    typeTable.ignoreRuntimeTypes = true;
     if (analysisFindings.errors.length !== 0) {
         throw new InternalError(
             "The standard library contains static analysis errors.",
@@ -52,10 +60,13 @@ export function analyzeStdlib(stdlibAst: AST) {
  */
 export function injectStdlib(stdlibAst: AST) {
     updateEnvironment({ source: stdlib });
-    runtimeTable.setGlobalFlagOverrides({ readonly: true});
+    runtimeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
     typeTable.setGlobalFlagOverrides({ readonly: true });
     stdlibAst.interpret();
-    runtimeTable.setGlobalFlagOverrides({ readonly: "notset" });
+    runtimeTable.setGlobalFlagOverrides({
+        readonly: "notset",
+        stdlib: "notset",
+    });
     typeTable.setGlobalFlagOverrides({ readonly: "notset" });
     updateEnvironment({ source: "" });
 }

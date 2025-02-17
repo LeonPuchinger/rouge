@@ -680,7 +680,15 @@ export class UniqueSymbolType implements SymbolType {
   }
 }
 
+/**
+ * Additional flags that apply to types only
+ * when they areinserted into the type table.
+ */
 type TypeFlags = {
+  /**
+   * Whether the type is readonly.
+   * Mainly used to protect stdlib contents from being reassigned.
+   */
   readonly: boolean;
 };
 
@@ -696,6 +704,12 @@ type Scope = {
 export class TypeTable {
   private scopes: Scope[] = [];
   /**
+   * Types that belong to the runtime are kept in a separate namespace.
+   * When looking up types via their name, runtime types are considered first.
+   * This behavior can be disabled by setting `ignoreRuntimeTypes` to `true`.
+   */
+  private runtimeTypes = new Map<string, SymbolType>();
+  /**
    * When a flag is set globally as an override, it is automatically
    * applied to all types that are inserted into the table.
    * This becomes useful, for instance, when initializing the stdlib.
@@ -709,6 +723,11 @@ export class TypeTable {
   } = {
     readonly: "notset",
   };
+  /**
+   * When set to `true`, the table will act as if types stored
+   * in the `runtimeTypes` namespace do not exists.
+   */
+  ignoreRuntimeTypes = true;
 
   constructor() {
     this.reset();
@@ -736,6 +755,12 @@ export class TypeTable {
   }
 
   findTypeInCurrentScope(name: string): Option<[SymbolType, TypeFlags]> {
+    if (!this.ignoreRuntimeTypes) {
+      const runtimeType = this.runtimeTypes.get(name);
+      if (runtimeType !== undefined) {
+        return Some([runtimeType, { readonly: true, runtimeBinding: true }]);
+      }
+    }
     const current = this.scopes.at(-1);
     if (current !== undefined) {
       return this.findTypeEntryInScope(name, current)
@@ -748,6 +773,12 @@ export class TypeTable {
   }
 
   findType(name: string): Option<[SymbolType, TypeFlags]> {
+    if (!this.ignoreRuntimeTypes) {
+      const runtimeType = this.runtimeTypes.get(name);
+      if (runtimeType !== undefined) {
+        return Some([runtimeType, { readonly: true, runtimeBinding: true }]);
+      }
+    }
     for (const currentScope of this.scopes.toReversed()) {
       const typeEntry = this.findTypeEntryInScope(name, currentScope)
         .map((entry) => {
@@ -760,6 +791,10 @@ export class TypeTable {
       return typeEntry as Option<[SymbolType, TypeFlags]>;
     }
     return None();
+  }
+
+  setRuntimeType(name: string, symbolType: SymbolType) {
+    this.runtimeTypes.set(name, symbolType);
   }
 
   typeResolvable(name: string): boolean {
@@ -848,7 +883,9 @@ export class TypeTable {
   /**
    * See the `globalFlagOverrides` attribute for more information.
    */
-  getGlobalFlagOverride(flag: keyof TypeFlags): TypeFlags[keyof TypeFlags] {
+  private getGlobalFlagOverride(
+    flag: keyof TypeFlags,
+  ): TypeFlags[keyof TypeFlags] {
     const override = this.globalFlagOverrides[flag];
     if (override === "notset") {
       return false;
