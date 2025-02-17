@@ -141,7 +141,7 @@ function createRuntimeBindingStaticSymbol(
 /**
  * Creates a new runtime binding and injects it into the symbol table with the
  * given `name`. The `hook` defines the behavior of the binding. Finally,
- * the `onlyAnalysis` flag can be used to only inject the binding only into the
+ * the `onlyAnalysis` flag can be used to only inject the binding into the
  * analysis table.
  */
 function createRuntimeBinding(
