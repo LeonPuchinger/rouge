@@ -8,7 +8,7 @@ import { InternalError } from "./util/error.ts";
 
 const stdlib = `
     print = function(message: String) {
-        runtime_print_no_newline()
+        runtime_print_newline(message)
     }
 `;
 

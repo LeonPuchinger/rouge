@@ -9,8 +9,9 @@ import {
     RuntimeSymbol,
     runtimeTable,
     StaticSymbol,
+    SymbolValue,
 } from "./symbol.ts";
-import { FunctionSymbolType, SymbolType } from "./type.ts";
+import { CompositeSymbolType, FunctionSymbolType, SymbolType } from "./type.ts";
 import { InternalError } from "./util/error.ts";
 import { nothingType } from "./util/type.ts";
 
@@ -63,37 +64,64 @@ export class RuntimeStatementAstNode implements InterpretableAstNode {
     }
 }
 
-export function injectRuntimeBindings() {
+function createSingleParameterNoReturnTypeRuntimeBinding<T>(
+    parameterName: string,
+    languageParameterTypeId: string,
+    hook: (param: T) => void,
+): RuntimeSymbol<SymbolValue<T>> {
+    const parameterTypes = new Map<string, SymbolType>([
+        [
+            parameterName,
+            new CompositeSymbolType({ id: languageParameterTypeId }),
+        ],
+    ]);
+    const returnType = nothingType;
     const statements = new StatementsAstNode({
         children: [
             new RuntimeStatementAstNode({
                 hook: () => {
-                    console.log("hello from print!");
+                    const param = retrieveRuntimeParameter<T>(parameterName);
+                    hook(param);
                 },
             }),
         ],
     });
-
-    const parameterTypes = new Map<string, SymbolType>();
-    const returnType = nothingType;
-
     const symbolValue = new FunctionSymbolValue({
         value: statements,
         parameterTypes: parameterTypes,
-        returnType: nothingType,
-    });
-    const rtSymbol = new RuntimeSymbol({
-        value: symbolValue,
-    });
-
-    const fnType = new FunctionSymbolType({
-        parameterTypes: Array.from(parameterTypes.values()),
         returnType: returnType,
     });
-    const stSymbol = new StaticSymbol({
-        valueType: fnType,
+    return new RuntimeSymbol({
+        value: symbolValue,
     });
+}
 
-    runtimeTable.setRuntimeBinding("runtime_print_no_newline", rtSymbol);
-    analysisTable.setRuntimeBinding("runtime_print_no_newline", stSymbol);
+function createSingleParameterNoReturnTypeStaticSymbol(
+    languageParameterTypeId: string,
+): StaticSymbol {
+    return new StaticSymbol({
+        valueType: new FunctionSymbolType({
+            parameterTypes: [
+                new CompositeSymbolType({ id: languageParameterTypeId }),
+            ],
+            returnType: nothingType,
+        }),
+    });
+}
+
+export function injectRuntimeBindings() {
+    runtimeTable.setRuntimeBinding(
+        "runtime_print_newline",
+        createSingleParameterNoReturnTypeRuntimeBinding<string>(
+            "message",
+            "String",
+            (message) => {
+                console.log(message);
+            },
+        ),
+    );
+    analysisTable.setRuntimeBinding(
+        "runtime_print_newline",
+        createSingleParameterNoReturnTypeStaticSymbol("String"),
+    );
 }
