@@ -151,16 +151,16 @@ function createRuntimeBinding(
     hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
     onlyAnalysis: boolean = false,
 ) {
-    runtimeTable.setRuntimeBinding(
-        name,
-        createRuntimeBindingRuntimeSymbol(parameters, returnType, hook),
-    );
     if (!onlyAnalysis) {
-        analysisTable.setRuntimeBinding(
+        runtimeTable.setRuntimeBinding(
             name,
-            createRuntimeBindingStaticSymbol(parameters, returnType),
+            createRuntimeBindingRuntimeSymbol(parameters, returnType, hook),
         );
     }
+    analysisTable.setRuntimeBinding(
+        name,
+        createRuntimeBindingStaticSymbol(parameters, returnType),
+    );
 }
 
 /**
