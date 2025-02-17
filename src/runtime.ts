@@ -10,6 +10,7 @@ import {
     RuntimeSymbol,
     runtimeTable,
     StaticSymbol,
+    StringSymbolValue,
     SymbolValue,
 } from "./symbol.ts";
 import { CompositeSymbolType, FunctionSymbolType, SymbolType } from "./type.ts";
@@ -128,5 +129,24 @@ export function injectRuntimeBindings() {
     analysisTable.setRuntimeBinding(
         "runtime_print_newline",
         createSingleParameterStaticSymbol("String"),
+    );
+
+    runtimeTable.setRuntimeBinding(
+        "runtime_reverse_string",
+        createSingleParameterRuntimeBinding<string>(
+            "message",
+            "String",
+            (message) => {
+                const reversed = message.split("").reverse().join("");
+                return new StringSymbolValue(reversed);
+            },
+        ),
+    );
+    analysisTable.setRuntimeBinding(
+        "runtime_reverse_string",
+        createSingleParameterStaticSymbol(
+            "String",
+            new CompositeSymbolType({ id: "String" }),
+        ),
     );
 }
