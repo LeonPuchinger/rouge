@@ -19,12 +19,13 @@ import { nothingInstance, nothingType } from "./util/type.ts";
 
 /**
  * Runtime bindings can be parametrized by pushing the parameter
- * values onto the symbol table. This function retrieves the underlying
- * values from the corresponding symbol stored in the table via a name.
+ * values onto the symbol table. This function retrieves the symbol value
+ * from the corresponding symbol stored in the table via a name.
+ * It also asserts that the symbol exists in the table.
  */
-function retrieveRuntimeParameter<T>(
+function resolveRuntimeParameter(
     name: string,
-): T {
+): SymbolValue {
     const symbol = runtimeTable.findSymbol(name)
         .map(([symbol, _flags]) => symbol)
         .unwrapOrThrow(
@@ -33,7 +34,7 @@ function retrieveRuntimeParameter<T>(
                 `However, the parameter called "${name}" could not be found in the symbol table.`,
             ),
         );
-    return symbol.value.value as T;
+    return symbol.value;
 }
 
 export class RuntimeStatementAstNode implements InterpretableAstNode {
@@ -66,26 +67,31 @@ export class RuntimeStatementAstNode implements InterpretableAstNode {
     }
 }
 
-function createSingleParameterRuntimeBinding<PARAM>(
-    parameterName: string,
-    languageParameterTypeId: string,
-    hook: (param: PARAM) => SymbolValue | void,
+type HookParameter = {
+    name: string;
+    symbolType: SymbolType;
+};
+
+function createRuntimeBinding<PARAM>(
+    parameters: HookParameter[],
+    returnType: SymbolType,
+    hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
 ): RuntimeSymbol<SymbolValue<PARAM>> {
-    const parameterTypes = new Map<string, SymbolType>([
-        [
-            parameterName,
-            new CompositeSymbolType({ id: languageParameterTypeId }),
-        ],
-    ]);
-    const returnType = nothingType;
+    const parameterTypes = new Map<string, SymbolType>(
+        parameters.map((param) => [param.name, param.symbolType]),
+    );
     const statements = new StatementsAstNode({
         children: [
             new RuntimeStatementAstNode({
                 hook: () => {
-                    const param = retrieveRuntimeParameter<PARAM>(
-                        parameterName,
+                    const resolvedParameters = new Map<string, SymbolValue>(
+                        parameters.map((param) => [
+                            param.name,
+                            resolveRuntimeParameter(param.name),
+                        ]),
                     );
-                    const returnValue = hook(param) ?? nothingInstance;
+                    const returnValue = hook(resolvedParameters) ??
+                        nothingInstance;
                     throw new ReturnValueContainer(returnValue);
                 },
             }),
@@ -101,15 +107,14 @@ function createSingleParameterRuntimeBinding<PARAM>(
     });
 }
 
-function createSingleParameterStaticSymbol(
-    languageParameterTypeId: string,
+function createRuntimeBindingStaticSymbol(
+    parameters: HookParameter[],
     returnType: SymbolType = nothingType,
 ): StaticSymbol {
+    const parameterTypes = parameters.map((param) => param.symbolType);
     return new StaticSymbol({
         valueType: new FunctionSymbolType({
-            parameterTypes: [
-                new CompositeSymbolType({ id: languageParameterTypeId }),
-            ],
+            parameterTypes: Array.from(parameterTypes),
             returnType: returnType,
         }),
     });
@@ -118,25 +123,36 @@ function createSingleParameterStaticSymbol(
 export function injectRuntimeBindings() {
     runtimeTable.setRuntimeBinding(
         "runtime_print_newline",
-        createSingleParameterRuntimeBinding<string>(
-            "message",
-            "String",
-            (message) => {
+        createRuntimeBinding<string>(
+            [{
+                name: "message",
+                symbolType: new CompositeSymbolType({ id: "String" }),
+            }],
+            nothingType,
+            (params) => {
+                const message = params.get("message")!.value as string;
                 console.log(message);
             },
         ),
     );
     analysisTable.setRuntimeBinding(
         "runtime_print_newline",
-        createSingleParameterStaticSymbol("String"),
+        createRuntimeBindingStaticSymbol([{
+            name: "message",
+            symbolType: new CompositeSymbolType({ id: "String" }),
+        }]),
     );
 
     runtimeTable.setRuntimeBinding(
         "runtime_reverse_string",
-        createSingleParameterRuntimeBinding<string>(
-            "message",
-            "String",
-            (message) => {
+        createRuntimeBinding<string>(
+            [{
+                name: "message",
+                symbolType: new CompositeSymbolType({ id: "String" }),
+            }],
+            new CompositeSymbolType({ id: "String" }),
+            (parameters) => {
+                const message = parameters.get("message")!.value as string;
                 const reversed = message.split("").reverse().join("");
                 return new StringSymbolValue(reversed);
             },
@@ -144,9 +160,9 @@ export function injectRuntimeBindings() {
     );
     analysisTable.setRuntimeBinding(
         "runtime_reverse_string",
-        createSingleParameterStaticSymbol(
-            "String",
-            new CompositeSymbolType({ id: "String" }),
-        ),
+        createRuntimeBindingStaticSymbol([{
+            name: "message",
+            symbolType: new CompositeSymbolType({ id: "String" }),
+        }], new CompositeSymbolType({ id: "String" })),
     );
 }
