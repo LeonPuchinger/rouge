@@ -30,7 +30,7 @@ export function run(source: string): AnalysisFindings {
 }
 
 export function analyze(source: string): AnalysisFindings {
-  // TODO: inject runtime bindings
+  injectRuntimeBindings(true);
   const stdlibAst = parseStdlib();
   analyzeStdlib(stdlibAst);
   updateEnvironment({ source: source });
