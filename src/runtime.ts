@@ -177,7 +177,7 @@ export function injectRuntimeBindings(
 ) {
     const stdStreamsDefined = [stdout, stderr, stdin]
         .every((stream) => stream !== undefined);
-    if (onlyAnalysis && !stdStreamsDefined) {
+    if (!onlyAnalysis && !stdStreamsDefined) {
         throw new InternalError(
             "The standard streams may only be omitted when the runtime bindings are injected for static analysis.",
         );
