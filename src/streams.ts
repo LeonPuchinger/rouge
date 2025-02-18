@@ -1,8 +1,8 @@
-interface ReadableTextStream {
-    onNewLine(fn: (line: string) => void): void;
-    readLine(): Promise<string>;
-    onNewChunk(fn: (chunk: string) => void): void;
-    readChunk(): Promise<string>;
+interface ReadableStream<T> {
+    onNewLine(fn: (line: T) => void): void;
+    readLine(): Promise<T>;
+    onNewChunk(fn: (chunk: T) => void): void;
+    readChunk(): Promise<T>;
     onClose(fn: () => void): void;
-    [Symbol.asyncIterator](): AsyncIterator<string>;
+    [Symbol.asyncIterator](): AsyncIterator<T>;
 }
