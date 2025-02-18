@@ -192,7 +192,7 @@ export function injectRuntimeBindings(
         nothingType,
         (params) => {
             const message = params.get("message")!.value as string;
-            console.log(message);
+            stdout?.writeLine(message);
         },
         onlyAnalysis,
     );
