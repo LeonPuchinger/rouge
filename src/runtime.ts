@@ -4,6 +4,7 @@ import { ReturnValueContainer } from "./features/function.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
+import { ReadableStream, WritableSink } from "./streams.ts";
 import {
     analysisTable,
     FunctionSymbolValue,
@@ -170,7 +171,18 @@ function createRuntimeBinding(
  */
 export function injectRuntimeBindings(
     onlyAnalysis: boolean = false,
+    stdout?: WritableSink<string>,
+    stderr?: WritableSink<string>,
+    stdin?: ReadableStream<string>,
 ) {
+    const stdStreamsDefined = [stdout, stderr, stdin]
+        .every((stream) => stream !== undefined);
+    if (onlyAnalysis && !stdStreamsDefined) {
+        throw new InternalError(
+            "The standard streams may only be omitted when the runtime bindings are injected for static analysis.",
+        );
+    }
+
     createRuntimeBinding(
         "runtime_print",
         [{

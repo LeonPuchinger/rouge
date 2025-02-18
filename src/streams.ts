@@ -61,6 +61,8 @@ export interface WritableSink<T> {
     close(): void;
 }
 
+export type FileLike<T> = ReadableStream<T> & WritableSink<T>;
+
 /**
  * A text based, virtual (aka. in memory) file that can can be
  * read from and written to in an asynchronous fashion.
