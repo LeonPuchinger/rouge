@@ -26,7 +26,7 @@ function run(input_file_path: string) {
     Deno.stderr.writeSync(new TextEncoder().encode(chunk));
   });
   const stdin = new VirtualTextFile();
-  onReadLine(Deno.stdin, (line) => {
+  const stdinReadSubscription = onReadLine(Deno.stdin, (line) => {
     stdin.writeLine(line);
   });
   try {
@@ -41,6 +41,7 @@ function run(input_file_path: string) {
   } catch (error) {
     logger.error(error);
   }
+  stdinReadSubscription.cancel();
   stdout.close();
   stderr.close();
   stdin.close();
