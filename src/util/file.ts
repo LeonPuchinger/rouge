@@ -54,7 +54,8 @@ export function onReadLine(
         onLine(value);
       }
     } catch (error) {
-      if (error.name !== "AbortError") {
+      const typedError = error as { name?: string };
+      if (typedError?.name && typedError.name !== "AbortError") {
         throw error;
       }
     } finally {
