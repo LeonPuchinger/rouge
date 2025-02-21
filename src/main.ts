@@ -3,18 +3,25 @@ import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { injectRuntimeBindings } from "./runtime.ts";
 import { analyzeStdlib, injectStdlib, parseStdlib } from "./stdlib.ts";
+import { FileLike, VirtualTextFile } from "./streams.ts";
 import { typeTable } from "./type.ts";
 import { updateEnvironment } from "./util/environment.ts";
 
 export type {
   AnalysisFinding,
   AnalysisFindingKind,
-  AnalysisFindings,
+  AnalysisFindings
 } from "./finding.ts";
+export { VirtualTextFile } from "./streams.ts";
 export type { Option, Result } from "./util/monad/index.ts";
 
-export function run(source: string): AnalysisFindings {
-  injectRuntimeBindings();
+export function run(
+  source: string,
+  stdout: FileLike<string> = new VirtualTextFile(),
+  stderr: FileLike<string> = new VirtualTextFile(),
+  stdin: FileLike<string> = new VirtualTextFile(),
+): AnalysisFindings {
+  injectRuntimeBindings(false, stdout, stderr, stdin);
   const stdlibAst = parseStdlib();
   analyzeStdlib(stdlibAst);
   updateEnvironment({ source: source });
@@ -30,7 +37,7 @@ export function run(source: string): AnalysisFindings {
 }
 
 export function analyze(source: string): AnalysisFindings {
-  // TODO: inject runtime bindings
+  injectRuntimeBindings(true);
   const stdlibAst = parseStdlib();
   analyzeStdlib(stdlibAst);
   updateEnvironment({ source: source });

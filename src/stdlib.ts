@@ -11,8 +11,12 @@ const stdlib = `
         runtime_print_newline(message)
     }
 
+    print_no_newline = function(message: String) {
+        runtime_print_no_newline(message)
+    }
+
     reverse = function(message: String) -> String {
-        return runtime_reverse_string(message)
+        return runtime_reverse(message)
     }
 `;
 

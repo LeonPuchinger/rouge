@@ -4,6 +4,7 @@ import { ReturnValueContainer } from "./features/function.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
+import { ReadableStream, WritableSink } from "./streams.ts";
 import {
     analysisTable,
     FunctionSymbolValue,
@@ -141,7 +142,7 @@ function createRuntimeBindingStaticSymbol(
 /**
  * Creates a new runtime binding and injects it into the symbol table with the
  * given `name`. The `hook` defines the behavior of the binding. Finally,
- * the `onlyAnalysis` flag can be used to only inject the binding only into the
+ * the `onlyAnalysis` flag can be used to only inject the binding into the
  * analysis table.
  */
 function createRuntimeBinding(
@@ -151,16 +152,16 @@ function createRuntimeBinding(
     hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
     onlyAnalysis: boolean = false,
 ) {
-    runtimeTable.setRuntimeBinding(
-        name,
-        createRuntimeBindingRuntimeSymbol(parameters, returnType, hook),
-    );
     if (!onlyAnalysis) {
-        analysisTable.setRuntimeBinding(
+        runtimeTable.setRuntimeBinding(
             name,
-            createRuntimeBindingStaticSymbol(parameters, returnType),
+            createRuntimeBindingRuntimeSymbol(parameters, returnType, hook),
         );
     }
+    analysisTable.setRuntimeBinding(
+        name,
+        createRuntimeBindingStaticSymbol(parameters, returnType),
+    );
 }
 
 /**
@@ -170,9 +171,20 @@ function createRuntimeBinding(
  */
 export function injectRuntimeBindings(
     onlyAnalysis: boolean = false,
+    stdout?: WritableSink<string>,
+    stderr?: WritableSink<string>,
+    stdin?: ReadableStream<string>,
 ) {
+    const stdStreamsDefined = [stdout, stderr, stdin]
+        .every((stream) => stream !== undefined);
+    if (!onlyAnalysis && !stdStreamsDefined) {
+        throw new InternalError(
+            "The standard streams may only be omitted when the runtime bindings are injected for static analysis.",
+        );
+    }
+
     createRuntimeBinding(
-        "runtime_print",
+        "runtime_print_newline",
         [{
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
@@ -180,7 +192,21 @@ export function injectRuntimeBindings(
         nothingType,
         (params) => {
             const message = params.get("message")!.value as string;
-            console.log(message);
+            stdout?.writeLine(message);
+        },
+        onlyAnalysis,
+    );
+
+    createRuntimeBinding(
+        "runtime_print_no_newline",
+        [{
+            name: "message",
+            symbolType: new CompositeSymbolType({ id: "String" }),
+        }],
+        nothingType,
+        (params) => {
+            const message = params.get("message")!.value as string;
+            stdout?.writeChunk(message);
         },
         onlyAnalysis,
     );
