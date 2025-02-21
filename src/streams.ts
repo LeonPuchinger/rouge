@@ -1,7 +1,7 @@
 /**
  * Allows a subscriber of a stream to manage their subscription.
  */
-type StreamSubscription = {
+export type StreamSubscription = {
     cancel(): void;
 };
 

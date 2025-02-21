@@ -1,4 +1,6 @@
 import * as interpreter from "./main.ts";
+import { VirtualTextFile } from "./streams.ts";
+import { onReadLine } from "./util/file.ts";
 import * as logger from "./util/logger.ts";
 import { Loglevel, updateLoggerConfig } from "./util/logger.ts";
 // @deno-types="@types/yargs"
@@ -15,13 +17,34 @@ function run(input_file_path: string) {
     console.log("The input file does not exist.");
     Deno.exit(1);
   }
+  const stdout = new VirtualTextFile();
+  stdout.onNewChunk((chunk) => {
+    Deno.stdout.writeSync(new TextEncoder().encode(chunk));
+  });
+  const stderr = new VirtualTextFile();
+  stderr.onNewChunk((chunk) => {
+    Deno.stderr.writeSync(new TextEncoder().encode(chunk));
+  });
+  const stdin = new VirtualTextFile();
+  onReadLine(Deno.stdin, (line) => {
+    stdin.writeLine(line);
+  });
   try {
-    const findings = interpreter.run(file_contents);
+    const findings = interpreter.run(
+      file_contents,
+      stdout,
+      stderr,
+      stdin,
+    );
     findings.errors.forEach(logger.error);
     findings.warnings.forEach(logger.warning);
   } catch (error) {
     logger.error(error);
   }
+  stdout.close();
+  stderr.close();
+  stdin.close();
+  Deno.stdin.close();
 }
 
 const cli = yargs(Deno.args).scriptName("rouge");
