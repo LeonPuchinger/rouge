@@ -184,7 +184,7 @@ export function injectRuntimeBindings(
     }
 
     createRuntimeBinding(
-        "runtime_print",
+        "runtime_print_newline",
         [{
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
@@ -193,6 +193,20 @@ export function injectRuntimeBindings(
         (params) => {
             const message = params.get("message")!.value as string;
             stdout?.writeLine(message);
+        },
+        onlyAnalysis,
+    );
+
+    createRuntimeBinding(
+        "runtime_print_no_newline",
+        [{
+            name: "message",
+            symbolType: new CompositeSymbolType({ id: "String" }),
+        }],
+        nothingType,
+        (params) => {
+            const message = params.get("message")!.value as string;
+            stdout?.writeChunk(message);
         },
         onlyAnalysis,
     );
