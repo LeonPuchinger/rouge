@@ -125,7 +125,7 @@ export class VirtualTextFile
     }
 
     writeLine(line: string): void {
-        this.chunkSubscribers.forEach((subscriber) => subscriber(line));
+        this.chunkSubscribers.forEach((subscriber) => subscriber(`${line}\n`));
         this.lineSubscribers.forEach((subscriber) => subscriber(line));
     }
 
