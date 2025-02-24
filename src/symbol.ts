@@ -293,6 +293,23 @@ export class SymbolTable<S extends Symbol> {
       this.globalFlagOverrides[key as keyof SymbolFlags] = value;
     }
   }
+
+  /**
+   * Resets the symbol table to its initial state. Runtime bindings are wiped as well,
+   * unless the `keepRuntimeBindings` flag is set to `true` (default setting).
+   */
+  reset(
+    keepRuntimeBindings = true,
+  ) {
+    this.scopes = [new Map()];
+    if (!keepRuntimeBindings) {
+      this.runtimeBindings = new Map();
+    }
+    this.globalFlagOverrides = {
+      readonly: "notset",
+      stdlib: "notset",
+    };
+  }
 }
 
 export const analysisTable: AnalysisSymbolTable = new SymbolTable();
