@@ -111,8 +111,8 @@ export function zip<T, U>(a: T[], b: U[]): [T, U, number][] {
 /**
  * A queue with a fixed size that removes the oldest element when full.
  */
-export class FixedSizeQueue {
-  private queue: string[] = [];
+export class FixedSizeQueue<T> {
+  private queue: T[] = [];
 
   constructor(private maxSize: number) {
     if (this.maxSize <= 0) {
@@ -125,7 +125,7 @@ export class FixedSizeQueue {
   /**
    * Adds an element to the queue. If the queue is full, the oldest element is removed.
    */
-  enqueue(item: string): void {
+  enqueue(item: T): void {
     if (this.queue.length >= this.maxSize) {
       this.queue.shift();
     }
@@ -135,14 +135,14 @@ export class FixedSizeQueue {
   /**
    * Removes and returns the oldest element from the queue.
    */
-  dequeue(): string | undefined {
+  dequeue(): T | undefined {
     return this.queue.shift();
   }
 
   /**
    * Returns the oldest element from the queue without removing it.
    */
-  peek(): string | undefined {
+  peek(): T | undefined {
     return this.queue[0];
   }
 
@@ -151,7 +151,7 @@ export class FixedSizeQueue {
    * The index can be negative to access elements starting
    * from the end of the queue.
    */
-  edit(index: number, newValue: string): void {
+  edit(index: number, newValue: T): void {
     const distance = index < 0 ? (-1 * index) - 1 : index;
     if (distance >= this.queue.length) {
       throw new InternalError(
@@ -164,7 +164,7 @@ export class FixedSizeQueue {
     this.queue[index] = newValue;
   }
 
-  get(index: number): string | undefined {
+  get(index: number): T | undefined {
     const distance = index < 0 ? (-1 * index) - 1 : index;
     if (distance >= this.queue.length) {
       throw new InternalError(
@@ -192,14 +192,14 @@ export class FixedSizeQueue {
   /**
    * Returns the array of elements in the queue without copying it.
    */
-  underlyingElements(): string[] {
+  underlyingElements(): T[] {
     return this.queue;
   }
 
   /**
    * Returns a copy of the array of elements in the queue.
    */
-  copyUnderlyingElements(): string[] {
+  copyUnderlyingElements(): T[] {
     return [...this.queue];
   }
 }
