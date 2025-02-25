@@ -177,9 +177,13 @@ export class VirtualTextFile
             .some((length) => length > 0);
         this.chunkSubscribers.forEach((subscriber) => subscriber(chunk));
         chunk.split("\n")
-            .forEach((line) => {
+            .forEach((line, index) => {
                 if (!anySubscribers) {
-                    this.lineBuffer.enqueue(line);
+                    if (index === 0) {
+                        this.lineBuffer.edit(-1, line);
+                    } else {
+                        this.lineBuffer.enqueue(line);
+                    }
                 }
                 this.lineSubscribers.forEach((subscriber) => subscriber(line));
             });
