@@ -190,5 +190,6 @@ export class VirtualTextFile
         this.lineSubscribers = [];
         this.closeSubscribers.forEach((subscriber) => subscriber());
         this.closeSubscribers = [];
+        this.lineBuffer.clear();
     }
 }

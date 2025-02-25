@@ -202,4 +202,11 @@ export class FixedSizeQueue<T> {
   copyUnderlyingElements(): T[] {
     return [...this.queue];
   }
+
+  /**
+   * Clears the queue.
+   */
+  clear(): void {
+    this.queue = [];
+  }
 }
