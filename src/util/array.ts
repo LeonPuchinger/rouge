@@ -1,3 +1,5 @@
+import { InternalError } from "./error.ts";
+
 export function range(n: number, m: number): number[] {
   const result = [];
   for (let i = n; i <= m; i++) {
@@ -104,4 +106,100 @@ export function zip<T, U>(a: T[], b: U[]): [T, U, number][] {
   const shortestArrayLength = Math.min(a.length, b.length);
   const trimmedA = a.slice(0, shortestArrayLength);
   return trimmedA.map((item, index) => [item, b[index], index]);
+}
+
+/**
+ * A queue with a fixed size that removes the oldest element when full.
+ */
+export class FixedSizeQueue {
+  private queue: string[] = [];
+
+  constructor(private maxSize: number) {
+    if (this.maxSize <= 0) {
+      throw new InternalError(
+        "The max. size of a FixedSizeQueue must be greater than 0",
+      );
+    }
+  }
+
+  /**
+   * Adds an element to the queue. If the queue is full, the oldest element is removed.
+   */
+  enqueue(item: string): void {
+    if (this.queue.length >= this.maxSize) {
+      this.queue.shift();
+    }
+    this.queue.push(item);
+  }
+
+  /**
+   * Removes and returns the oldest element from the queue.
+   */
+  dequeue(): string | undefined {
+    return this.queue.shift();
+  }
+
+  /**
+   * Returns the oldest element from the queue without removing it.
+   */
+  peek(): string | undefined {
+    return this.queue[0];
+  }
+
+  /**
+   * Replaces the element at the given index with a new value.
+   * The index can be negative to access elements starting
+   * from the end of the queue.
+   */
+  edit(index: number, newValue: string): void {
+    const distance = index < 0 ? (-1 * index) - 1 : index;
+    if (distance >= this.queue.length) {
+      throw new InternalError(
+        `The FixedSizeQueue does not have an element at index ${index}`,
+      );
+    }
+    if (index < 0) {
+      index = this.queue.length - distance - 1;
+    }
+    this.queue[index] = newValue;
+  }
+
+  get(index: number): string | undefined {
+    const distance = index < 0 ? (-1 * index) - 1 : index;
+    if (distance >= this.queue.length) {
+      throw new InternalError(
+        `The FixedSizeQueue does not have an element at index ${index}`,
+      );
+    }
+    if (index < 0) {
+      return this.queue[this.queue.length - distance - 1];
+    }
+    return this.queue[index];
+  }
+
+  size(): number {
+    return this.queue.length;
+  }
+
+  isFull(): boolean {
+    return this.queue.length === this.maxSize;
+  }
+
+  isEmpty(): boolean {
+    return this.queue.length === 0;
+  }
+
+  /**
+   * Returns the array of elements in the queue without copying it.
+   */
+  underlyingElements(): string[] {
+    return this.queue;
+  }
+
+  /**
+   * Returns a copy of the array of elements in the queue.
+   */
+  copyUnderlyingElements(): string[] {
+    return [...this.queue];
+  }
 }
