@@ -164,7 +164,18 @@ export class FixedSizeQueue<T> {
     this.queue[index] = newValue;
   }
 
-  get(index: number): T | undefined {
+  /**
+   * Replaces the element at the given index with a new value.
+   * The new value is calculated by applying the given function
+   * to the current value. The index can be negative to access
+   * elements starting from the end of the queue.
+   */
+  apply(index: number, fn: (item: T) => T): void {
+    const current = this.get(index);
+    this.edit(index, fn(current));
+  }
+
+  get(index: number): T {
     const distance = index < 0 ? (-1 * index) - 1 : index;
     if (distance >= this.queue.length) {
       throw new InternalError(

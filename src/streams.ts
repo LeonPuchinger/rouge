@@ -77,13 +77,14 @@ export class VirtualTextFile
     private chunkSubscribers: ((chunk: string) => void)[] = [];
     private closeSubscribers: (() => void)[] = [];
     private lineBuffer: FixedSizeQueue<string>;
+    private currentLineBuffer = "";
 
     constructor(bufferSize: number = 500) {
         this.lineBuffer = new FixedSizeQueue(bufferSize);
     }
 
     onNewLine(fn: (line: string) => void): StreamSubscription {
-        while (this.lineBuffer.size() > 0) {
+        while (this.lineBuffer.size() > 1) {
             fn(this.lineBuffer.dequeue()!);
         }
         this.lineSubscribers.push(fn);
@@ -98,7 +99,7 @@ export class VirtualTextFile
 
     readLine(): Promise<string> {
         return new Promise((resolve) => {
-            if (this.lineBuffer.size() > 0) {
+            if (this.lineBuffer.size() > 1) {
                 resolve(this.lineBuffer.dequeue()!);
                 return;
             }
@@ -173,20 +174,34 @@ export class VirtualTextFile
         const anySubscribers = [
             this.chunkSubscribers.length,
             this.lineSubscribers.length,
-        ]
-            .some((length) => length > 0);
-        this.chunkSubscribers.forEach((subscriber) => subscriber(chunk));
-        chunk.split("\n")
-            .forEach((line, index) => {
-                if (!anySubscribers) {
-                    if (index === 0) {
-                        this.lineBuffer.edit(-1, line);
-                    } else {
-                        this.lineBuffer.enqueue(line);
-                    }
-                }
+        ].some((length) => length > 0);
+        const lines = chunk.split("\n");
+        const enqueue = this.lineBuffer.enqueue.bind(this.lineBuffer);
+        if (!anySubscribers) {
+            if (this.lineBuffer.isEmpty()) {
+                lines.forEach(enqueue);
+            } else {
+                lines.slice(0, 1).forEach((line) => {
+                    this.lineBuffer.apply(
+                        0,
+                        (current) => `${current}${line}`,
+                    );
+                });
+                lines.slice(1).forEach(enqueue);
+            }
+        } else {
+            this.chunkSubscribers.forEach((subscriber) => subscriber(chunk));
+            lines.slice(0, 1).forEach((line) => {
+                this.lineSubscribers.forEach((subscriber) =>
+                    subscriber(`${this.currentLineBuffer}${line}`)
+                );
+                this.currentLineBuffer = "";
+            });
+            lines.slice(1, -1).forEach((line) => {
                 this.lineSubscribers.forEach((subscriber) => subscriber(line));
             });
+            this.currentLineBuffer = lines[lines.length - 1] ?? "";
+        }
     }
 
     close(): void {
