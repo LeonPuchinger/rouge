@@ -110,6 +110,7 @@ export function zip<T, U>(a: T[], b: U[]): [T, U, number][] {
 
 /**
  * A queue with a fixed size that removes the oldest element when full.
+ * Throws an `InternalError` if the max. size is less than or equal to 0.
  */
 export class FixedSizeQueue<T> {
   private queue: T[] = [];
@@ -149,7 +150,8 @@ export class FixedSizeQueue<T> {
   /**
    * Replaces the element at the given index with a new value.
    * The index can be negative to access elements starting
-   * from the end of the queue.
+   * from the end of the queue. Throws an `InternalError` if
+   * the index is out of bounds.
    */
   edit(index: number, newValue: T): void {
     const distance = index < 0 ? (-1 * index) - 1 : index;
@@ -175,6 +177,11 @@ export class FixedSizeQueue<T> {
     this.edit(index, fn(current));
   }
 
+  /**
+   * Returns the element at the given index. The index can be negative
+   * to access elements starting from the end of the queue. Throws an
+   * `InternalError` if the index is out of bounds.
+   */
   get(index: number): T {
     const distance = index < 0 ? (-1 * index) - 1 : index;
     if (distance >= this.queue.length) {

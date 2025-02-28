@@ -116,7 +116,7 @@ export class VirtualTextFile
             fn(`${line}\n`);
         }
         if (this.lineBuffer.size() === 1) {
-            fn(this.lineBuffer.get(-1)!);
+            fn(this.lineBuffer.get(-1));
         }
         this.chunkSubscribers.push(fn);
         return {
@@ -136,7 +136,7 @@ export class VirtualTextFile
                 return;
             }
             if (this.lineBuffer.size() === 1) {
-                resolve(this.lineBuffer.get(-1)!);
+                resolve(this.lineBuffer.get(-1));
                 return;
             }
             const subscriber = this.onNewChunk((chunk) => {
