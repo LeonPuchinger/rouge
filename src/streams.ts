@@ -161,8 +161,7 @@ export class VirtualTextFile
         const anySubscribers = [
             this.chunkSubscribers.length,
             this.lineSubscribers.length,
-        ]
-            .some((length) => length > 0);
+        ].some((length) => length > 0);
         if (!anySubscribers) {
             this.lineBuffer.enqueue(line);
         }
