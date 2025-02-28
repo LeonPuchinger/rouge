@@ -166,7 +166,10 @@ export class VirtualTextFile
             this.lineBuffer.enqueue(line);
         }
         this.chunkSubscribers.forEach((subscriber) => subscriber(`${line}\n`));
-        this.lineSubscribers.forEach((subscriber) => subscriber(line));
+        this.lineSubscribers.forEach((subscriber) =>
+            subscriber(`${this.currentLineBuffer}${line}`)
+        );
+        this.currentLineBuffer = "";
     }
 
     writeChunk(chunk: string): void {
