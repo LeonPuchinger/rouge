@@ -86,8 +86,8 @@ export class VirtualTextFile
                     fn(this.lineBuffer.dequeue()!);
                 }
             }
+            this.subscribers.push(fn);
         }, 0);
-        this.subscribers.push(fn);
         return {
             cancel: () => {
                 disableBufferFlush = true;
@@ -144,9 +144,11 @@ export class VirtualTextFile
     }
 
     close(): void {
-        this.subscribers = [];
-        this.lineBuffer.clear();
-        this.closeSubscribers.forEach((subscriber) => subscriber());
-        this.closeSubscribers = [];
+        setTimeout(() => {
+            this.subscribers = [];
+            this.lineBuffer.clear();
+            this.closeSubscribers.forEach((subscriber) => subscriber());
+            this.closeSubscribers = [];
+        }, 0);
     }
 }
