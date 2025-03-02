@@ -70,6 +70,85 @@ export type FileLike<T> = ReadableStream<T> & WritableSink<T>;
  * read from and written to in an asynchronous fashion.
  * Automatically creates backpressure when there are no subscribers
  * to the stream by buffering the most recent `bufferSize` lines.
+ * This file only handles reads/writes in chunks. See `VirtualTextFile`
+ * for a file that can handle these operations for chunks as well as lines.
+ */
+class ChunkBasedVirtualFile {
+    private subscribers: ((chunk: string) => void)[] = [];
+    private lineBuffer: FixedSizeQueue<string>;
+
+    constructor(bufferSize: number = 500) {
+        this.lineBuffer = new FixedSizeQueue(bufferSize);
+    }
+
+    readChunk(): Promise<string> {
+        return new Promise((resolve) => {
+            const subscriber = this.onNewChunk((chunk) => {
+                resolve(chunk);
+                subscriber.cancel();
+            });
+        });
+    }
+
+    onNewChunk(fn: (chunk: string) => void): StreamSubscription {
+        let disableBufferFlush = false;
+        setTimeout(() => {
+            while (this.lineBuffer.size() >= 2) {
+                if (disableBufferFlush) {
+                    return;
+                }
+                const line = this.lineBuffer.dequeue()!;
+                fn(`${line}\n`);
+            }
+            if (this.lineBuffer.size() === 1) {
+                if (!disableBufferFlush) {
+                    fn(this.lineBuffer.dequeue()!);
+                }
+            }
+        }, 0);
+        this.subscribers.push(fn);
+        return {
+            cancel: () => {
+                disableBufferFlush = true;
+                this.subscribers = this.subscribers.filter(
+                    (subscriber) => subscriber !== fn,
+                );
+            },
+        };
+    }
+
+    writeChunk(chunk: string): void {
+        const anySubscribers = this.subscribers.length > 0;
+        const lines = chunk.split("\n");
+        const enqueue = this.lineBuffer.enqueue.bind(this.lineBuffer);
+        if (!anySubscribers) {
+            if (this.lineBuffer.isEmpty()) {
+                lines.forEach(enqueue);
+            } else {
+                lines.slice(0, 1).forEach((line) => {
+                    this.lineBuffer.apply(
+                        -1,
+                        (current) => `${current}${line}`,
+                    );
+                });
+                lines.slice(1).forEach(enqueue);
+            }
+        } else {
+            this.subscribers.forEach((subscriber) => subscriber(chunk));
+        }
+    }
+
+    close(): void {
+        this.subscribers = [];
+        this.lineBuffer.clear();
+    }
+}
+
+/**
+ * A text based, virtual (aka. in memory) file that can can be
+ * read from and written to in an asynchronous fashion.
+ * Automatically creates backpressure when there are no subscribers
+ * to the stream by buffering the most recent `bufferSize` lines.
  */
 export class VirtualTextFile
     implements ReadableStream<string>, WritableSink<string> {
