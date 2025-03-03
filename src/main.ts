@@ -14,6 +14,11 @@ export type {
   AnalysisFindings,
 } from "./finding.ts";
 export { VirtualTextFile } from "./streams.ts";
+export type {
+  ReadableStream,
+  StreamSubscription,
+  WritableSink,
+} from "./streams.ts";
 export type { Option, Result } from "./util/monad/index.ts";
 
 export function run(

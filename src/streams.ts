@@ -1,3 +1,5 @@
+import { FixedSizeQueue } from "./util/array.ts";
+
 /**
  * Allows a subscriber of a stream to manage their subscription.
  */
@@ -10,16 +12,6 @@ export type StreamSubscription = {
  * Usually paired with a writable sink that produces the data.
  */
 export interface ReadableStream<T> {
-    /**
-     * Be notified when a new line has been written to the stream.
-     */
-    onNewLine(fn: (line: T) => void): StreamSubscription;
-
-    /**
-     * Wait until a new line has been written to the stream.
-     */
-    readLine(): Promise<T>;
-
     /**
      * Be notified when a new chunk has been written to the stream.
      * A chunk may contain multiple lines. When a chunk is written to the file,
@@ -66,38 +58,40 @@ export type FileLike<T> = ReadableStream<T> & WritableSink<T>;
 /**
  * A text based, virtual (aka. in memory) file that can can be
  * read from and written to in an asynchronous fashion.
+ * Automatically creates backpressure when there are no subscribers
+ * to the stream by buffering the most recent `bufferSize` lines.
  */
 export class VirtualTextFile
     implements ReadableStream<string>, WritableSink<string> {
-    private lineSubscribers: ((line: string) => void)[] = [];
-    private chunkSubscribers: ((chunk: string) => void)[] = [];
+    private subscribers: ((chunk: string) => void)[] = [];
     private closeSubscribers: (() => void)[] = [];
+    private lineBuffer: FixedSizeQueue<string>;
 
-    onNewLine(fn: (line: string) => void): StreamSubscription {
-        this.lineSubscribers.push(fn);
-        return {
-            cancel: () => {
-                this.lineSubscribers = this.lineSubscribers.filter(
-                    (subscriber) => subscriber !== fn,
-                );
-            },
-        };
-    }
-
-    readLine(): Promise<string> {
-        return new Promise((resolve) => {
-            const subscriber = this.onNewLine((line) => {
-                resolve(line);
-                subscriber.cancel();
-            });
-        });
+    constructor(bufferSize: number = 500) {
+        this.lineBuffer = new FixedSizeQueue(bufferSize);
     }
 
     onNewChunk(fn: (chunk: string) => void): StreamSubscription {
-        this.chunkSubscribers.push(fn);
+        let disableBufferFlush = false;
+        setTimeout(() => {
+            this.subscribers.push(fn);
+            while (this.lineBuffer.size() >= 2) {
+                if (disableBufferFlush) {
+                    return;
+                }
+                const line = this.lineBuffer.dequeue()!;
+                fn(`${line}\n`);
+            }
+            if (this.lineBuffer.size() === 1) {
+                if (!disableBufferFlush) {
+                    fn(this.lineBuffer.dequeue()!);
+                }
+            }
+        }, 0);
         return {
             cancel: () => {
-                this.chunkSubscribers = this.chunkSubscribers.filter(
+                disableBufferFlush = true;
+                this.subscribers = this.subscribers.filter(
                     (subscriber) => subscriber !== fn,
                 );
             },
@@ -113,6 +107,31 @@ export class VirtualTextFile
         });
     }
 
+    writeLine(line: string): void {
+        this.writeChunk(`${line}\n`);
+    }
+
+    writeChunk(chunk: string): void {
+        const anySubscribers = this.subscribers.length > 0;
+        const lines = chunk.split("\n");
+        const enqueue = this.lineBuffer.enqueue.bind(this.lineBuffer);
+        if (!anySubscribers) {
+            if (this.lineBuffer.isEmpty()) {
+                lines.forEach(enqueue);
+            } else {
+                lines.slice(0, 1).forEach((line) => {
+                    this.lineBuffer.apply(
+                        -1,
+                        (current) => `${current}${line}`,
+                    );
+                });
+                lines.slice(1).forEach(enqueue);
+            }
+        } else {
+            this.subscribers.forEach((subscriber) => subscriber(chunk));
+        }
+    }
+
     onClose(fn: () => void): StreamSubscription {
         this.closeSubscribers.push(fn);
         return {
@@ -124,23 +143,12 @@ export class VirtualTextFile
         };
     }
 
-    writeLine(line: string): void {
-        this.chunkSubscribers.forEach((subscriber) => subscriber(`${line}\n`));
-        this.lineSubscribers.forEach((subscriber) => subscriber(line));
-    }
-
-    writeChunk(chunk: string): void {
-        this.chunkSubscribers.forEach((subscriber) => subscriber(chunk));
-        chunk.split("\n")
-            .forEach((line) => {
-                this.lineSubscribers.forEach((subscriber) => subscriber(line));
-            });
-    }
-
     close(): void {
-        this.chunkSubscribers = [];
-        this.lineSubscribers = [];
-        this.closeSubscribers.forEach((subscriber) => subscriber());
-        this.closeSubscribers = [];
+        setTimeout(() => {
+            this.subscribers = [];
+            this.lineBuffer.clear();
+            this.closeSubscribers.forEach((subscriber) => subscriber());
+            this.closeSubscribers = [];
+        }, 0);
     }
 }
