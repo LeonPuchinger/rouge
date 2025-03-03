@@ -74,6 +74,7 @@ export class VirtualTextFile
     onNewChunk(fn: (chunk: string) => void): StreamSubscription {
         let disableBufferFlush = false;
         setTimeout(() => {
+            this.subscribers.push(fn);
             while (this.lineBuffer.size() >= 2) {
                 if (disableBufferFlush) {
                     return;
@@ -86,7 +87,6 @@ export class VirtualTextFile
                     fn(this.lineBuffer.dequeue()!);
                 }
             }
-            this.subscribers.push(fn);
         }, 0);
         return {
             cancel: () => {
