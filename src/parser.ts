@@ -11,6 +11,7 @@ import { toMultiline } from "./util/string.ts";
 import "./features/condition.ts";
 import "./features/function.ts";
 import "./features/invocation.ts";
+import "./features/string.ts";
 
 /**
  * Top level production/entry point to the parser
