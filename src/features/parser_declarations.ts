@@ -1,11 +1,12 @@
 import { rule } from "typescript-parsec";
 import { TokenKind } from "../lexer.ts";
 import { ConditionAstNode } from "./condition.ts";
-import { InvocationAstNode } from "./invocation.ts";
 import {
   FunctionDefinitionAstNode,
   ReturnStatementAstNode,
 } from "./function.ts";
+import { InvocationAstNode } from "./invocation.ts";
+import { ComplexStringAstNode } from "./string.ts";
 
 /*
 This file contains uninitialized parser declarations.
@@ -50,3 +51,5 @@ export const functionDefinition = rule<TokenKind, FunctionDefinitionAstNode>();
 export const returnStatement = rule<TokenKind, ReturnStatementAstNode>();
 
 export const invocation = rule<TokenKind, InvocationAstNode>();
+
+export const complexStringLiteral = rule<TokenKind, ComplexStringAstNode>();

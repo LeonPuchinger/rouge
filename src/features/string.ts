@@ -7,6 +7,7 @@ import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { memoize } from "../util/memoize.ts";
 import { Attributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
+import { complexStringLiteral } from "./parser_declarations.ts";
 
 /* AST NODES */
 
@@ -37,7 +38,7 @@ class StringAstNode implements EvaluableAstNode {
   }
 }
 
-class StringInterpolationAstNode implements EvaluableAstNode {
+export class StringInterpolationAstNode implements EvaluableAstNode {
   beginningSymbol!: Token<TokenKind>;
   expression!: EvaluableAstNode;
   closingSymbol!: Token<TokenKind>;
@@ -66,7 +67,7 @@ class StringInterpolationAstNode implements EvaluableAstNode {
   }
 }
 
-class ComplexStringAstNode implements EvaluableAstNode {
+export class ComplexStringAstNode implements EvaluableAstNode {
   openingQuotation!: Token<TokenKind>;
   contents!: EvaluableAstNode[];
   closingQuotation!: Token<TokenKind>;
@@ -107,7 +108,7 @@ const stringContents = apply(
   (token) => new StringAstNode({ literal: token }),
 );
 
-const interpolation = apply(
+const stringInterpolation = apply(
   seq(
     str<TokenKind>("$"),
     str("{"),
@@ -122,21 +123,23 @@ const interpolation = apply(
     }),
 );
 
-export const complexStringLiteral = apply(
-  seq(
-    str<TokenKind>('"'),
-    rep_sc(
-      alt_sc(
-        stringContents,
-        interpolation,
+complexStringLiteral.setPattern(
+  apply(
+    seq(
+      str<TokenKind>('"'),
+      rep_sc(
+        alt_sc(
+          stringContents,
+          stringInterpolation,
+        ),
       ),
+      str<TokenKind>('"'),
     ),
-    str<TokenKind>('"'),
+    ([openingQuotation, contents, closingQuotation]) =>
+      new ComplexStringAstNode({
+        openingQuotation,
+        contents,
+        closingQuotation,
+      }),
   ),
-  ([openingQuotation, contents, closingQuotation]) =>
-    new ComplexStringAstNode({
-      openingQuotation,
-      contents,
-      closingQuotation,
-    }),
 );
