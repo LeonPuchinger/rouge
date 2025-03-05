@@ -52,11 +52,11 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  @memoize
   evaluate(): StringSymbolValue {
-    // remove quotation marks which are part of the literal
-    const contents = this.literal.text.slice(1, -1);
-    return new StringSymbolValue(contents);
+    // analysis guarantees that the result of the expression
+    // can be interpolated into a string.
+    const contents = this.expression.evaluate();
+    return new StringSymbolValue(`${contents}`);
   }
 
   resolveType(): SymbolType {
