@@ -16,18 +16,16 @@ import { complexStringLiteral } from "./parser_declarations.ts";
 
 /* AST NODES */
 
-class StringAstNode implements EvaluableAstNode {
-  literal!: Token<TokenKind>;
+class StringContentsAstNode implements EvaluableAstNode {
+  contents!: Token<TokenKind>;
 
-  constructor(params: Attributes<StringAstNode>) {
+  constructor(params: Attributes<StringContentsAstNode>) {
     Object.assign(this, params);
   }
 
   @memoize
   evaluate(): StringSymbolValue {
-    // remove quotation marks which are part of the literal
-    const contents = this.literal.text.slice(1, -1);
-    return new StringSymbolValue(contents);
+    return new StringSymbolValue(this.contents.text);
   }
 
   resolveType(): SymbolType {
@@ -39,7 +37,7 @@ class StringAstNode implements EvaluableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.literal, this.literal];
+    return [this.contents, this.contents];
   }
 }
 
@@ -126,14 +124,9 @@ export class ComplexStringAstNode implements EvaluableAstNode {
 
 /* PARSER */
 
-export const stringLiteral = apply(
-  tok(TokenKind.string),
-  (token) => new StringAstNode({ literal: token }),
-);
-
 const stringContents = apply(
   tok(TokenKind.unspecified),
-  (token) => new StringAstNode({ literal: token }),
+  (token) => new StringContentsAstNode({ contents: token }),
 );
 
 const stringInterpolation = apply(
