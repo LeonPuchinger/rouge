@@ -177,7 +177,7 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
 
   analyze(): AnalysisFindings {
     const analysisResult = this.child.analyze();
-    if (!this.child.resolveType().isPrimitive("Number")) {
+    if (!this.child.resolveType().isFundamental("Number")) {
       analysisResult.errors.push(AnalysisError({
         message:
           "You tried to use a numeric operation on something that is not a number.",

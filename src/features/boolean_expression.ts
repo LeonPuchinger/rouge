@@ -114,7 +114,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
     }
     if (
       [">", ">=", "<", "<="].includes(operator) &&
-      (!leftType.isPrimitive("Number") || !rightType.isPrimitive("Number"))
+      (!leftType.isFundamental("Number") || !rightType.isFundamental("Number"))
     ) {
       findings.errors.push(AnalysisError({
         message:
@@ -125,7 +125,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
     }
     if (
       ["&&", "||", "^"].includes(operator) &&
-      (!leftType.isPrimitive("Boolean") || !rightType.isPrimitive("Boolean"))
+      (!leftType.isFundamental("Boolean") || !rightType.isFundamental("Boolean"))
     ) {
       findings.errors.push(AnalysisError({
         message:

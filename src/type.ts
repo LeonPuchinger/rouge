@@ -121,9 +121,9 @@ export interface SymbolType {
   fork(): SymbolType;
 
   /**
-   * Whether this type represents one of the primitive types.
+   * Whether this type represents one of the fundamental types.
    */
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
+  isFundamental(kind: PrimitiveSymbolTypeKind): boolean;
 
   /**
    * Whether this type represents a function type.
@@ -303,7 +303,7 @@ export class FunctionSymbolType implements SymbolType {
     return copy;
   }
 
-  isPrimitive(): boolean {
+  isFundamental(): boolean {
     return false;
   }
 
@@ -474,7 +474,7 @@ export class CompositeSymbolType implements SymbolType {
     return copy;
   }
 
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(kind: PrimitiveSymbolTypeKind): boolean {
     return this.id === kind;
   }
 
@@ -580,9 +580,9 @@ export class PlaceholderSymbolType implements SymbolType {
     });
   }
 
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(kind: PrimitiveSymbolTypeKind): boolean {
     return this.reference
-      .map((reference) => reference.isPrimitive(kind))
+      .map((reference) => reference.isFundamental(kind))
       .unwrapOr(false);
   }
 
@@ -671,7 +671,7 @@ export class UniqueSymbolType implements SymbolType {
     return copy;
   }
 
-  isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(_kind: PrimitiveSymbolTypeKind): boolean {
     return false;
   }
 
