@@ -5,7 +5,7 @@ import { None, Option, Some } from "./util/monad/index.ts";
 import { surroundWithIfNonEmpty } from "./util/string.ts";
 import { WithOptionalAttributes } from "./util/type.ts";
 
-type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
+export type FundamentalSymbolTypeKind = "Number" | "Boolean" | "String";
 
 /**
  * A type that allows callers of type comparisons to gain insight into why the type comparison failed.
@@ -123,7 +123,7 @@ export interface SymbolType {
   /**
    * Whether this type represents one of the fundamental types.
    */
-  isFundamental(kind: PrimitiveSymbolTypeKind): boolean;
+  isFundamental(kind: FundamentalSymbolTypeKind): boolean;
 
   /**
    * Whether this type represents a function type.
@@ -474,7 +474,7 @@ export class CompositeSymbolType implements SymbolType {
     return copy;
   }
 
-  isFundamental(kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(kind: FundamentalSymbolTypeKind): boolean {
     return this.id === kind;
   }
 
@@ -580,7 +580,7 @@ export class PlaceholderSymbolType implements SymbolType {
     });
   }
 
-  isFundamental(kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(kind: FundamentalSymbolTypeKind): boolean {
     return this.reference
       .map((reference) => reference.isFundamental(kind))
       .unwrapOr(false);
@@ -671,7 +671,7 @@ export class UniqueSymbolType implements SymbolType {
     return copy;
   }
 
-  isFundamental(_kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(_kind: FundamentalSymbolTypeKind): boolean {
     return false;
   }
 

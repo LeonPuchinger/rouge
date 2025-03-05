@@ -1,13 +1,18 @@
 import { alt_sc, apply, rep_sc, seq, str, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
-import { AnalysisFindings } from "../finding.ts";
+import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { StringSymbolValue } from "../symbol.ts";
-import { CompositeSymbolType, SymbolType } from "../type.ts";
+import {
+  CompositeSymbolType,
+  FundamentalSymbolTypeKind,
+  SymbolType,
+} from "../type.ts";
 import { memoize } from "../util/memoize.ts";
 import { Attributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
 import { complexStringLiteral } from "./parser_declarations.ts";
+import { None } from "../util/monad/option.ts";
 
 /* AST NODES */
 
@@ -59,7 +64,28 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    return AnalysisFindings.empty();
+    const findings = this.expression.analyze();
+    if (findings.isErroneous()) {
+      return findings;
+    }
+    const fundamentalTypeIds: FundamentalSymbolTypeKind[] = [
+      "Boolean",
+      "Number",
+      "String",
+    ];
+    const expressionIsFundamental = fundamentalTypeIds.map(
+      (id) => this.expression.resolveType().isFundamental(id),
+    );
+    if (!expressionIsFundamental) {
+      findings.errors.push(
+        AnalysisError({
+          message: "Only fundamental types can be interpolated in a string.",
+          beginHighlight: this.expression,
+          endHighlight: None(),
+        }),
+      );
+    }
+    return findings;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
