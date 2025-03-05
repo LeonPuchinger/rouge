@@ -9,10 +9,10 @@ import {
   SymbolType,
 } from "../type.ts";
 import { memoize } from "../util/memoize.ts";
+import { None } from "../util/monad/option.ts";
 import { Attributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
 import { complexStringLiteral } from "./parser_declarations.ts";
-import { None } from "../util/monad/option.ts";
 
 /* AST NODES */
 
@@ -102,10 +102,10 @@ export class ComplexStringAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  @memoize
   evaluate(): StringSymbolValue {
-    // remove quotation marks which are part of the literal
-    const contents = this.literal.text.slice(1, -1);
+    const contents = this.contents
+      .map((node) => node.evaluate().value)
+      .join("");
     return new StringSymbolValue(contents);
   }
 
@@ -114,7 +114,9 @@ export class ComplexStringAstNode implements EvaluableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    return AnalysisFindings.empty();
+    return AnalysisFindings.merge(
+      ...this.contents.map((node) => node.analyze()),
+    );
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
