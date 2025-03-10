@@ -111,15 +111,19 @@ class PropertyAccessAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    return analysisTable
-      .findSymbol(this.identifierToken.text)
-      .map(([symbol, _flags]) => symbol.valueType)
-      .unwrapOrThrow(
-        new InternalError(
-          "Unable to resolve a symbol in the symbol table.",
-          "This should have been caught by static analysis.",
-        ),
+    const parentType = this.parent
+      .resolveType()
+      .resolve() as CompositeSymbolType;
+    const accessedType = parentType.fields.get(
+      this.identifierToken.text,
+    );
+    if (accessedType === undefined) {
+      throw new InternalError(
+        `The property "${this.identifierToken.text}" does not exist on the object.`,
+        "This should have been caught during static analysis.",
       );
+    }
+    return accessedType;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
