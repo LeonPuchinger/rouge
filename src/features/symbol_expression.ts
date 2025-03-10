@@ -90,7 +90,7 @@ class PropertyAccessAstNode implements EvaluableAstNode {
     if (findings.isErroneous()) {
       return findings;
     }
-    const parentType = this.parent.resolveType().resolve();
+    const parentType = this.parent.resolveType().peel();
     if (parentType instanceof CompositeSymbolType) {
       const fieldExists = parentType.fields.has(this.identifierToken.text);
       if (fieldExists) {
@@ -113,7 +113,7 @@ class PropertyAccessAstNode implements EvaluableAstNode {
   resolveType(): SymbolType {
     const parentType = this.parent
       .resolveType()
-      .resolve() as CompositeSymbolType;
+      .peel() as CompositeSymbolType;
     const accessedType = parentType.fields.get(
       this.identifierToken.text,
     );
