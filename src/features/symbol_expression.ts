@@ -3,7 +3,7 @@ import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { analysisTable, runtimeTable, SymbolValue } from "../symbol.ts";
-import { SymbolType } from "../type.ts";
+import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 import { Attributes } from "../util/type.ts";
@@ -86,19 +86,27 @@ class PropertyAccessAstNode implements EvaluableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    const ident = this.identifierToken.text;
-    const findings = AnalysisFindings.empty();
-    analysisTable.findSymbol(ident).onNone(() => {
-      findings.errors.push(
-        AnalysisError({
-          message:
-            "You tried to use a variable that has not been defined at this point in the program.",
-          beginHighlight: this,
-          endHighlight: None(),
-          messageHighlight: `Variable "${ident}" is unknown at this point.`,
-        }),
-      );
-    });
+    const findings = this.parent.analyze();
+    if (findings.isErroneous()) {
+      return findings;
+    }
+    const parentType = this.parent.resolveType().resolve();
+    if (parentType instanceof CompositeSymbolType) {
+      const fieldExists = parentType.fields.has(this.identifierToken.text);
+      if (fieldExists) {
+        return findings;
+      }
+    }
+    findings.errors.push(
+      AnalysisError({
+        message:
+          "The property you tried to access does not exist on the object.",
+        beginHighlight: this,
+        endHighlight: None(),
+        messageHighlight:
+          `Type "${parentType.displayName()}" does not include an attibute called "${this.identifierToken.text}".`,
+      }),
+    );
     return findings;
   }
 
