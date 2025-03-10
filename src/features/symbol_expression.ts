@@ -2,7 +2,12 @@ import { apply, kright, rep_sc, seq, str, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { analysisTable, runtimeTable, SymbolValue } from "../symbol.ts";
+import {
+  analysisTable,
+  CompositeSymbolValue,
+  runtimeTable,
+  SymbolValue,
+} from "../symbol.ts";
 import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
@@ -73,16 +78,15 @@ class PropertyAccessAstNode implements EvaluableAstNode {
   }
 
   evaluate(): SymbolValue<unknown> {
-    const ident = this.identifierToken.text;
-    return runtimeTable
-      .findSymbol(ident)
-      .map(([symbol, _flags]) => symbol.value)
-      .unwrapOrThrow(
-        new InternalError(
-          `Unable to resolve symbol ${ident} in the symbol table.`,
-          "This should have been caught during static analysis.",
-        ),
+    const parentValue = this.parent.evaluate() as CompositeSymbolValue;
+    const accessedValue = parentValue.value.get(this.identifierToken.text);
+    if (accessedValue === undefined) {
+      throw new InternalError(
+        `The property "${this.identifierToken.text}" does not exist on the object.`,
+        "This should have been caught during static analysis.",
       );
+    }
+    return accessedValue;
   }
 
   analyze(): AnalysisFindings {
