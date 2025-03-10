@@ -1,4 +1,4 @@
-import { apply, tok, Token } from "typescript-parsec";
+import { apply, kright, str, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -63,7 +63,13 @@ export class SymbolExpressionAstNode implements EvaluableAstNode {
   }
 }
 
+
 /* PARSER */
+
+const propertyAccess = kright(
+  str<TokenKind>("."),
+  tok(TokenKind.ident),
+);
 
 export const symbolExpression = apply(
   tok(TokenKind.ident),
