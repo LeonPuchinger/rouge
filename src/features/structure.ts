@@ -11,9 +11,10 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { InterpretableAstNode } from "../ast.ts";
+import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { SymbolValue } from "../symbol.ts";
 import {
   CompositeSymbolType,
   PlaceholderSymbolType,
@@ -21,14 +22,15 @@ import {
   typeTable,
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
-import { None } from "../util/monad/option.ts";
+import { None, Option, Some } from "../util/monad/index.ts";
 import {
   kouter,
   starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
-import { Attributes } from "../util/type.ts";
+import { Attributes, WithOptionalAttributes } from "../util/type.ts";
+import { FunctionDefinitionAstNode } from "./function.ts";
 import { functionDefinition } from "./parser_declarations.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
@@ -192,6 +194,33 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   }
 }
 
+class MethodDefinitionAstNode implements EvaluableAstNode {
+  name!: Token<TokenKind>;
+  typeAnnotation!: Option<TypeLiteralAstNode>;
+  function!: FunctionDefinitionAstNode;
+
+  constructor(params: WithOptionalAttributes<MethodDefinitionAstNode>) {
+    Object.assign(this, params);
+    this.typeAnnotation = Some(params.typeAnnotation);
+  }
+
+  evaluate(): SymbolValue<unknown> {
+    throw new Error("Method not implemented.");
+  }
+
+  resolveType(): SymbolType {
+    throw new Error("Method not implemented.");
+  }
+
+  analyze(): AnalysisFindings {
+    throw new Error("Method not implemented.");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    throw new Error("Method not implemented.");
+  }
+}
+
 /* PARSER */
 
 const placeholderNames = kleft(
@@ -224,11 +253,19 @@ const fields = kleft(
   opt_sc(str(",")),
 );
 
-const method = seq(
-  tok(TokenKind.ident),
-  opt_sc(starts_with_breaking_whitespace(typeLiteral)),
-  surround_with_breaking_whitespace(str<TokenKind>("=")),
-  functionDefinition,
+const method = apply(
+  seq(
+    tok(TokenKind.ident),
+    opt_sc(starts_with_breaking_whitespace(typeLiteral)),
+    surround_with_breaking_whitespace(str<TokenKind>("=")),
+    functionDefinition,
+  ),
+  ([name, typeAnnotation, _, func]) =>
+    new MethodDefinitionAstNode({
+      name: name,
+      typeAnnotation: typeAnnotation,
+      function: func,
+    }),
 );
 
 export const structureDefinition = apply(
