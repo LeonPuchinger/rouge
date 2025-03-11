@@ -22,9 +22,14 @@ import {
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
 import { None } from "../util/monad/option.ts";
-import { kouter, surround_with_breaking_whitespace } from "../util/parser.ts";
+import {
+  kouter,
+  starts_with_breaking_whitespace,
+  surround_with_breaking_whitespace,
+} from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes } from "../util/type.ts";
+import { functionDefinition } from "./parser_declarations.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */
@@ -217,6 +222,13 @@ const fields = kleft(
     fieldSeparator,
   ),
   opt_sc(str(",")),
+);
+
+const method = seq(
+  tok(TokenKind.ident),
+  opt_sc(starts_with_breaking_whitespace(typeLiteral)),
+  surround_with_breaking_whitespace(str<TokenKind>("=")),
+  functionDefinition,
 );
 
 export const structureDefinition = apply(
