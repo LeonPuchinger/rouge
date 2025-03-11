@@ -113,7 +113,7 @@ export interface SymbolType {
    * In case the type is a chain of placeholders, returns the last type in the chain.
    * In case the type is not a placeholder, returns the type itself.
    */
-  resolve(): SymbolType;
+  peel(): SymbolType;
 
   /**
    * Creates a deep copy of the type.
@@ -257,7 +257,7 @@ export class FunctionSymbolType implements SymbolType {
     return;
   }
 
-  resolve(): SymbolType {
+  peel(): SymbolType {
     return this;
   }
 
@@ -444,7 +444,7 @@ export class CompositeSymbolType implements SymbolType {
     return;
   }
 
-  resolve(): SymbolType {
+  peel(): SymbolType {
     return this;
   }
 
@@ -496,8 +496,8 @@ export class PlaceholderSymbolType implements SymbolType {
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
   ): boolean {
-    const resolvedA = this.resolve();
-    const resolvedB = other.resolve();
+    const resolvedA = this.peel();
+    const resolvedB = other.peel();
     const bothBound = resolvedA.bound() && resolvedB.bound();
     if (bothBound) {
       return resolvedA.typeCompatibleWith(resolvedB, mismatchHandler);
@@ -563,9 +563,9 @@ export class PlaceholderSymbolType implements SymbolType {
     this.reference = Some(to);
   }
 
-  resolve(): SymbolType {
+  peel(): SymbolType {
     return this.reference
-      .map((reference) => reference.resolve())
+      .map((reference) => reference.peel())
       .unwrapOr(this);
   }
 
@@ -661,7 +661,7 @@ export class UniqueSymbolType implements SymbolType {
     return;
   }
 
-  resolve(): SymbolType {
+  peel(): SymbolType {
     return this;
   }
 
