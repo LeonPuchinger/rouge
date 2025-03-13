@@ -24,14 +24,13 @@ import {
 import { findDuplicates, removeAll } from "../util/array.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
-  kouter,
   starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes, WithOptionalAttributes } from "../util/type.ts";
+import { expression, ExpressionAstNode } from "./expression.ts";
 import { FunctionDefinitionAstNode } from "./function.ts";
-import { functionDefinition } from "./parser_declarations.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */
@@ -40,7 +39,11 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
   name!: Token<TokenKind>;
-  fields!: [Token<TokenKind>, TypeLiteralAstNode][];
+  fields!: [
+    Token<TokenKind>,
+    Option<TypeLiteralAstNode>,
+    Option<ExpressionAstNode>,
+  ][];
   closingBrace!: Token<TokenKind>;
 
   constructor(params: Attributes<StructureDefinitonAstNode>) {
@@ -234,10 +237,34 @@ const placeholders = kmid(
   str<TokenKind>(">"),
 );
 
-const field = kouter(
-  tok(TokenKind.ident),
-  str(":"),
-  typeLiteral,
+const typeAnnotation = kright(
+  str<TokenKind>(":"),
+  starts_with_breaking_whitespace(typeLiteral),
+);
+
+const defaultValue = kright(
+  str<TokenKind>("="),
+  starts_with_breaking_whitespace(expression),
+);
+
+const field = apply(
+  seq(
+    tok(TokenKind.ident),
+    opt_sc(starts_with_breaking_whitespace(typeAnnotation)),
+    opt_sc(starts_with_breaking_whitespace(defaultValue)),
+  ),
+  ([fieldName, fieldType, defaultValue]) =>
+    // Typescripts type checker is not so smart sometimes.
+    // It needs to be reminded that this is a tuple, not an array.
+    <[
+      Token<TokenKind>,
+      Option<TypeLiteralAstNode>,
+      Option<ExpressionAstNode>,
+    ]> [
+      fieldName,
+      Some(fieldType),
+      Some(defaultValue),
+    ],
 );
 
 const fieldSeparator = alt(
@@ -251,21 +278,6 @@ const fields = kleft(
     fieldSeparator,
   ),
   opt_sc(str(",")),
-);
-
-const method = apply(
-  seq(
-    tok(TokenKind.ident),
-    opt_sc(starts_with_breaking_whitespace(typeLiteral)),
-    surround_with_breaking_whitespace(str<TokenKind>("=")),
-    functionDefinition,
-  ),
-  ([name, typeAnnotation, _, func]) =>
-    new MethodDefinitionAstNode({
-      name: name,
-      typeAnnotation: typeAnnotation,
-      function: func,
-    }),
 );
 
 export const structureDefinition = apply(
