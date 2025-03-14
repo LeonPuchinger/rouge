@@ -103,7 +103,16 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    throw new Error("Method not implemented.");
+    return [
+      this.name,
+      this.defaultValue
+        .map((value) => value.tokenRange()[1])
+        .unwrapOr(
+          this.typeAnnotation
+            .map((type) => type.tokenRange()[1])
+            .unwrapOr(this.name),
+        ),
+    ];
   }
 }
 
