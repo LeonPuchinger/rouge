@@ -22,6 +22,7 @@ import {
   typeTable,
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
+import { InternalError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   starts_with_breaking_whitespace,
@@ -30,7 +31,6 @@ import {
 import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
-import { FunctionDefinitionAstNode } from "./function.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */
@@ -51,7 +51,17 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
   }
 
   resolveType(): SymbolType {
-    throw new Error("Method not implemented.");
+    return (this.typeAnnotation as Option<
+      TypeLiteralAstNode | ExpressionAstNode
+    >)
+      .or(this.expression)
+      .map((node) => node.resolveType())
+      .unwrapOrThrow(
+        new InternalError(
+          "A field for a structure has to have at least a type annotation or a default value.",
+          "This should have been caught by static analysis.",
+        ),
+      );
   }
 
   analyze(): AnalysisFindings {
@@ -67,11 +77,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
   name!: Token<TokenKind>;
-  fields!: [
-    Token<TokenKind>,
-    Option<TypeLiteralAstNode>,
-    Option<ExpressionAstNode>,
-  ][];
+  fields!: FieldAstNode[];
   closingBrace!: Token<TokenKind>;
 
   constructor(params: Attributes<StructureDefinitonAstNode>) {
@@ -88,9 +94,9 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       id: this.name.text,
       placeholders: placeholderTypes,
     });
-    for (const [fieldNameToken, fieldTypeNode] of this.fields) {
-      const fieldName = fieldNameToken.text;
-      const fieldType = fieldTypeNode.resolveType();
+    for (const field of this.fields) {
+      const fieldName = field.name.text;
+      const fieldType = field.resolveType();
       structureType.fields.set(fieldName, fieldType);
     }
     typeTable.setType(this.name.text, structureType);
