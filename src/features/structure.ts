@@ -303,17 +303,11 @@ const field = apply(
     opt_sc(starts_with_breaking_whitespace(defaultValue)),
   ),
   ([fieldName, fieldType, defaultValue]) =>
-    // Typescripts type checker is not so smart sometimes.
-    // It needs to be reminded that this is a tuple, not an array.
-    <[
-      Token<TokenKind>,
-      Option<TypeLiteralAstNode>,
-      Option<ExpressionAstNode>,
-    ]> [
-      fieldName,
-      Some(fieldType),
-      Some(defaultValue),
-    ],
+    new FieldAstNode({
+      name: fieldName,
+      typeAnnotation: fieldType,
+      defaultValue: defaultValue,
+    }),
 );
 
 const fieldSeparator = alt(
