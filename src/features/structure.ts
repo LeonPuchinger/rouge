@@ -60,19 +60,34 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
   }
 
   analyze(): AnalysisFindings {
-    let findings = AnalysisFindings.empty();
     const typeAnnotationFindings = this.typeAnnotation
       .map((typeAnnotation) => typeAnnotation.analyze())
       .unwrapOr(AnalysisFindings.empty());
     const defaultValueFindings = this.expression
       .map((defaultValue) => defaultValue.analyze())
       .unwrapOr(AnalysisFindings.empty());
-    findings = AnalysisFindings.merge(
+    const findings = AnalysisFindings.merge(
       typeAnnotationFindings,
       defaultValueFindings,
     );
     if (findings.isErroneous()) {
       return findings;
+    }
+    if (this.typeAnnotation.hasValue() && this.expression.hasValue()) {
+      const typeAnnotation = this.typeAnnotation.unwrap();
+      const expression = this.expression.unwrap();
+      const typeAnnotationType = typeAnnotation.resolveType();
+      const expressionType = expression.resolveType();
+      if (!expressionType.typeCompatibleWith(typeAnnotationType)) {
+        findings.errors.push(AnalysisError({
+          message:
+            `The default value for field "${this.name.text}" is incompatible with its explicitly stated type.`,
+          beginHighlight: typeAnnotation,
+          endHighlight: this.expression,
+          messageHighlight:
+            `The field is expected to be of type "${typeAnnotationType.displayName()}" but the default value is of type "${expressionType.displayName()}".`,
+        }));
+      }
     }
 
     return findings;
