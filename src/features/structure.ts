@@ -216,14 +216,13 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       typeTable.setType(placeholerName, placeholderType);
     }
     const fieldNames: string[] = [];
-    for (const [fieldNameToken, fieldTypeNode] of this.fields) {
-      const fieldTypeFindings = fieldTypeNode.analyze();
-      findings = AnalysisFindings.merge(findings, fieldTypeFindings);
-      const fieldName = fieldNameToken.text;
+    for (const field of this.fields) {
+      findings = AnalysisFindings.merge(findings, field.analyze());
+      const fieldName = field.name.text;
       if (fieldNames.includes(fieldName)) {
         findings.errors.push(AnalysisError({
           message: "Fields inside of a structure have to have a unique name.",
-          beginHighlight: DummyAstNode.fromToken(fieldNameToken),
+          beginHighlight: DummyAstNode.fromToken(field.name),
           endHighlight: None(),
           messageHighlight:
             `The field called "${fieldName}" already exists in the structure.`,
