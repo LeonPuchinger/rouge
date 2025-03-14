@@ -256,33 +256,6 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   }
 }
 
-class MethodDefinitionAstNode implements EvaluableAstNode {
-  name!: Token<TokenKind>;
-  typeAnnotation!: Option<TypeLiteralAstNode>;
-  function!: FunctionDefinitionAstNode;
-
-  constructor(params: WithOptionalAttributes<MethodDefinitionAstNode>) {
-    Object.assign(this, params);
-    this.typeAnnotation = Some(params.typeAnnotation);
-  }
-
-  evaluate(): SymbolValue<unknown> {
-    throw new Error("Method not implemented.");
-  }
-
-  resolveType(): SymbolType {
-    throw new Error("Method not implemented.");
-  }
-
-  analyze(): AnalysisFindings {
-    throw new Error("Method not implemented.");
-  }
-
-  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    throw new Error("Method not implemented.");
-  }
-}
-
 /* PARSER */
 
 const placeholderNames = kleft(
