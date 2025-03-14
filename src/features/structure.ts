@@ -35,6 +35,34 @@ import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */
 
+class FieldAstNode implements Partial<EvaluableAstNode> {
+  name!: Token<TokenKind>;
+  typeAnnotation!: Option<TypeLiteralAstNode>;
+  expression!: Option<ExpressionAstNode>;
+
+  constructor(params: WithOptionalAttributes<FieldAstNode>) {
+    Object.assign(this, params);
+    this.typeAnnotation = Some(params.typeAnnotation);
+    this.expression = Some(params.expression);
+  }
+
+  evaluate(): SymbolValue<unknown> {
+    throw new Error("Method not implemented.");
+  }
+
+  resolveType(): SymbolType {
+    throw new Error("Method not implemented.");
+  }
+
+  analyze(): AnalysisFindings {
+    throw new Error("Method not implemented.");
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    throw new Error("Method not implemented.");
+  }
+}
+
 export class StructureDefinitonAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
