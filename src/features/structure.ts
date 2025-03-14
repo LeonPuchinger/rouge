@@ -46,10 +46,6 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     this.expression = Some(params.expression);
   }
 
-  evaluate(): SymbolValue<unknown> {
-    throw new Error("Method not implemented.");
-  }
-
   resolveType(): SymbolType {
     return (this.typeAnnotation as Option<
       TypeLiteralAstNode | ExpressionAstNode
