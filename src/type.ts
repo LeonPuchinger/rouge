@@ -320,12 +320,13 @@ export class FunctionSymbolType implements SymbolType {
  * Two instances of `CompositeSymbolType` are type compatible in case they contain
  * the same amount of field, the fields have the same names,
  * and the types for each field are type compatible themselves.
+ * A `CompositeSymbolType` can contain default values for each of its fields,
+ * which are only used during the instantiation of the type.
+ * Default values are ignored during type comparisons.
  */
 export class CompositeSymbolType implements SymbolType {
   id!: string;
   fields!: Map<string, SymbolType>;
-  // Default values are ignored during type comparisons.
-  // They are only accessed during instantiation of the type.
   defaultValues!: Map<string, SymbolValue>;
   placeholders!: Map<string, PlaceholderSymbolType>;
 
