@@ -14,7 +14,6 @@ import {
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { SymbolValue } from "../symbol.ts";
 import {
   CompositeSymbolType,
   PlaceholderSymbolType,
@@ -61,7 +60,22 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
   }
 
   analyze(): AnalysisFindings {
-    throw new Error("Method not implemented.");
+    let findings = AnalysisFindings.empty();
+    const typeAnnotationFindings = this.typeAnnotation
+      .map((typeAnnotation) => typeAnnotation.analyze())
+      .unwrapOr(AnalysisFindings.empty());
+    const defaultValueFindings = this.expression
+      .map((defaultValue) => defaultValue.analyze())
+      .unwrapOr(AnalysisFindings.empty());
+    findings = AnalysisFindings.merge(
+      typeAnnotationFindings,
+      defaultValueFindings,
+    );
+    if (findings.isErroneous()) {
+      return findings;
+    }
+
+    return findings;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
