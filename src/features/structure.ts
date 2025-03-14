@@ -37,19 +37,19 @@ import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 class FieldAstNode implements Partial<EvaluableAstNode> {
   name!: Token<TokenKind>;
   typeAnnotation!: Option<TypeLiteralAstNode>;
-  expression!: Option<ExpressionAstNode>;
+  defaultValue!: Option<ExpressionAstNode>;
 
   constructor(params: WithOptionalAttributes<FieldAstNode>) {
     Object.assign(this, params);
     this.typeAnnotation = Some(params.typeAnnotation);
-    this.expression = Some(params.expression);
+    this.defaultValue = Some(params.defaultValue);
   }
 
   resolveType(): SymbolType {
     return (this.typeAnnotation as Option<
       TypeLiteralAstNode | ExpressionAstNode
     >)
-      .or(this.expression)
+      .or(this.defaultValue)
       .map((node) => node.resolveType())
       .unwrapOrThrow(
         new InternalError(
@@ -63,7 +63,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     const typeAnnotationFindings = this.typeAnnotation
       .map((typeAnnotation) => typeAnnotation.analyze())
       .unwrapOr(AnalysisFindings.empty());
-    const defaultValueFindings = this.expression
+    const defaultValueFindings = this.defaultValue
       .map((defaultValue) => defaultValue.analyze())
       .unwrapOr(AnalysisFindings.empty());
     const findings = AnalysisFindings.merge(
@@ -73,9 +73,9 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     if (findings.isErroneous()) {
       return findings;
     }
-    if (this.typeAnnotation.hasValue() && this.expression.hasValue()) {
+    if (this.typeAnnotation.hasValue() && this.defaultValue.hasValue()) {
       const typeAnnotation = this.typeAnnotation.unwrap();
-      const expression = this.expression.unwrap();
+      const expression = this.defaultValue.unwrap();
       const typeAnnotationType = typeAnnotation.resolveType();
       const expressionType = expression.resolveType();
       if (!expressionType.typeCompatibleWith(typeAnnotationType)) {
@@ -83,13 +83,13 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
           message:
             `The default value for field "${this.name.text}" is incompatible with its explicitly stated type.`,
           beginHighlight: typeAnnotation,
-          endHighlight: this.expression,
+          endHighlight: this.defaultValue,
           messageHighlight:
             `The field is expected to be of type "${typeAnnotationType.displayName()}" but the default value is of type "${expressionType.displayName()}".`,
         }));
       }
     }
-    if (!this.typeAnnotation.hasValue() && !this.expression.hasValue()) {
+    if (!this.typeAnnotation.hasValue() && !this.defaultValue.hasValue()) {
       findings.errors.push(AnalysisError({
         message:
           `For each field, you have to at least specify its type or provide a default value.`,
