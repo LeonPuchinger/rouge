@@ -1,3 +1,4 @@
+import { SymbolValue } from "./symbol.ts";
 import { zip } from "./util/array.ts";
 import { InternalError } from "./util/error.ts";
 import { globalAutoincrement } from "./util/increment.ts";
@@ -323,6 +324,9 @@ export class FunctionSymbolType implements SymbolType {
 export class CompositeSymbolType implements SymbolType {
   id!: string;
   fields!: Map<string, SymbolType>;
+  // Default values are ignored during type comparisons.
+  // They are only accessed during instantiation of the type.
+  defaultValues!: Map<string, SymbolValue>;
   placeholders!: Map<string, PlaceholderSymbolType>;
 
   /**
