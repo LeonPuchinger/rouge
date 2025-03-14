@@ -89,7 +89,16 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
         }));
       }
     }
-
+    if (!this.typeAnnotation.hasValue() && !this.expression.hasValue()) {
+      findings.errors.push(AnalysisError({
+        message:
+          `For each field, you have to at least specify its type or provide a default value.`,
+        beginHighlight: DummyAstNode.fromToken(this.name),
+        endHighlight: None(),
+        messageHighlight:
+          `The type of the field "${this.name.text}" could not be determined.`,
+      }));
+    }
     return findings;
   }
 
