@@ -330,18 +330,17 @@ export class CompositeSymbolType implements SymbolType {
   defaultValues!: Map<string, SymbolValue>;
   placeholders!: Map<string, PlaceholderSymbolType>;
 
-  /**
-   * @param fields The key-value pairs of name and type that make up this user defined type.
-   */
   constructor(
     params: {
       id: string;
       fields?: Map<string, SymbolType>;
+      defaultValues?: Map<string, SymbolValue>;
       placeholders?: Map<string, PlaceholderSymbolType>;
     },
   ) {
     params.fields ??= new Map();
     params.placeholders ??= new Map();
+    params.defaultValues ??= new Map();
     Object.assign(this, params);
   }
 
