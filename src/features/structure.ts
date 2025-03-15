@@ -150,7 +150,6 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           });
       }
     }
-    typeTable.setType(this.name.text, structureType);
     return structureType;
   }
 
