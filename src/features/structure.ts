@@ -132,6 +132,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    */
   generateSymbolType(
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
+    includeDefaultValues = false,
   ): SymbolType {
     const structureType = new CompositeSymbolType({
       id: this.name.text,
@@ -141,6 +142,13 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       const fieldName = field.name.text;
       const fieldType = field.resolveType();
       structureType.fields.set(fieldName, fieldType);
+      if (includeDefaultValues) {
+        field.defaultValue
+          .map((node) => node.evaluate())
+          .then((defaultValue) => {
+            structureType.defaultValues.set(fieldName, defaultValue);
+          });
+      }
     }
     typeTable.setType(this.name.text, structureType);
     return structureType;
@@ -260,6 +268,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     }
     const structureType = this.generateSymbolType(
       placeholderTypes,
+      true,
     );
     typeTable.popScope();
     typeTable.setType(
