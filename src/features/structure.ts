@@ -128,16 +128,28 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   }
 
   /**
-   * Generates a composite symbol type of the struct with all its fields.
+   * Generates a composite symbol type of the struct with placeholders,
+   * but without any fields. The resulting type can be completed by
+   * calling `completeBarebonesSymbolType`, which will add the missing fields.
+   * This is useful for working with self-referential types.
    */
-  generateSymbolType(
+  generateBarebonesSymbolType(
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
-    includeDefaultValues = false,
-  ): SymbolType {
+  ): CompositeSymbolType {
     const structureType = new CompositeSymbolType({
       id: this.name.text,
       placeholders: placeholderTypes,
     });
+    return structureType;
+  }
+
+  /**
+   * Adds the fields of the struct to a barebones symbol type.
+   */
+  completeBarebonesSymbolType(
+    structureType: CompositeSymbolType,
+    includeDefaultValues = false,
+  ): SymbolType {
     for (const field of this.fields) {
       const fieldName = field.name.text;
       const fieldType = field.resolveType();
@@ -151,6 +163,27 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       }
     }
     return structureType;
+  }
+
+  /**
+   * Generates a composite symbol type of the struct with all its fields.
+   */
+  generateSymbolType(
+    placeholderTypes?: Map<string, PlaceholderSymbolType>,
+    includeDefaultValues = false,
+  ): SymbolType {
+    const structureType = this.generateBarebonesSymbolType(placeholderTypes);
+    typeTable.pushScope();
+    typeTable.setType(
+      this.name.text,
+      structureType,
+    );
+    const completeType = this.completeBarebonesSymbolType(
+      structureType,
+      includeDefaultValues,
+    );
+    typeTable.popScope();
+    return completeType;
   }
 
   analyze(): AnalysisFindings {
@@ -222,6 +255,13 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     ) {
       typeTable.setType(placeholerName, placeholderType);
     }
+    const structureTypeNoFields = this.generateBarebonesSymbolType(
+      unproblematicPlaceholderTypes,
+    );
+    typeTable.setType(
+      this.name.text,
+      structureTypeNoFields,
+    );
     const fieldNames: string[] = [];
     for (const field of this.fields) {
       findings = AnalysisFindings.merge(findings, field.analyze());
@@ -237,9 +277,11 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       }
       fieldNames.push(fieldName);
     }
-    if (!findings.isErroneous()) {
-      const structureType = this.generateSymbolType(
-        unproblematicPlaceholderTypes,
+    if (findings.isErroneous()) {
+      typeTable.popScope();
+    } else {
+      const structureType = this.completeBarebonesSymbolType(
+        structureTypeNoFields,
       );
       typeTable.popScope();
       typeTable.setType(
