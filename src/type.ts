@@ -96,7 +96,7 @@ export interface SymbolType {
   /**
    * Returns `true` in case the type (including all its subtypes) does not contain any unboud placeholders.
    */
-  complete(): boolean;
+  complete(memo?: Map<SymbolType, boolean>): boolean;
 
   /**
    * Returns `false` in case the type is an unbound placeholder.
@@ -244,10 +244,16 @@ export class FunctionSymbolType implements SymbolType {
     return this.resolveId();
   }
 
-  complete(): boolean {
-    return [...this.parameterTypes, this.returnType]
-      .map((type) => type.complete())
+  complete(memo = new Map<SymbolType, boolean>()): boolean {
+    if (memo.has(this)) {
+      return memo.get(this)!;
+    }
+    memo.set(this, false);
+    const result = [...this.parameterTypes, this.returnType]
+      .map((type) => type.complete(memo))
       .every((entry) => entry === true);
+    memo.set(this, result);
+    return result;
   }
 
   bound(): boolean {
@@ -438,10 +444,16 @@ export class CompositeSymbolType implements SymbolType {
     return this.resolveId();
   }
 
-  complete(): boolean {
-    return Array.from(this.placeholders.entries())
-      .map(([_name, type]) => type.complete())
+  complete(memo = new Map<SymbolType, boolean>()): boolean {
+    if (memo.has(this)) {
+      return memo.get(this)!;
+    }
+    memo.set(this, false);
+    const result = Array.from(this.placeholders.entries())
+      .map(([_name, type]) => type.complete(memo))
       .every((entry) => entry === true);
+    memo.set(this, result);
+    return result;
   }
 
   bound(): boolean {
@@ -558,9 +570,9 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.name;
   }
 
-  complete(): boolean {
+  complete(memo = new Map<SymbolType, boolean>()): boolean {
     return this.reference
-      .map((reference) => reference.complete())
+      .map((reference) => reference.complete(memo))
       .unwrapOr(false);
   }
 
