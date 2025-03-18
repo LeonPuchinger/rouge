@@ -14,6 +14,7 @@ import {
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { SymbolValue } from "../symbol.ts";
 import {
   CompositeSymbolType,
   PlaceholderSymbolType,
@@ -150,18 +151,26 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     structureType: CompositeSymbolType,
     includeDefaultValues = false,
   ): SymbolType {
+    // The new fields and default values are not immediately added
+    // to the type. This is done in case the type is recursive (self-referential).
+    // If the recursive type is forked, and the fields were to be added
+    // early, it would result in an infinite loop.
+    const fields = new Map<string, SymbolType>();
+    const defaultValues = new Map<string, SymbolValue>();
     for (const field of this.fields) {
       const fieldName = field.name.text;
       const fieldType = field.resolveType();
-      structureType.fields.set(fieldName, fieldType);
+      fields.set(fieldName, fieldType);
       if (includeDefaultValues) {
         field.defaultValue
           .map((node) => node.evaluate())
           .then((defaultValue) => {
-            structureType.defaultValues.set(fieldName, defaultValue);
+            defaultValues.set(fieldName, defaultValue);
           });
       }
     }
+    structureType.fields = fields;
+    structureType.defaultValues = defaultValues;
     return structureType;
   }
 
