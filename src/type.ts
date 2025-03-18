@@ -119,7 +119,7 @@ export interface SymbolType {
   /**
    * Creates a deep copy of the type.
    */
-  fork(): SymbolType;
+  fork(memo?: Map<SymbolType, SymbolType>): SymbolType;
 
   /**
    * Whether this type represents one of the primitive types.
@@ -262,13 +262,16 @@ export class FunctionSymbolType implements SymbolType {
     return this;
   }
 
-  fork(): FunctionSymbolType {
+  fork(memo = new Map<SymbolType, SymbolType>()): FunctionSymbolType {
+    if (memo.has(this)) {
+      return memo.get(this) as FunctionSymbolType;
+    }
     const originalPlaceholders: SymbolType[] = Array.from(
       this.placeholders.values(),
     );
     const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
     const forkedParameters = this.parameterTypes.map((type) => {
-      const forkedParameter = type.fork();
+      const forkedParameter = type.fork(memo);
       if (originalPlaceholders.includes(type)) {
         const forkedPlaceholder = forkedParameter as PlaceholderSymbolType;
         forkedPlaceholders.set(forkedPlaceholder.name, forkedPlaceholder);
@@ -276,7 +279,7 @@ export class FunctionSymbolType implements SymbolType {
       return forkedParameter;
     });
     const originalReturnType = this.returnType;
-    let forkedReturnType = originalReturnType.fork();
+    let forkedReturnType = originalReturnType.fork(memo);
     const returnTypeIsPlaceholder = originalPlaceholders.includes(
       originalReturnType,
     );
@@ -293,7 +296,7 @@ export class FunctionSymbolType implements SymbolType {
     // fork placeholders that are not utilized by a parameter
     for (const [name, type] of this.placeholders) {
       if (!forkedPlaceholders.has(name)) {
-        forkedPlaceholders.set(name, type.fork() as PlaceholderSymbolType);
+        forkedPlaceholders.set(name, type.fork(memo) as PlaceholderSymbolType);
       }
     }
     const copy = new FunctionSymbolType({
@@ -301,6 +304,7 @@ export class FunctionSymbolType implements SymbolType {
       placeholders: forkedPlaceholders,
       returnType: forkedReturnType,
     });
+    memo.set(this, copy);
     return copy;
   }
 
@@ -452,17 +456,23 @@ export class CompositeSymbolType implements SymbolType {
     return this;
   }
 
-  fork(): CompositeSymbolType {
+  fork(
+    memo = new Map<CompositeSymbolType, CompositeSymbolType>(),
+  ): CompositeSymbolType {
+    if (memo.has(this)) {
+      return memo.get(this)!;
+    }
     const copy = new CompositeSymbolType({
       id: this.id,
       fields: new Map(),
       placeholders: new Map(),
     });
+    memo.set(this, copy);
     const originalPlaceholders: SymbolType[] = Array.from(
       this.placeholders.values(),
     );
     for (const [fieldName, field] of this.fields) {
-      const forkedField = field.fork();
+      const forkedField = field.fork(memo);
       if (originalPlaceholders.includes(field)) {
         const forkedPlaceholder = forkedField as PlaceholderSymbolType;
         copy.placeholders.set(forkedPlaceholder.name, forkedPlaceholder);
@@ -472,7 +482,7 @@ export class CompositeSymbolType implements SymbolType {
     // fork placeholders that are not utilized by a field
     for (const [name, type] of this.placeholders) {
       if (!copy.placeholders.has(name)) {
-        copy.placeholders.set(name, type.fork() as PlaceholderSymbolType);
+        copy.placeholders.set(name, type.fork(memo) as PlaceholderSymbolType);
       }
     }
     return copy;
@@ -573,15 +583,18 @@ export class PlaceholderSymbolType implements SymbolType {
       .unwrapOr(this);
   }
 
-  fork(): SymbolType {
+  fork(
+    memo = new Map<SymbolType, SymbolType>(),
+  ): SymbolType {
     const forkedReference = this.reference
-      .map((reference) => reference.fork());
-    return new PlaceholderSymbolType({
+      .map((reference) => reference.fork(memo));
+    const copy = new PlaceholderSymbolType({
       name: this.name,
       reference: forkedReference.hasValue()
         ? forkedReference.unwrap()
         : undefined,
     });
+    return copy;
   }
 
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
