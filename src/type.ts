@@ -67,6 +67,7 @@ export interface SymbolType {
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
+    memo?: Map<SymbolType, Set<SymbolType>>,
   ): boolean;
 
   /**
@@ -153,9 +154,17 @@ export class FunctionSymbolType implements SymbolType {
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: Partial<SymbolTypeMismatchHandler>,
+    memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
+    if (memo.get(this)?.has(other)) {
+      return true;
+    }
+    if (!memo.has(this)) {
+      memo.set(this, new Set());
+    }
+    memo.get(this)!.add(other);
     if (other instanceof PlaceholderSymbolType) {
-      return other.typeCompatibleWith(this, mismatchHandler);
+      return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     // only fork types if no placeholders need to be assumed
     let self = this as FunctionSymbolType;
@@ -208,7 +217,9 @@ export class FunctionSymbolType implements SymbolType {
         other.parameterTypes,
       )
     ) {
-      if (!selfParameter.typeCompatibleWith(otherParameter)) {
+      if (
+        !selfParameter.typeCompatibleWith(otherParameter, mismatchHandler, memo)
+      ) {
         mismatchHandler?.onFunctionParameterTypeMismatch?.({
           index: index,
           expected: selfParameter,
@@ -218,7 +229,13 @@ export class FunctionSymbolType implements SymbolType {
       }
     }
     // compare return type
-    if (!self.returnType.typeCompatibleWith(other.returnType)) {
+    if (
+      !self.returnType.typeCompatibleWith(
+        other.returnType,
+        mismatchHandler,
+        memo,
+      )
+    ) {
       mismatchHandler?.onFunctionReturnTypeMismatch?.({
         expected: self.returnType,
         found: other.returnType,
@@ -357,9 +374,17 @@ export class CompositeSymbolType implements SymbolType {
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
+    memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
+    if (memo.get(this)?.has(other)) {
+      return true;
+    }
+    if (!memo.has(this)) {
+      memo.set(this, new Set());
+    }
+    memo.get(this)!.add(other);
     if (other instanceof PlaceholderSymbolType) {
-      return other.typeCompatibleWith(this, mismatchHandler);
+      return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     if (!(other instanceof CompositeSymbolType)) {
       mismatchHandler?.onIdMismatch?.({
@@ -398,7 +423,13 @@ export class CompositeSymbolType implements SymbolType {
         });
         return false;
       }
-      if (!placeholderType.typeCompatibleWith(otherPlaceholder)) {
+      if (
+        !placeholderType.typeCompatibleWith(
+          otherPlaceholder,
+          mismatchHandler,
+          memo,
+        )
+      ) {
         mismatchHandler?.onPlaceholderTypeMismatch?.({
           expected: placeholderType,
           found: otherPlaceholder,
@@ -420,7 +451,13 @@ export class CompositeSymbolType implements SymbolType {
           "Encountered two CompositeSymbolTypes with matching IDs but different names for their fields.",
         );
       }
-      if (!other.fields.get(key)?.typeCompatibleWith(this.fields.get(key)!)) {
+      if (
+        !other.fields.get(key)?.typeCompatibleWith(
+          this.fields.get(key)!,
+          mismatchHandler,
+          memo,
+        )
+      ) {
         throw new InternalError(
           "Encountered two CompositeSymbolTypes with matching IDs but at least one type-incompatible field.",
         );
@@ -521,12 +558,13 @@ export class PlaceholderSymbolType implements SymbolType {
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
+    memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
     const resolvedA = this.peel();
     const resolvedB = other.peel();
     const bothBound = resolvedA.bound() && resolvedB.bound();
     if (bothBound) {
-      return resolvedA.typeCompatibleWith(resolvedB, mismatchHandler);
+      return resolvedA.typeCompatibleWith(resolvedB, mismatchHandler, memo);
     }
     const bothUnbound = !resolvedA.bound() && !resolvedB.bound();
     if (bothUnbound) {
