@@ -17,6 +17,7 @@ import { TokenKind } from "../lexer.ts";
 import { SymbolValue } from "../symbol.ts";
 import {
   CompositeSymbolType,
+  IgnoreSymbolType,
   PlaceholderSymbolType,
   SymbolType,
   typeTable,
@@ -58,6 +59,18 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
           "This should have been caught by static analysis.",
         ),
       );
+  }
+
+  /**
+   * Creates a reference to an `IgnoreSymbolType` for the field.
+   * When the type of the field can safely be determined, the reference
+   * can be updated with the actual type. The reference is realized
+   * using a `PlaceholderSymbolType`.
+   */
+  resolvePreliminaryType(): SymbolType {
+    const reference = new PlaceholderSymbolType({ name: this.name.text });
+    reference.bind(new IgnoreSymbolType());
+    return reference;
   }
 
   analyze(): AnalysisFindings {
@@ -129,9 +142,10 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   }
 
   /**
-   * Generates a composite symbol type of the struct with placeholders,
-   * but without any fields. The resulting type can be completed by
-   * calling `completeBarebonesSymbolType`, which will add the missing fields.
+   * Generates a composite symbol type of the struct with placeholders and fields.
+   * However, the fields don't have their correct type yet.
+   * The resulting type can be completed by calling `completeBarebonesSymbolType`,
+   * which will add the missing field types.
    * This is useful for working with self-referential types.
    */
   generateBarebonesSymbolType(
@@ -141,6 +155,9 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       id: this.name.text,
       placeholders: placeholderTypes,
     });
+    for (const field of this.fields) {
+      structureType.fields.set(field.name.text, field.resolvePreliminaryType());
+    }
     return structureType;
   }
 
@@ -151,16 +168,17 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     structureType: CompositeSymbolType,
     includeDefaultValues = false,
   ): SymbolType {
-    // The new fields and default values are not immediately added
-    // to the type. This is done in case the type is recursive (self-referential).
-    // If the recursive type is forked, and the fields were to be added
-    // early, it would result in an infinite loop.
-    const fields = new Map<string, SymbolType>();
     const defaultValues = new Map<string, SymbolValue>();
     for (const field of this.fields) {
       const fieldName = field.name.text;
+      const existingField = structureType.fields.get(fieldName);
+      if (existingField === undefined) {
+        throw new InternalError(
+          `The field "${fieldName}" was not found in the structure "${this.name.text}".`,
+        );
+      }
       const fieldType = field.resolveType();
-      fields.set(fieldName, fieldType);
+      existingField.bind(fieldType);
       if (includeDefaultValues) {
         field.defaultValue
           .map((node) => node.evaluate())
@@ -169,7 +187,6 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           });
       }
     }
-    structureType.fields = fields;
     structureType.defaultValues = defaultValues;
     return structureType;
   }
@@ -264,16 +281,21 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     ) {
       typeTable.setType(placeholerName, placeholderType);
     }
-    const structureTypeNoFields = this.generateBarebonesSymbolType(
+    const incompleteStructureType = this.generateBarebonesSymbolType(
       unproblematicPlaceholderTypes,
     );
     typeTable.setType(
       this.name.text,
-      structureTypeNoFields,
+      incompleteStructureType,
     );
     const fieldNames: string[] = [];
+    // First (preliminary) pass of the analysis without field types set
+    let preliminaryFindings = AnalysisFindings.empty();
     for (const field of this.fields) {
-      findings = AnalysisFindings.merge(findings, field.analyze());
+      preliminaryFindings = AnalysisFindings.merge(
+        preliminaryFindings,
+        field.analyze(),
+      );
       const fieldName = field.name.text;
       if (fieldNames.includes(fieldName)) {
         findings.errors.push(AnalysisError({
@@ -286,18 +308,29 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       }
       fieldNames.push(fieldName);
     }
-    if (findings.isErroneous()) {
+    if (findings.isErroneous() || preliminaryFindings.isErroneous()) {
       typeTable.popScope();
-    } else {
-      const structureType = this.completeBarebonesSymbolType(
-        structureTypeNoFields,
-      );
-      typeTable.popScope();
-      typeTable.setType(
-        this.name.text,
-        structureType,
-      );
+      return AnalysisFindings.merge(findings, preliminaryFindings);
     }
+    const structureType = this.completeBarebonesSymbolType(
+      incompleteStructureType,
+    );
+    // Second pass of the analysis with field types set
+    const fieldFindings = this.fields
+      .map((field) => field.analyze())
+      .reduce(
+        (previous, current) => AnalysisFindings.merge(previous, current),
+        AnalysisFindings.empty(),
+      );
+    findings = AnalysisFindings.merge(findings, fieldFindings);
+    typeTable.popScope();
+    if (findings.isErroneous()) {
+      return findings;
+    }
+    typeTable.setType(
+      this.name.text,
+      structureType,
+    );
     return findings;
   }
 
