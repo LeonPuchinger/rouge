@@ -223,7 +223,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       .map(([symbol, _flags]) => [symbol.valueType.isFunction(), true])
       .unwrapOr([false, false]);
     const calledType = typeTable.findType(this.name.text)
-      .map(([type, _flags]) => type);
+      .map(([type, _flags]) => type.peel());
     const isType = calledType.hasValue();
     if (symbolExists && isType) {
       throw new InternalError(
@@ -251,7 +251,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         findings,
         this.analyzeFunctionInvocation(
           calledSymbol
-            .map(([symbol, _flags]) => symbol.valueType)
+            .map(([symbol, _flags]) => symbol.valueType.peel())
             .unwrap() as FunctionSymbolType,
         ),
       );
