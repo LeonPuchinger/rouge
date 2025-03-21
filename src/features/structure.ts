@@ -68,7 +68,10 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
    * using a `PlaceholderSymbolType`.
    */
   resolvePreliminaryType(): SymbolType {
-    const reference = new PlaceholderSymbolType({ name: this.name.text });
+    const reference = new PlaceholderSymbolType({
+      name: this.name.text,
+      rebindingAllowed: true,
+    });
     reference.bind(new IgnoreSymbolType());
     return reference;
   }

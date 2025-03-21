@@ -4,7 +4,6 @@ import { InternalError } from "./util/error.ts";
 import { globalAutoincrement } from "./util/increment.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { surroundWithIfNonEmpty } from "./util/string.ts";
-import { WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
@@ -555,10 +554,20 @@ export class CompositeSymbolType implements SymbolType {
 export class PlaceholderSymbolType implements SymbolType {
   reference!: Option<SymbolType>;
   name!: string;
+  rebindingAllowed!: boolean;
 
-  constructor(params: WithOptionalAttributes<PlaceholderSymbolType>) {
-    Object.assign(this, params);
-    this.reference = Some(params.reference);
+  constructor({
+    reference,
+    name,
+    rebindingAllowed = false,
+  }: {
+    reference?: SymbolType;
+    name: string;
+    rebindingAllowed?: boolean;
+  }) {
+    this.reference = Some(reference);
+    this.name = name;
+    this.rebindingAllowed = rebindingAllowed;
   }
 
   typeCompatibleWith(
@@ -625,7 +634,7 @@ export class PlaceholderSymbolType implements SymbolType {
   }
 
   bind(to: SymbolType) {
-    if (this.bound()) {
+    if (this.bound() && !this.rebindingAllowed) {
       throw new InternalError(
         "A PlaceholderSymbolType can only be bound to another type once.",
       );
