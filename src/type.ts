@@ -163,7 +163,10 @@ export class FunctionSymbolType implements SymbolType {
       memo.set(this, new Set());
     }
     memo.get(this)!.add(other);
-    if (other instanceof PlaceholderSymbolType) {
+    if (
+      other instanceof PlaceholderSymbolType ||
+      other instanceof IgnoreSymbolType
+    ) {
       return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     // only fork types if no placeholders need to be assumed
@@ -383,7 +386,10 @@ export class CompositeSymbolType implements SymbolType {
       memo.set(this, new Set());
     }
     memo.get(this)!.add(other);
-    if (other instanceof PlaceholderSymbolType) {
+    if (
+      other instanceof PlaceholderSymbolType ||
+      other instanceof IgnoreSymbolType
+    ) {
       return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     if (!(other instanceof CompositeSymbolType)) {
@@ -657,6 +663,72 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.reference
       .map((reference) => reference.isFunction())
       .unwrapOr(false);
+  }
+}
+
+/**
+ * A SymbolType that is meant to produce no side effects. For instance,
+ * comparing this type to any other type will always yield `true`, which
+ * should result in no type mismatches in the analysis findings (which
+ * are considered side effects here).
+ * It is used primarily in two scenarios. First, in case the
+ * analysis of a field or a variables yields erroneous findings,
+ * the type of that field or variable cannot be determined safely.
+ * In this case, the type can be set to an instance of `IgnoreSymbolType`.
+ * This will allow the analysis to continue even without a proper type.
+ * Second, when a type contains mutually dependent fields, it not possible
+ * to perform analysis on one field when its dependent field has not yet
+ * been analyzed. As a solution, each field is set to an instance of
+ * `IgnoreSymbolType` first, which allows an initial pass of the analysis
+ * to be performed. Later, when all fields have been analyzed in the first
+ * pass, the types can be replaced with the correct types. Only then can the
+ * analysis. An instance of `IgnoreSymbolType` is usually paired with an
+ * instance of `PlaceholderSymbolType` which acts as a mutable reference that
+ * allows replacing the `IgnoreSymbolType` once the "real" type can be determined.
+ */
+export class IgnoreSymbolType implements SymbolType {
+  typeCompatibleWith(): boolean {
+    return true;
+  }
+
+  displayName(): string {
+    return "Ignore";
+  }
+
+  resolveId(): string {
+    return "Ignore";
+  }
+
+  unresolvedId(): string {
+    return "Ignore";
+  }
+
+  complete(): boolean {
+    return true;
+  }
+
+  bound(): boolean {
+    return true;
+  }
+
+  bind(): void {
+    return;
+  }
+
+  peel(): SymbolType {
+    return this;
+  }
+
+  fork(): SymbolType {
+    return new IgnoreSymbolType();
+  }
+
+  isPrimitive(): boolean {
+    return true;
+  }
+
+  isFunction(): boolean {
+    return true;
   }
 }
 
