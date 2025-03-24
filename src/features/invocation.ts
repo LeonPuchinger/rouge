@@ -219,11 +219,18 @@ export class InvocationAstNode implements EvaluableAstNode {
         AnalysisFindings.empty(),
       );
     const calledSymbol = analysisTable.findSymbol(this.name.text);
-    const [isFunction, symbolExists] = calledSymbol
-      .map(([symbol, _flags]) => [symbol.valueType.isFunction(), true])
-      .unwrapOr([false, false]);
+    const [isFunction, symbolExists, ignoreFunction] = calledSymbol
+      .map(([symbol, _flags]) => [
+        symbol.valueType.isFunction(),
+        true,
+        symbol.valueType.ignore()
+      ])
+      .unwrapOr([false, false, false]);
     const calledType = typeTable.findType(this.name.text)
       .map(([type, _flags]) => type.peel());
+    const ignoreType = calledType
+      .map((type) => type.ignore())
+      .unwrapOr(false);
     const isType = calledType.hasValue();
     if (symbolExists && isType) {
       throw new InternalError(
@@ -246,7 +253,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         endHighlight: None(),
       }));
     }
-    if (isFunction && !findings.isErroneous()) {
+    if (isFunction && !findings.isErroneous() && !ignoreFunction) {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeFunctionInvocation(
@@ -256,7 +263,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       );
     }
-    if (isType && !findings.isErroneous()) {
+    if (isType && !findings.isErroneous() && !ignoreType) {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeStructureInvocation(

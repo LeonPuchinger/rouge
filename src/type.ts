@@ -130,6 +130,11 @@ export interface SymbolType {
    * Whether this type represents a function type.
    */
   isFunction(): boolean;
+
+  /**
+   * Whether to ignore potential analysis findings that are caused by this type.
+   */
+  ignore(): boolean;
 }
 
 export class FunctionSymbolType implements SymbolType {
@@ -340,6 +345,10 @@ export class FunctionSymbolType implements SymbolType {
   isFunction(): boolean {
     return true;
   }
+
+  ignore(): boolean {
+    return false;
+  }
 }
 
 /**
@@ -549,6 +558,10 @@ export class CompositeSymbolType implements SymbolType {
   isFunction(): boolean {
     return false;
   }
+
+  ignore(): boolean {
+    return false;
+  }
 }
 
 export class PlaceholderSymbolType implements SymbolType {
@@ -673,6 +686,12 @@ export class PlaceholderSymbolType implements SymbolType {
       .map((reference) => reference.isFunction())
       .unwrapOr(false);
   }
+
+  ignore(): boolean {
+    return this.reference
+      .map((reference) => reference.ignore())
+      .unwrapOr(false);
+  }
 }
 
 /**
@@ -737,6 +756,10 @@ export class IgnoreSymbolType implements SymbolType {
   }
 
   isFunction(): boolean {
+    return true;
+  }
+
+  ignore(): boolean {
     return true;
   }
 }
@@ -824,6 +847,10 @@ export class UniqueSymbolType implements SymbolType {
   }
 
   isFunction(): boolean {
+    return false;
+  }
+
+  ignore(): boolean {
     return false;
   }
 }
