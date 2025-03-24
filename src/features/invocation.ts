@@ -30,6 +30,7 @@ import {
 import { zip } from "../util/array.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Some } from "../util/monad/option.ts";
+import { between } from "../util/number.ts";
 import {
   starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
@@ -152,14 +153,23 @@ export class InvocationAstNode implements EvaluableAstNode {
   ): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     structureType = structureType.fork();
+    const defaultValues = structureType.defaultValues;
     const expectedFields = structureType.fields;
-    const expectedFieldTypes = Array.from(expectedFields.values());
+    const maxExpectedFieldTypes = Array.from(expectedFields.values());
+    const minExpectedFieldTypeCount = maxExpectedFieldTypes.length -
+      defaultValues.size;
     const foundFields = this.parameters;
     const foundFieldTypes = foundFields.map((field) => field.resolveType());
-    if (expectedFieldTypes.length != foundFieldTypes.length) {
+    if (
+      !between(
+        foundFieldTypes.length,
+        minExpectedFieldTypeCount,
+        maxExpectedFieldTypes.length,
+      )
+    ) {
       findings.errors.push(AnalysisError({
         message:
-          `The structure expected ${expectedFieldTypes.length} fields but ${foundFieldTypes.length} were supplied.`,
+          `The structure expected between ${minExpectedFieldTypeCount} and ${maxExpectedFieldTypes.length} fields but ${foundFieldTypes.length} were supplied.`,
         beginHighlight: this.parameters.at(0) ??
           DummyAstNode.fromToken(this.openParenthesis),
         endHighlight: Some(
@@ -194,10 +204,10 @@ export class InvocationAstNode implements EvaluableAstNode {
     for (
       let index = 0;
       index <
-        Math.min(expectedFieldTypes.length, foundFieldTypes.length);
+        Math.min(maxExpectedFieldTypes.length, foundFieldTypes.length);
       index += 1
     ) {
-      const expectedParameterType = expectedFieldTypes[index];
+      const expectedParameterType = maxExpectedFieldTypes[index];
       const foundParameterType = foundFieldTypes[index];
       if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
         findings.errors.push(AnalysisError({
@@ -223,7 +233,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       .map(([symbol, _flags]) => [
         symbol.valueType.isFunction(),
         true,
-        symbol.valueType.ignore()
+        symbol.valueType.ignore(),
       ])
       .unwrapOr([false, false, false]);
     const calledType = typeTable.findType(this.name.text)
