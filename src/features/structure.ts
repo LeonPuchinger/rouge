@@ -47,6 +47,10 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     this.defaultValue = Some(params.defaultValue);
   }
 
+  hasDefaultValue(): boolean {
+    return this.defaultValue.hasValue();
+  }
+
   resolveType(): SymbolType {
     return (this.typeAnnotation as Option<
       TypeLiteralAstNode | ExpressionAstNode
@@ -237,6 +241,23 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           }));
         }
       });
+    type FieldInitializerMode = "positional" | "default";
+    this.fields.reduce<FieldInitializerMode>(
+      (mode, field) => {
+        if (mode === "default" && !field.hasDefaultValue()) {
+          findings.errors.push(AnalysisError({
+            message:
+              "Fields without default values have to come before fields with default values.",
+            beginHighlight: DummyAstNode.fromToken(field.name),
+            endHighlight: None(),
+            messageHighlight:
+              `The field "${field.name.text}" does not have a default value.`,
+          }));
+        }
+        return field.hasDefaultValue() ? "default" : mode;
+      },
+      "positional",
+    );
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
       typeTable.findType(placeholder.text)
