@@ -260,6 +260,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     );
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
+      let problematic = false;
       typeTable.findType(placeholder.text)
         .then(() => {
           findings.errors.push(AnalysisError({
@@ -272,8 +273,21 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           }));
         })
         .onNone(() => {
-          unproblematicPlaceholders.push(placeholder.text);
+          problematic = true;
         });
+      if (placeholder.text === this.name.text) {
+        findings.errors.push(AnalysisError({
+          message:
+            "A placeholder cannot share the same name as its surrounding structure.",
+          beginHighlight: DummyAstNode.fromToken(placeholder),
+          endHighlight: None(),
+          messageHighlight: "",
+        }));
+        problematic = true;
+      }
+      if (!problematic) {
+        unproblematicPlaceholders.push(placeholder.text);
+      }
     }
     const placeholderDuplicates = findDuplicates(
       this.placeholders.map((p) => p.text),
