@@ -14,7 +14,6 @@ import {
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { SymbolValue } from "../symbol.ts";
 import {
   CompositeSymbolType,
   IgnoreSymbolType,
@@ -173,9 +172,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    */
   completeBarebonesSymbolType(
     structureType: CompositeSymbolType,
-    includeDefaultValues = false,
   ): SymbolType {
-    const defaultValues = new Map<string, SymbolValue>();
     for (const field of this.fields) {
       const fieldName = field.name.text;
       const existingField = structureType.fields.get(fieldName);
@@ -186,15 +183,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       }
       const fieldType = field.resolveType();
       existingField.bind(fieldType);
-      if (includeDefaultValues) {
-        field.defaultValue
-          .map((node) => node.evaluate())
-          .then((defaultValue) => {
-            defaultValues.set(fieldName, defaultValue);
-          });
-      }
     }
-    structureType.defaultValues = defaultValues;
     return structureType;
   }
 
@@ -203,7 +192,6 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    */
   generateSymbolType(
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
-    includeDefaultValues = false,
   ): SymbolType {
     const structureType = this.generateBarebonesSymbolType(placeholderTypes);
     typeTable.pushScope();
@@ -213,7 +201,6 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     );
     const completeType = this.completeBarebonesSymbolType(
       structureType,
-      includeDefaultValues,
     );
     typeTable.popScope();
     return completeType;
@@ -387,10 +374,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     for (const [placeholderName, placeholderType] of placeholderTypes) {
       typeTable.setType(placeholderName, placeholderType);
     }
-    const structureType = this.generateSymbolType(
-      placeholderTypes,
-      true,
-    );
+    const structureType = this.generateSymbolType(placeholderTypes);
     typeTable.popScope();
     typeTable.setType(
       this.name.text,

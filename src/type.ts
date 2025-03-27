@@ -365,7 +365,6 @@ export class FunctionSymbolType implements SymbolType {
 export class CompositeSymbolType implements SymbolType {
   id!: string;
   fields!: Map<string, SymbolType>;
-  defaultValues!: Map<string, SymbolValue>;
   placeholders!: Map<string, PlaceholderSymbolType>;
 
   constructor(
