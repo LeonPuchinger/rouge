@@ -14,8 +14,18 @@ import {
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { createRuntimeBindingStaticSymbol } from "../runtime.ts";
-import { analysisTable, StaticSymbol } from "../symbol.ts";
+import {
+  createRuntimeBindingRuntimeSymbol,
+  createRuntimeBindingStaticSymbol,
+} from "../runtime.ts";
+import {
+  analysisTable,
+  CompositeSymbolValue,
+  RuntimeSymbol,
+  runtimeTable,
+  StaticSymbol,
+  SymbolValue,
+} from "../symbol.ts";
 import {
   CompositeSymbolType,
   IgnoreSymbolType,
@@ -390,6 +400,54 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     return findings;
   }
 
+  /**
+   * Similar to `generateConstructorStaticSymbol`, but creates
+   * a runtime symbol that actually contains the constructor logic.
+   */
+  generateConstructorRuntimeSymbol(
+    structureType: SymbolType,
+  ): RuntimeSymbol {
+    const nonDefaultParameters: {
+      name: string;
+      symbolType: SymbolType;
+    }[] = [];
+    for (const field of this.fields) {
+      if (!field.hasDefaultValue()) {
+        nonDefaultParameters.push({
+          name: field.name.text,
+          symbolType: field.resolveType(),
+        });
+      }
+    }
+    return createRuntimeBindingRuntimeSymbol(
+      nonDefaultParameters,
+      structureType,
+      (params) => {
+        const initializers = new Map<string, [SymbolValue, SymbolType]>();
+        for (const field of this.fields) {
+          if (params.has(field.name.text)) {
+            initializers.set(
+              field.name.text,
+              [params.get(field.name.text)!, field.resolveType()],
+            );
+          }
+          if (field.hasDefaultValue()) {
+            const defaultValue = field.defaultValue.unwrap().evaluate();
+            initializers.set(
+              field.name.text,
+              [defaultValue, field.resolveType()],
+            );
+          }
+        }
+        const instance = new CompositeSymbolValue({
+          fields: initializers,
+          id: this.name.text,
+        });
+        return instance;
+      },
+    );
+  }
+
   interpret(): void {
     const placeholderTypes = new Map(
       this.placeholders.map(
@@ -411,6 +469,8 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       this.name.text,
       structureType,
     );
+    const constructor = this.generateConstructorRuntimeSymbol(structureType);
+    runtimeTable.setSymbol(this.name.text, constructor);
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

@@ -87,7 +87,7 @@ type HookParameter = {
  * Responsible for creating the runtime symbol for a runtime binding
  * that will end up in the runtime table.
  */
-function createRuntimeBindingRuntimeSymbol(
+export function createRuntimeBindingRuntimeSymbol(
     parameters: HookParameter[],
     returnType: SymbolType,
     hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
