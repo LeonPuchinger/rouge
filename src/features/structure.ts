@@ -14,6 +14,8 @@ import {
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { createRuntimeBindingStaticSymbol } from "../runtime.ts";
+import { analysisTable, StaticSymbol } from "../symbol.ts";
 import {
   CompositeSymbolType,
   IgnoreSymbolType,
@@ -206,6 +208,33 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     return completeType;
   }
 
+  /**
+   * Generates a static symbol for the constructor of the struct.
+   * The constructor accepts values for all fields that don't
+   * have a default value. It is assumed that fields with default
+   * parameters are located at the end of the list of fields.
+   */
+  generateConstructorStaticSymbol(
+    structureType: SymbolType,
+  ): StaticSymbol {
+    const nonDefaultParameters: {
+      name: string;
+      symbolType: SymbolType;
+    }[] = [];
+    for (const field of this.fields) {
+      if (!field.hasDefaultValue()) {
+        nonDefaultParameters.push({
+          name: field.name.text,
+          symbolType: field.resolveType(),
+        });
+      }
+    }
+    return createRuntimeBindingStaticSymbol(
+      nonDefaultParameters,
+      structureType,
+    );
+  }
+
   analyze(): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
@@ -356,6 +385,8 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       this.name.text,
       structureType,
     );
+    const constructor = this.generateConstructorStaticSymbol(structureType);
+    analysisTable.setSymbol(this.name.text, constructor);
     return findings;
   }
 

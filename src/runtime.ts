@@ -126,7 +126,7 @@ function createRuntimeBindingRuntimeSymbol(
  * Responsible for creating the static symbol for a runtime binding
  * that will end up in the analysis table.
  */
-function createRuntimeBindingStaticSymbol(
+export function createRuntimeBindingStaticSymbol(
     parameters: HookParameter[],
     returnType: SymbolType = nothingType,
 ): StaticSymbol {
