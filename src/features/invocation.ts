@@ -15,7 +15,6 @@ import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
   analysisTable,
-  CompositeSymbolValue,
   FunctionSymbolValue,
   RuntimeSymbol,
   runtimeTable,
@@ -30,7 +29,6 @@ import {
 import { zip } from "../util/array.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Some } from "../util/monad/option.ts";
-import { between } from "../util/number.ts";
 import {
   starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
@@ -148,79 +146,6 @@ export class InvocationAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  analyzeStructureInvocation(
-    structureType: CompositeSymbolType,
-  ): AnalysisFindings {
-    let findings = AnalysisFindings.empty();
-    structureType = structureType.fork();
-    const defaultValues = structureType.defaultValues;
-    const expectedFields = structureType.fields;
-    const maxExpectedFieldTypes = Array.from(expectedFields.values());
-    const minExpectedFieldTypeCount = maxExpectedFieldTypes.length -
-      defaultValues.size;
-    const foundFields = this.parameters;
-    const foundFieldTypes = foundFields.map((field) => field.resolveType());
-    if (
-      !between(
-        foundFieldTypes.length,
-        minExpectedFieldTypeCount,
-        maxExpectedFieldTypes.length,
-      )
-    ) {
-      findings.errors.push(AnalysisError({
-        message:
-          `The structure expected between ${minExpectedFieldTypeCount} and ${maxExpectedFieldTypes.length} fields but ${foundFieldTypes.length} were supplied.`,
-        beginHighlight: this.parameters.at(0) ??
-          DummyAstNode.fromToken(this.openParenthesis),
-        endHighlight: Some(
-          this.parameters.at(-1) ??
-            DummyAstNode.fromToken(this.closingParenthesis),
-        ),
-      }));
-    }
-    const placeholdersFindings = this.analyzePlaceholders(
-      structureType,
-      "function",
-    );
-    findings = AnalysisFindings.merge(
-      findings,
-      placeholdersFindings,
-    );
-    if (placeholdersFindings.isErroneous()) {
-      return findings;
-    }
-    // bind placeholdes to the supplied types
-    for (
-      const [placeholder, suppliedType] of zip(
-        Array.from(structureType.placeholders.values()),
-        this.placeholders.map((placeholder) =>
-          typeTable.findType(placeholder.text)
-            .map(([type, _flags]) => type)
-        ),
-      )
-    ) {
-      placeholder.bind(suppliedType.unwrap());
-    }
-    for (
-      let index = 0;
-      index <
-        Math.min(maxExpectedFieldTypes.length, foundFieldTypes.length);
-      index += 1
-    ) {
-      const expectedParameterType = maxExpectedFieldTypes[index];
-      const foundParameterType = foundFieldTypes[index];
-      if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
-        findings.errors.push(AnalysisError({
-          message:
-            `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
-          beginHighlight: foundFields[index],
-          endHighlight: None(),
-        }));
-      }
-    }
-    return findings;
-  }
-
   analyze(): AnalysisFindings {
     let findings = this.parameters
       .map((parameter) => parameter.analyze())
@@ -236,21 +161,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         symbol.valueType.ignore(),
       ])
       .unwrapOr([false, false, false]);
-    const calledType = typeTable.findType(this.name.text)
-      .map(([type, _flags]) => type.peel());
-    const ignoreType = calledType
-      .map((type) => type.ignore())
-      .unwrapOr(false);
-    const isType = calledType.hasValue();
-    if (symbolExists && isType) {
-      throw new InternalError(
-        `Encountered a type and a symbol with the same name ('${this.name.text}')`,
-      );
-    }
-    if (!symbolExists && !isType) {
+    if (!symbolExists) {
       findings.errors.push(AnalysisError({
         message:
-          `Unable to resolve type or symbol by the name '${this.name.text}'.`,
+          `Unable to resolve a type or symbol by the name '${this.name.text}'.`,
         beginHighlight: DummyAstNode.fromToken(this.name),
         endHighlight: None(),
       }));
@@ -270,14 +184,6 @@ export class InvocationAstNode implements EvaluableAstNode {
           calledSymbol
             .map(([symbol, _flags]) => symbol.valueType.peel())
             .unwrap() as FunctionSymbolType,
-        ),
-      );
-    }
-    if (isType && !findings.isErroneous() && !ignoreType) {
-      findings = AnalysisFindings.merge(
-        findings,
-        this.analyzeStructureInvocation(
-          calledType.unwrap() as CompositeSymbolType,
         ),
       );
     }
@@ -311,23 +217,6 @@ export class InvocationAstNode implements EvaluableAstNode {
     return returnValue;
   }
 
-  evaluateStructure(
-    structureType: CompositeSymbolType,
-  ): SymbolValue<unknown> {
-    const instantiatedFields = new Map<string, [SymbolValue, SymbolType]>(
-      Array.from(
-        structureType.fields,
-        ([name, type], index) => {
-          return [name, [this.parameters[index].evaluate(), type]];
-        },
-      ),
-    );
-    return new CompositeSymbolValue({
-      fields: instantiatedFields,
-      id: this.name.text,
-    });
-  }
-
   evaluate(): SymbolValue<unknown> {
     const calledSymbol = runtimeTable.findSymbol(this.name.text);
     const partOfStdlib = calledSymbol
@@ -345,17 +234,10 @@ export class InvocationAstNode implements EvaluableAstNode {
       runtimeTable.ignoreRuntimeBindings = true;
       return result;
     }
-    // It can safely be assumed that the invocation is of a type
-    // since no function with the name was found in the symbol table
-    // and static analysis guarantees that either a function or type
-    // with the name exists.
-    const calledStructure = typeTable.findType(this.name.text)
-      .map(([type, _flags]) => type);
-    const result = this.evaluateStructure(
-      calledStructure.unwrap() as CompositeSymbolType,
+    throw new InternalError(
+      `Unable to resolve a runtime symbol by the name '${this.name.text}'.`,
+      "This should have been caught during static analysis.",
     );
-    runtimeTable.ignoreRuntimeBindings = true;
-    return result;
   }
 
   resolveType(): SymbolType {
