@@ -352,6 +352,8 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       this.name.text,
       incompleteStructureType,
     );
+    const constructor = this.generateConstructorStaticSymbol(incompleteStructureType);
+    analysisTable.setSymbol(this.name.text, constructor);
     const fieldNames: string[] = [];
     // First (preliminary) pass of the analysis without field types set
     let preliminaryFindings = AnalysisFindings.empty();
@@ -395,8 +397,6 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       this.name.text,
       structureType,
     );
-    const constructor = this.generateConstructorStaticSymbol(structureType);
-    analysisTable.setSymbol(this.name.text, constructor);
     return findings;
   }
 
