@@ -48,12 +48,12 @@ import {
 } from "../util/type.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
-import { functionDefinition, returnStatement } from "./parser_declarations.ts";
 import {
-  StatementAstNode,
+  functionDefinition,
+  returnStatement,
   statements,
-  StatementsAstNode,
-} from "./statement.ts";
+} from "./parser_declarations.ts";
+import { StatementAstNode, StatementsAstNode } from "./statement.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* DATA TYPES */

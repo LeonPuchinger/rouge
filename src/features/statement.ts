@@ -8,12 +8,16 @@ import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
+import { RuntimeStatementAstNode } from "../runtime.ts";
 import {} from "../util/array.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { ReturnStatementAstNode } from "./function.ts";
-import { condition, returnStatement } from "./parser_declarations.ts";
+import {
+  condition,
+  returnStatement,
+  statements,
+} from "./parser_declarations.ts";
 import { structureDefinition, StructureDefinitonAstNode } from "./structure.ts";
-import { RuntimeStatementAstNode } from "../runtime.ts";
 
 /* AST NODES */
 
@@ -70,14 +74,16 @@ const statement = alt_sc(
   expression,
 );
 
-export const statements = apply(
-  opt_sc(
-    list_sc(
-      statement,
-      tok(TokenKind.breakingWhitespace),
+statements.setPattern(
+  apply(
+    opt_sc(
+      list_sc(
+        statement,
+        tok(TokenKind.breakingWhitespace),
+      ),
     ),
+    (statements) => new StatementsAstNode({ children: statements ?? [] }),
   ),
-  (statements) => new StatementsAstNode({ children: statements ?? [] }),
 );
 
 export const globalStatements = surround_with_breaking_whitespace(statements);
