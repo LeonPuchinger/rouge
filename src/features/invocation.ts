@@ -87,6 +87,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     functionType: FunctionSymbolType,
   ): AnalysisFindings {
     let findings = AnalysisFindings.empty();
+    const isConstructor = typeTable.findType(this.name.text).hasValue();
+    const construct = isConstructor ? "structure" : "function";
     functionType = functionType.fork();
     const expectedParameterTypes = functionType.parameterTypes;
     const foundParameterTypes = this.parameters
@@ -94,7 +96,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     if (expectedParameterTypes.length != foundParameterTypes.length) {
       findings.errors.push(AnalysisError({
         message:
-          `The function expected ${expectedParameterTypes.length} parameters but ${foundParameterTypes.length} were supplied.`,
+          `The ${construct} expected ${expectedParameterTypes.length} parameters but ${foundParameterTypes.length} were supplied.`,
         beginHighlight: this.parameters.at(0) ??
           DummyAstNode.fromToken(this.openParenthesis),
         endHighlight: Some(
