@@ -420,6 +420,9 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
         AnalysisFindings.empty(),
       );
     findings = AnalysisFindings.merge(findings, fieldFindings);
+    const constructor = this.generateConstructorStaticSymbol(
+      incompleteStructureType,
+    );
     typeTable.popScope();
     if (findings.isErroneous()) {
       return findings;
@@ -427,9 +430,6 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     typeTable.setType(
       this.name.text,
       structureType,
-    );
-    const constructor = this.generateConstructorStaticSymbol(
-      incompleteStructureType,
     );
     analysisTable.setSymbol(this.name.text, constructor);
     return findings;
