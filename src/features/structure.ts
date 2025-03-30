@@ -245,6 +245,34 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     );
   }
 
+  /**
+   * Similar to `generateConstructorStaticSymbol`, but the parameters
+   * are all of type `IgnoreSymbolType`. This allows static analysis
+   * to check whether the constructor is called with the correct number
+   * of arguments. Only in a later pass are the parameters checked
+   * for type compatibility.
+   */
+  generateMockConstructorStaticSymbol(
+    structureType: SymbolType,
+  ): StaticSymbol {
+    const nonDefaultParameters: {
+      name: string;
+      symbolType: SymbolType;
+    }[] = [];
+    for (const field of this.fields) {
+      if (!field.hasDefaultValue()) {
+        nonDefaultParameters.push({
+          name: field.name.text,
+          symbolType: new IgnoreSymbolType(),
+        });
+      }
+    }
+    return createRuntimeBindingStaticSymbol(
+      nonDefaultParameters,
+      structureType,
+    );
+  }
+
   analyze(): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
@@ -352,8 +380,13 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       this.name.text,
       incompleteStructureType,
     );
-    const constructor = this.generateConstructorStaticSymbol(incompleteStructureType);
-    analysisTable.setSymbol(this.name.text, constructor);
+    const mockConstructor = this.generateMockConstructorStaticSymbol(
+      incompleteStructureType,
+    );
+    analysisTable.setSymbol(
+      this.name.text,
+      mockConstructor,
+    );
     const fieldNames: string[] = [];
     // First (preliminary) pass of the analysis without field types set
     let preliminaryFindings = AnalysisFindings.empty();
@@ -397,6 +430,10 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       this.name.text,
       structureType,
     );
+    const constructor = this.generateConstructorStaticSymbol(
+      incompleteStructureType,
+    );
+    analysisTable.setSymbol(this.name.text, constructor);
     return findings;
   }
 
