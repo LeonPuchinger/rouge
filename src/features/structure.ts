@@ -325,8 +325,6 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
             messageHighlight:
               `A type by the name "${placeholder.text}" already exists.`,
           }));
-        })
-        .onNone(() => {
           problematic = true;
         });
       if (placeholder.text === this.name.text) {
