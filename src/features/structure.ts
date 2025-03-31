@@ -464,6 +464,14 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           symbolType: field.resolveType(),
         });
       }
+    const placeholders = new Map<string, PlaceholderSymbolType>();
+    for (const placeholder of this.placeholders) {
+      const name = placeholder.text;
+      const placeholderType = typeTable
+        .findType(name)
+        .map(([type, _flags]) => type)
+        .unwrap();
+      placeholders.set(name, placeholderType as PlaceholderSymbolType);
     }
     return createRuntimeBindingRuntimeSymbol(
       nonDefaultParameters,
@@ -491,6 +499,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
         });
         return instance;
       },
+      placeholders,
     );
   }
 
@@ -510,12 +519,12 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       typeTable.setType(placeholderName, placeholderType);
     }
     const structureType = this.generateSymbolType(placeholderTypes);
+    const constructor = this.generateConstructorRuntimeSymbol(structureType);
     typeTable.popScope();
     typeTable.setType(
       this.name.text,
       structureType,
     );
-    const constructor = this.generateConstructorRuntimeSymbol(structureType);
     runtimeTable.setSymbol(this.name.text, constructor);
   }
 

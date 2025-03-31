@@ -14,7 +14,7 @@ import {
     StringSymbolValue,
     SymbolValue,
 } from "./symbol.ts";
-import { CompositeSymbolType, FunctionSymbolType, SymbolType } from "./type.ts";
+import { CompositeSymbolType, FunctionSymbolType, PlaceholderSymbolType, SymbolType } from "./type.ts";
 import { InternalError } from "./util/error.ts";
 import { nothingInstance, nothingType } from "./util/type.ts";
 
@@ -91,6 +91,7 @@ export function createRuntimeBindingRuntimeSymbol(
     parameters: HookParameter[],
     returnType: SymbolType,
     hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
+    placeholders: Map<string, PlaceholderSymbolType> = new Map(),
 ): RuntimeSymbol<SymbolValue> {
     const parameterTypes = new Map<string, SymbolType>(
         parameters.map((param) => [param.name, param.symbolType]),
@@ -115,6 +116,7 @@ export function createRuntimeBindingRuntimeSymbol(
     const symbolValue = new FunctionSymbolValue({
         value: statements,
         parameterTypes: parameterTypes,
+        placeholderTypes: placeholders,
         returnType: returnType,
     });
     return new RuntimeSymbol({
