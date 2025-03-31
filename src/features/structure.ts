@@ -224,21 +224,13 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    */
   generateConstructorStaticSymbol(
     structureType: SymbolType,
+    placeholders: Map<string, PlaceholderSymbolType>,
   ): StaticSymbol {
     const nonDefaultParameters: SymbolType[] = [];
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
         nonDefaultParameters.push(field.resolveType());
       }
-    }
-    const placeholders = new Map<string, PlaceholderSymbolType>();
-    for (const placeholder of this.placeholders) {
-      const name = placeholder.text;
-      const placeholderType = typeTable
-        .findType(name)
-        .map(([type, _flags]) => type)
-        .unwrap();
-      placeholders.set(name, placeholderType as PlaceholderSymbolType);
     }
     return new StaticSymbol({
       valueType: new FunctionSymbolType({
@@ -258,22 +250,13 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    */
   generateMockConstructorStaticSymbol(
     structureType: SymbolType,
+    placeholders: Map<string, PlaceholderSymbolType>,
   ): StaticSymbol {
     const nonDefaultParameters: SymbolType[] = [];
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
         nonDefaultParameters.push(new IgnoreSymbolType());
       }
-    }
-    const placeholders = new Map<string, PlaceholderSymbolType>();
-    for (const placeholder of this.placeholders) {
-      const name = placeholder.text;
-      placeholders.set(
-        name,
-        new PlaceholderSymbolType({
-          name: name,
-        }),
-      );
     }
     return new StaticSymbol({
       valueType: new FunctionSymbolType({
@@ -391,6 +374,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     );
     const mockConstructor = this.generateMockConstructorStaticSymbol(
       incompleteStructureType,
+      unproblematicPlaceholderTypes,
     );
     analysisTable.setSymbol(
       this.name.text,
@@ -433,6 +417,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     findings = AnalysisFindings.merge(findings, fieldFindings);
     const constructor = this.generateConstructorStaticSymbol(
       incompleteStructureType,
+      unproblematicPlaceholderTypes,
     );
     typeTable.popScope();
     if (findings.isErroneous()) {
@@ -452,12 +437,17 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    */
   generateConstructorRuntimeSymbol(
     structureType: SymbolType,
+    placeholders: Map<string, PlaceholderSymbolType>,
   ): RuntimeSymbol {
     const nonDefaultParameters: {
       name: string;
       symbolType: SymbolType;
     }[] = [];
     const fieldTypes = new Map<string, SymbolType>();
+    typeTable.pushScope();
+    for (const [placeholderName, placeholderType] of placeholders) {
+      typeTable.setType(placeholderName, placeholderType);
+    }
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
         nonDefaultParameters.push({
@@ -467,15 +457,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       }
       fieldTypes.set(field.name.text, field.resolveType());
     }
-    const placeholders = new Map<string, PlaceholderSymbolType>();
-    for (const placeholder of this.placeholders) {
-      const name = placeholder.text;
-      const placeholderType = typeTable
-        .findType(name)
-        .map(([type, _flags]) => type)
-        .unwrap();
-      placeholders.set(name, placeholderType as PlaceholderSymbolType);
-    }
+    typeTable.popScope();
     return createRuntimeBindingRuntimeSymbol(
       nonDefaultParameters,
       structureType,
@@ -522,11 +504,14 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       typeTable.setType(placeholderName, placeholderType);
     }
     const structureType = this.generateSymbolType(placeholderTypes);
-    const constructor = this.generateConstructorRuntimeSymbol(structureType);
     typeTable.popScope();
     typeTable.setType(
       this.name.text,
       structureType,
+    );
+    const constructor = this.generateConstructorRuntimeSymbol(
+      structureType,
+      placeholderTypes,
     );
     runtimeTable.setSymbol(this.name.text, constructor);
   }
