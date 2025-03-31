@@ -457,6 +457,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       name: string;
       symbolType: SymbolType;
     }[] = [];
+    const fieldTypes = new Map<string, SymbolType>();
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
         nonDefaultParameters.push({
@@ -464,6 +465,8 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           symbolType: field.resolveType(),
         });
       }
+      fieldTypes.set(field.name.text, field.resolveType());
+    }
     const placeholders = new Map<string, PlaceholderSymbolType>();
     for (const placeholder of this.placeholders) {
       const name = placeholder.text;
@@ -482,14 +485,14 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           if (params.has(field.name.text)) {
             initializers.set(
               field.name.text,
-              [params.get(field.name.text)!, field.resolveType()],
+              [params.get(field.name.text)!, fieldTypes.get(field.name.text)!],
             );
           }
           if (field.hasDefaultValue()) {
             const defaultValue = field.defaultValue.unwrap().evaluate();
             initializers.set(
               field.name.text,
-              [defaultValue, field.resolveType()],
+              [defaultValue, fieldTypes.get(field.name.text)!],
             );
           }
         }
