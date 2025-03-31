@@ -104,6 +104,12 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       }));
       return findings;
     }
+    for (const placeholder of this.placeholders) {
+      findings = AnalysisFindings.merge(findings, placeholder.analyze());
+    }
+    if (findings.isErroneous()) {
+      return findings;
+    }
     const descriptiveType = this.resolveType();
     descriptiveType.typeCompatibleWith(type.unwrap(), {
       onPlaceholderCountMismatch: ({ expected, found }) => {
@@ -115,9 +121,6 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
         }));
       },
     });
-    for (const placeholder of this.placeholders) {
-      findings = AnalysisFindings.merge(findings, placeholder.analyze());
-    }
     return findings;
   }
 
