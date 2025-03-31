@@ -434,6 +434,8 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   /**
    * Similar to `generateConstructorStaticSymbol`, but creates
    * a runtime symbol that actually contains the constructor logic.
+   * The constructor is implemented as a runtime binding, which means
+   * it makes use of functionality that is also used by the runtime.
    */
   generateConstructorRuntimeSymbol(
     structureType: SymbolType,
