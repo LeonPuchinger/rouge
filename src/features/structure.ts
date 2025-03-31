@@ -14,10 +14,7 @@ import {
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  createRuntimeBindingRuntimeSymbol,
-  createRuntimeBindingStaticSymbol,
-} from "../runtime.ts";
+import { createRuntimeBindingRuntimeSymbol } from "../runtime.ts";
 import {
   analysisTable,
   CompositeSymbolValue,
@@ -28,6 +25,7 @@ import {
 } from "../symbol.ts";
 import {
   CompositeSymbolType,
+  FunctionSymbolType,
   IgnoreSymbolType,
   PlaceholderSymbolType,
   SymbolType,
@@ -227,22 +225,28 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   generateConstructorStaticSymbol(
     structureType: SymbolType,
   ): StaticSymbol {
-    const nonDefaultParameters: {
-      name: string;
-      symbolType: SymbolType;
-    }[] = [];
+    const nonDefaultParameters: SymbolType[] = [];
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
-        nonDefaultParameters.push({
-          name: field.name.text,
-          symbolType: field.resolveType(),
-        });
+        nonDefaultParameters.push(field.resolveType());
       }
     }
-    return createRuntimeBindingStaticSymbol(
-      nonDefaultParameters,
-      structureType,
-    );
+    const placeholders = new Map<string, PlaceholderSymbolType>();
+    for (const placeholder of this.placeholders) {
+      const name = placeholder.text;
+      const placeholderType = typeTable
+        .findType(name)
+        .map(([type, _flags]) => type)
+        .unwrap();
+      placeholders.set(name, placeholderType as PlaceholderSymbolType);
+    }
+    return new StaticSymbol({
+      valueType: new FunctionSymbolType({
+        parameterTypes: nonDefaultParameters,
+        returnType: structureType,
+        placeholders: placeholders,
+      }),
+    });
   }
 
   /**
@@ -255,22 +259,29 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
   generateMockConstructorStaticSymbol(
     structureType: SymbolType,
   ): StaticSymbol {
-    const nonDefaultParameters: {
-      name: string;
-      symbolType: SymbolType;
-    }[] = [];
+    const nonDefaultParameters: SymbolType[] = [];
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
-        nonDefaultParameters.push({
-          name: field.name.text,
-          symbolType: new IgnoreSymbolType(),
-        });
+        nonDefaultParameters.push(new IgnoreSymbolType());
       }
     }
-    return createRuntimeBindingStaticSymbol(
-      nonDefaultParameters,
-      structureType,
-    );
+    const placeholders = new Map<string, PlaceholderSymbolType>();
+    for (const placeholder of this.placeholders) {
+      const name = placeholder.text;
+      placeholders.set(
+        name,
+        new PlaceholderSymbolType({
+          name: name,
+        }),
+      );
+    }
+    return new StaticSymbol({
+      valueType: new FunctionSymbolType({
+        parameterTypes: nonDefaultParameters,
+        returnType: structureType,
+        placeholders: placeholders,
+      }),
+    });
   }
 
   analyze(): AnalysisFindings {
