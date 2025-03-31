@@ -462,6 +462,10 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       nonDefaultParameters,
       structureType,
       (params) => {
+        typeTable.pushScope();
+        for (const [placeholderName, placeholderType] of placeholders) {
+          typeTable.setType(placeholderName, placeholderType);
+        }
         const initializers = new Map<string, [SymbolValue, SymbolType]>();
         for (const field of this.fields) {
           if (params.has(field.name.text)) {
@@ -478,6 +482,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
             );
           }
         }
+        typeTable.popScope();
         const instance = new CompositeSymbolValue({
           fields: initializers,
           id: this.name.text,
