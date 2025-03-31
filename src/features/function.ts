@@ -31,7 +31,6 @@ import {
   typeTable,
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
-import { UnresolvableSymbolTypeError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
@@ -48,12 +47,12 @@ import {
 } from "../util/type.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
-import { functionDefinition, returnStatement } from "./parser_declarations.ts";
 import {
-  StatementAstNode,
+  functionDefinition,
+  returnStatement,
   statements,
-  StatementsAstNode,
-} from "./statement.ts";
+} from "./parser_declarations.ts";
+import { StatementAstNode, StatementsAstNode } from "./statement.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* DATA TYPES */
@@ -64,14 +63,14 @@ type Function = StatementsAstNode;
 
 class ParameterAstNode implements Partial<EvaluableAstNode> {
   name!: Token<TokenKind>;
-  type!: Token<TokenKind>;
+  type!: TypeLiteralAstNode;
 
   constructor(params: Attributes<ParameterAstNode>) {
     Object.assign(this, params);
   }
 
   analyze(): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    const findings = this.type.analyze();
     const existingSymbol = analysisTable.findSymbol(this.name.text);
     if (existingSymbol.hasValue()) {
       findings.errors.push(AnalysisError({
@@ -83,24 +82,15 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
         endHighlight: None(),
       }));
     }
-    if (!typeTable.findType(this.type.text).hasValue()) {
-      findings.errors.push(AnalysisError({
-        message: `The type called "${this.type.text}" could not be found.`,
-        beginHighlight: DummyAstNode.fromToken(this.type),
-        endHighlight: None(),
-      }));
-    }
     return findings;
   }
 
   resolveType(): SymbolType {
-    const parameterType = typeTable.findType(this.type.text)
-      .map(([type, _flags]) => type);
-    return parameterType.unwrapOrThrow(UnresolvableSymbolTypeError());
+    return this.type.resolveType();
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.name, this.type];
+    return [this.name, this.type.tokenRange()[1]];
   }
 }
 
@@ -461,7 +451,7 @@ export const parameter = apply(
   kouter(
     tok(TokenKind.ident),
     surround_with_breaking_whitespace(str(":")),
-    tok(TokenKind.ident), // TODO: replace with typeLiteral
+    typeLiteral,
   ),
   ([ident, type]) =>
     new ParameterAstNode({
