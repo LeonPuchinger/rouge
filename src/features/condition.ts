@@ -1,4 +1,12 @@
-import { apply, kmid, kright, opt_sc, seq, str, Token } from "typescript-parsec";
+import {
+  apply,
+  kmid,
+  kright,
+  opt_sc,
+  seq,
+  str,
+  Token,
+} from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -13,8 +21,8 @@ import {
 import { WithOptionalAttributes } from "../util/type.ts";
 import { BooleanExpressionAstNode } from "./boolean_expression.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
-import { condition } from "./parser_declarations.ts";
-import { statements, StatementsAstNode } from "./statement.ts";
+import { condition, statements } from "./parser_declarations.ts";
+import { StatementsAstNode } from "./statement.ts";
 
 /* AST NODES */
 

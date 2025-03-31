@@ -1,9 +1,9 @@
+import { SymbolValue } from "./symbol.ts";
 import { zip } from "./util/array.ts";
 import { InternalError } from "./util/error.ts";
 import { globalAutoincrement } from "./util/increment.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { surroundWithIfNonEmpty } from "./util/string.ts";
-import { WithOptionalAttributes } from "./util/type.ts";
 
 type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
 
@@ -66,6 +66,7 @@ export interface SymbolType {
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
+    memo?: Map<SymbolType, Set<SymbolType>>,
   ): boolean;
 
   /**
@@ -95,7 +96,7 @@ export interface SymbolType {
   /**
    * Returns `true` in case the type (including all its subtypes) does not contain any unboud placeholders.
    */
-  complete(): boolean;
+  complete(memo?: Map<SymbolType, boolean>): boolean;
 
   /**
    * Returns `false` in case the type is an unbound placeholder.
@@ -118,7 +119,7 @@ export interface SymbolType {
   /**
    * Creates a deep copy of the type.
    */
-  fork(): SymbolType;
+  fork(memo?: Map<SymbolType, SymbolType>): SymbolType;
 
   /**
    * Whether this type represents one of the primitive types.
@@ -129,6 +130,11 @@ export interface SymbolType {
    * Whether this type represents a function type.
    */
   isFunction(): boolean;
+
+  /**
+   * Whether to ignore potential analysis findings that are caused by this type.
+   */
+  ignore(): boolean;
 }
 
 export class FunctionSymbolType implements SymbolType {
@@ -152,9 +158,20 @@ export class FunctionSymbolType implements SymbolType {
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: Partial<SymbolTypeMismatchHandler>,
+    memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
-    if (other instanceof PlaceholderSymbolType) {
-      return other.typeCompatibleWith(this, mismatchHandler);
+    if (memo.get(this)?.has(other)) {
+      return true;
+    }
+    if (!memo.has(this)) {
+      memo.set(this, new Set());
+    }
+    memo.get(this)!.add(other);
+    if (
+      other instanceof PlaceholderSymbolType ||
+      other instanceof IgnoreSymbolType
+    ) {
+      return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     // only fork types if no placeholders need to be assumed
     let self = this as FunctionSymbolType;
@@ -207,7 +224,9 @@ export class FunctionSymbolType implements SymbolType {
         other.parameterTypes,
       )
     ) {
-      if (!selfParameter.typeCompatibleWith(otherParameter)) {
+      if (
+        !selfParameter.typeCompatibleWith(otherParameter, mismatchHandler, memo)
+      ) {
         mismatchHandler?.onFunctionParameterTypeMismatch?.({
           index: index,
           expected: selfParameter,
@@ -217,7 +236,13 @@ export class FunctionSymbolType implements SymbolType {
       }
     }
     // compare return type
-    if (!self.returnType.typeCompatibleWith(other.returnType)) {
+    if (
+      !self.returnType.typeCompatibleWith(
+        other.returnType,
+        mismatchHandler,
+        memo,
+      )
+    ) {
       mismatchHandler?.onFunctionReturnTypeMismatch?.({
         expected: self.returnType,
         found: other.returnType,
@@ -243,10 +268,16 @@ export class FunctionSymbolType implements SymbolType {
     return this.resolveId();
   }
 
-  complete(): boolean {
-    return [...this.parameterTypes, this.returnType]
-      .map((type) => type.complete())
+  complete(memo = new Map<SymbolType, boolean>()): boolean {
+    if (memo.has(this)) {
+      return memo.get(this)!;
+    }
+    memo.set(this, false);
+    const result = [...this.parameterTypes, this.returnType]
+      .map((type) => type.complete(memo))
       .every((entry) => entry === true);
+    memo.set(this, result);
+    return result;
   }
 
   bound(): boolean {
@@ -261,13 +292,16 @@ export class FunctionSymbolType implements SymbolType {
     return this;
   }
 
-  fork(): FunctionSymbolType {
+  fork(memo = new Map<SymbolType, SymbolType>()): FunctionSymbolType {
+    if (memo.has(this)) {
+      return memo.get(this) as FunctionSymbolType;
+    }
     const originalPlaceholders: SymbolType[] = Array.from(
       this.placeholders.values(),
     );
     const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
     const forkedParameters = this.parameterTypes.map((type) => {
-      const forkedParameter = type.fork();
+      const forkedParameter = type.fork(memo);
       if (originalPlaceholders.includes(type)) {
         const forkedPlaceholder = forkedParameter as PlaceholderSymbolType;
         forkedPlaceholders.set(forkedPlaceholder.name, forkedPlaceholder);
@@ -275,7 +309,7 @@ export class FunctionSymbolType implements SymbolType {
       return forkedParameter;
     });
     const originalReturnType = this.returnType;
-    let forkedReturnType = originalReturnType.fork();
+    let forkedReturnType = originalReturnType.fork(memo);
     const returnTypeIsPlaceholder = originalPlaceholders.includes(
       originalReturnType,
     );
@@ -292,7 +326,7 @@ export class FunctionSymbolType implements SymbolType {
     // fork placeholders that are not utilized by a parameter
     for (const [name, type] of this.placeholders) {
       if (!forkedPlaceholders.has(name)) {
-        forkedPlaceholders.set(name, type.fork() as PlaceholderSymbolType);
+        forkedPlaceholders.set(name, type.fork(memo) as PlaceholderSymbolType);
       }
     }
     const copy = new FunctionSymbolType({
@@ -300,6 +334,7 @@ export class FunctionSymbolType implements SymbolType {
       placeholders: forkedPlaceholders,
       returnType: forkedReturnType,
     });
+    memo.set(this, copy);
     return copy;
   }
 
@@ -310,6 +345,10 @@ export class FunctionSymbolType implements SymbolType {
   isFunction(): boolean {
     return true;
   }
+
+  ignore(): boolean {
+    return false;
+  }
 }
 
 /**
@@ -319,33 +358,46 @@ export class FunctionSymbolType implements SymbolType {
  * Two instances of `CompositeSymbolType` are type compatible in case they contain
  * the same amount of field, the fields have the same names,
  * and the types for each field are type compatible themselves.
+ * A `CompositeSymbolType` can contain default values for each of its fields,
+ * which are only used during the instantiation of the type.
+ * Default values are ignored during type comparisons.
  */
 export class CompositeSymbolType implements SymbolType {
   id!: string;
   fields!: Map<string, SymbolType>;
   placeholders!: Map<string, PlaceholderSymbolType>;
 
-  /**
-   * @param fields The key-value pairs of name and type that make up this user defined type.
-   */
   constructor(
     params: {
       id: string;
       fields?: Map<string, SymbolType>;
+      defaultValues?: Map<string, SymbolValue>;
       placeholders?: Map<string, PlaceholderSymbolType>;
     },
   ) {
     params.fields ??= new Map();
     params.placeholders ??= new Map();
+    params.defaultValues ??= new Map();
     Object.assign(this, params);
   }
 
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
+    memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
-    if (other instanceof PlaceholderSymbolType) {
-      return other.typeCompatibleWith(this, mismatchHandler);
+    if (memo.get(this)?.has(other)) {
+      return true;
+    }
+    if (!memo.has(this)) {
+      memo.set(this, new Set());
+    }
+    memo.get(this)!.add(other);
+    if (
+      other instanceof PlaceholderSymbolType ||
+      other instanceof IgnoreSymbolType
+    ) {
+      return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     if (!(other instanceof CompositeSymbolType)) {
       mismatchHandler?.onIdMismatch?.({
@@ -384,7 +436,13 @@ export class CompositeSymbolType implements SymbolType {
         });
         return false;
       }
-      if (!placeholderType.typeCompatibleWith(otherPlaceholder)) {
+      if (
+        !placeholderType.typeCompatibleWith(
+          otherPlaceholder,
+          mismatchHandler,
+          memo,
+        )
+      ) {
         mismatchHandler?.onPlaceholderTypeMismatch?.({
           expected: placeholderType,
           found: otherPlaceholder,
@@ -406,7 +464,13 @@ export class CompositeSymbolType implements SymbolType {
           "Encountered two CompositeSymbolTypes with matching IDs but different names for their fields.",
         );
       }
-      if (!other.fields.get(key)?.typeCompatibleWith(this.fields.get(key)!)) {
+      if (
+        !other.fields.get(key)?.typeCompatibleWith(
+          this.fields.get(key)!,
+          mismatchHandler,
+          memo,
+        )
+      ) {
         throw new InternalError(
           "Encountered two CompositeSymbolTypes with matching IDs but at least one type-incompatible field.",
         );
@@ -430,10 +494,16 @@ export class CompositeSymbolType implements SymbolType {
     return this.resolveId();
   }
 
-  complete(): boolean {
-    return Array.from(this.placeholders.entries())
-      .map(([_name, type]) => type.complete())
+  complete(memo = new Map<SymbolType, boolean>()): boolean {
+    if (memo.has(this)) {
+      return memo.get(this)!;
+    }
+    memo.set(this, false);
+    const result = Array.from(this.placeholders.entries())
+      .map(([_name, type]) => type.complete(memo))
       .every((entry) => entry === true);
+    memo.set(this, result);
+    return result;
   }
 
   bound(): boolean {
@@ -448,17 +518,23 @@ export class CompositeSymbolType implements SymbolType {
     return this;
   }
 
-  fork(): CompositeSymbolType {
+  fork(
+    memo = new Map<CompositeSymbolType, CompositeSymbolType>(),
+  ): CompositeSymbolType {
+    if (memo.has(this)) {
+      return memo.get(this)!;
+    }
     const copy = new CompositeSymbolType({
       id: this.id,
       fields: new Map(),
       placeholders: new Map(),
     });
+    memo.set(this, copy);
     const originalPlaceholders: SymbolType[] = Array.from(
       this.placeholders.values(),
     );
     for (const [fieldName, field] of this.fields) {
-      const forkedField = field.fork();
+      const forkedField = field.fork(memo);
       if (originalPlaceholders.includes(field)) {
         const forkedPlaceholder = forkedField as PlaceholderSymbolType;
         copy.placeholders.set(forkedPlaceholder.name, forkedPlaceholder);
@@ -468,7 +544,7 @@ export class CompositeSymbolType implements SymbolType {
     // fork placeholders that are not utilized by a field
     for (const [name, type] of this.placeholders) {
       if (!copy.placeholders.has(name)) {
-        copy.placeholders.set(name, type.fork() as PlaceholderSymbolType);
+        copy.placeholders.set(name, type.fork(memo) as PlaceholderSymbolType);
       }
     }
     return copy;
@@ -481,26 +557,41 @@ export class CompositeSymbolType implements SymbolType {
   isFunction(): boolean {
     return false;
   }
+
+  ignore(): boolean {
+    return false;
+  }
 }
 
 export class PlaceholderSymbolType implements SymbolType {
   reference!: Option<SymbolType>;
   name!: string;
+  rebindingAllowed!: boolean;
 
-  constructor(params: WithOptionalAttributes<PlaceholderSymbolType>) {
-    Object.assign(this, params);
-    this.reference = Some(params.reference);
+  constructor({
+    reference,
+    name,
+    rebindingAllowed = false,
+  }: {
+    reference?: SymbolType;
+    name: string;
+    rebindingAllowed?: boolean;
+  }) {
+    this.reference = Some(reference);
+    this.name = name;
+    this.rebindingAllowed = rebindingAllowed;
   }
 
   typeCompatibleWith(
     other: SymbolType,
     mismatchHandler?: SymbolTypeMismatchHandler,
+    memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
     const resolvedA = this.peel();
     const resolvedB = other.peel();
     const bothBound = resolvedA.bound() && resolvedB.bound();
     if (bothBound) {
-      return resolvedA.typeCompatibleWith(resolvedB, mismatchHandler);
+      return resolvedA.typeCompatibleWith(resolvedB, mismatchHandler, memo);
     }
     const bothUnbound = !resolvedA.bound() && !resolvedB.bound();
     if (bothUnbound) {
@@ -544,9 +635,9 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.name;
   }
 
-  complete(): boolean {
+  complete(memo = new Map<SymbolType, boolean>()): boolean {
     return this.reference
-      .map((reference) => reference.complete())
+      .map((reference) => reference.complete(memo))
       .unwrapOr(false);
   }
 
@@ -555,7 +646,7 @@ export class PlaceholderSymbolType implements SymbolType {
   }
 
   bind(to: SymbolType) {
-    if (this.bound()) {
+    if (this.bound() && !this.rebindingAllowed) {
       throw new InternalError(
         "A PlaceholderSymbolType can only be bound to another type once.",
       );
@@ -569,15 +660,18 @@ export class PlaceholderSymbolType implements SymbolType {
       .unwrapOr(this);
   }
 
-  fork(): SymbolType {
+  fork(
+    memo = new Map<SymbolType, SymbolType>(),
+  ): SymbolType {
     const forkedReference = this.reference
-      .map((reference) => reference.fork());
-    return new PlaceholderSymbolType({
+      .map((reference) => reference.fork(memo));
+    const copy = new PlaceholderSymbolType({
       name: this.name,
       reference: forkedReference.hasValue()
         ? forkedReference.unwrap()
         : undefined,
     });
+    return copy;
   }
 
   isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
@@ -590,6 +684,82 @@ export class PlaceholderSymbolType implements SymbolType {
     return this.reference
       .map((reference) => reference.isFunction())
       .unwrapOr(false);
+  }
+
+  ignore(): boolean {
+    return this.reference
+      .map((reference) => reference.ignore())
+      .unwrapOr(false);
+  }
+}
+
+/**
+ * A SymbolType that is meant to produce no side effects. For instance,
+ * comparing this type to any other type will always yield `true`, which
+ * should result in no type mismatches in the analysis findings (which
+ * are considered side effects here).
+ * It is used primarily in two scenarios. First, in case the
+ * analysis of a field or a variables yields erroneous findings,
+ * the type of that field or variable cannot be determined safely.
+ * In this case, the type can be set to an instance of `IgnoreSymbolType`.
+ * This will allow the analysis to continue even without a proper type.
+ * Second, when a type contains mutually dependent fields, it not possible
+ * to perform analysis on one field when its dependent field has not yet
+ * been analyzed. As a solution, each field is set to an instance of
+ * `IgnoreSymbolType` first, which allows an initial pass of the analysis
+ * to be performed. Later, when all fields have been analyzed in the first
+ * pass, the types can be replaced with the correct types. Only then can the
+ * analysis. An instance of `IgnoreSymbolType` is usually paired with an
+ * instance of `PlaceholderSymbolType` which acts as a mutable reference that
+ * allows replacing the `IgnoreSymbolType` once the "real" type can be determined.
+ */
+export class IgnoreSymbolType implements SymbolType {
+  typeCompatibleWith(): boolean {
+    return true;
+  }
+
+  displayName(): string {
+    return "Ignore";
+  }
+
+  resolveId(): string {
+    return "Ignore";
+  }
+
+  unresolvedId(): string {
+    return "Ignore";
+  }
+
+  complete(): boolean {
+    return true;
+  }
+
+  bound(): boolean {
+    return true;
+  }
+
+  bind(): void {
+    return;
+  }
+
+  peel(): SymbolType {
+    return this;
+  }
+
+  fork(): SymbolType {
+    return new IgnoreSymbolType();
+  }
+
+  isPrimitive(): boolean {
+    return true;
+  }
+
+  isFunction(): boolean {
+    return true;
+  }
+
+  ignore(): boolean {
+    return true;
   }
 }
 
@@ -676,6 +846,10 @@ export class UniqueSymbolType implements SymbolType {
   }
 
   isFunction(): boolean {
+    return false;
+  }
+
+  ignore(): boolean {
     return false;
   }
 }
