@@ -14,6 +14,7 @@ import { None } from "../util/monad/option.ts";
 import { Attributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
 import { complexStringLiteral } from "./parser_declarations.ts";
+import { rep_at_least_once_sc } from "../util/parser.ts";
 
 /* AST NODES */
 
@@ -134,7 +135,7 @@ export class ComplexStringAstNode implements EvaluableAstNode {
 /* PARSER */
 
 const stringContents = apply(
-  rep_sc(tok(TokenKind.stringContents)),
+  rep_at_least_once_sc(tok(TokenKind.stringContents)),
   (token) => new StringContentsAstNode({ contents: token }),
 );
 
