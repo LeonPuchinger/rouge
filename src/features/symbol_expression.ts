@@ -12,7 +12,10 @@ import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 import { Attributes } from "../util/type.ts";
-import { ends_with_breaking_whitespace } from "../util/parser.ts";
+import {
+  ends_with_breaking_whitespace,
+  starts_with_breaking_whitespace,
+} from "../util/parser.ts";
 
 /* AST NODES */
 
@@ -151,7 +154,11 @@ const referenceExpression = apply(
 export const symbolExpression = apply(
   seq(
     referenceExpression,
-    rep_sc(propertyAccess),
+    rep_sc(
+      starts_with_breaking_whitespace(
+        propertyAccess,
+      ),
+    ),
   ),
   ([rootSymbol, propertyAccesses]) => {
     return propertyAccesses.reduce(
