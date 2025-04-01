@@ -31,7 +31,7 @@
     "vite-plugin-dts": "^4.3.0"
   },
   "dependencies": {
-    "typescript-parsec": "github:LeonPuchinger/ts-parsec-stateful-lexer#v0.4.0",
+    "typescript-parsec": "github:LeonPuchinger/ts-parsec-stateful-lexer#v0.4.1",
     "yargs": "^17.7.2"
   }
 }
