@@ -12,6 +12,7 @@ import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 import { Attributes } from "../util/type.ts";
+import { ends_with_breaking_whitespace } from "../util/parser.ts";
 
 /* AST NODES */
 
@@ -138,7 +139,7 @@ class PropertyAccessAstNode implements EvaluableAstNode {
 /* PARSER */
 
 const propertyAccess = kright(
-  str<TokenKind>("."),
+  ends_with_breaking_whitespace(str<TokenKind>(".")),
   tok(TokenKind.ident),
 );
 
