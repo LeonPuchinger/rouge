@@ -32,7 +32,7 @@ statements.push(
   [true, /^(function|structure|use|if|else|while)/g, TokenKind.keyword],
   [true, /^[_A-Za-z]+[\-_0-9A-Za-z]*/g, TokenKind.ident],
   [true, /^->/g, TokenKind.single_line_arrow],
-  [false, /^"/g, TokenKind.stringDelimiter, stringLiteral],
+  [true, /^"/g, TokenKind.stringDelimiter, stringLiteral],
   [true, /^{/g, TokenKind.standalonePunctuation, "push"],
   [true, /^}/g, TokenKind.standalonePunctuation, "pop"],
   [true, /^[()<>$"]/g, TokenKind.standalonePunctuation],
@@ -41,8 +41,8 @@ statements.push(
 );
 
 stringLiteral.push(
-  [false, /^"/g, TokenKind.stringDelimiter, "pop"],
-  [false, /^\${/g, TokenKind.stringInterpolationDelimiter, statements],
+  [true, /^"/g, TokenKind.stringDelimiter, "pop"],
+  [true, /^\${/g, TokenKind.stringInterpolationDelimiter, statements],
   [true, /^\\"/g, TokenKind.stringContents],
   [true, /^\$/g, TokenKind.stringContents],
   [true, /^\\\${/g, TokenKind.stringContents],

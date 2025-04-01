@@ -51,9 +51,9 @@ class StringContentsAstNode implements EvaluableAstNode {
 }
 
 export class StringInterpolationAstNode implements EvaluableAstNode {
-  beginningSymbol!: Token<TokenKind>;
+  beginDelimiter!: Token<TokenKind>;
   expression!: EvaluableAstNode;
-  closingSymbol!: Token<TokenKind>;
+  endDelimiter!: Token<TokenKind>;
 
   constructor(params: Attributes<StringInterpolationAstNode>) {
     Object.assign(this, params);
@@ -62,7 +62,7 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
   evaluate(): StringSymbolValue {
     // analysis guarantees that the result of the expression
     // can be interpolated into a string.
-    const contents = this.expression.evaluate();
+    const contents = this.expression.evaluate().value;
     return new StringSymbolValue(`${contents}`);
   }
 
@@ -96,7 +96,7 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.beginningSymbol, this.closingSymbol];
+    return [this.beginDelimiter, this.endDelimiter];
   }
 }
 
@@ -140,16 +140,15 @@ const stringContents = apply(
 
 const stringInterpolation = apply(
   seq(
-    str<TokenKind>("$"),
-    str("{"),
+    str<TokenKind>("${"),
     expression,
     str<TokenKind>("}"),
   ),
-  ([beginningSymbol, _, expression, closingSymbol]) =>
+  ([beginDelimiter, expression, endDelimiter]) =>
     new StringInterpolationAstNode({
-      beginningSymbol,
+      beginDelimiter: beginDelimiter,
       expression,
-      closingSymbol,
+      endDelimiter: endDelimiter,
     }),
 );
 
