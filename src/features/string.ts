@@ -8,6 +8,7 @@ import {
   FundamentalSymbolTypeKind,
   SymbolType,
 } from "../type.ts";
+import { InternalError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
 import { None } from "../util/monad/option.ts";
 import { Attributes } from "../util/type.ts";
@@ -17,15 +18,23 @@ import { complexStringLiteral } from "./parser_declarations.ts";
 /* AST NODES */
 
 class StringContentsAstNode implements EvaluableAstNode {
-  contents!: Token<TokenKind>;
+  contents!: Token<TokenKind>[];
 
   constructor(params: Attributes<StringContentsAstNode>) {
+    if (params.contents.length === 0) {
+      throw new InternalError(
+        "StringContentsAstNode must consist of at least one token.",
+      );
+    }
     Object.assign(this, params);
   }
 
   @memoize
   evaluate(): StringSymbolValue {
-    return new StringSymbolValue(this.contents.text);
+    const concatenatedContents = this.contents
+      .map((token) => token.text)
+      .join("");
+    return new StringSymbolValue(concatenatedContents);
   }
 
   resolveType(): SymbolType {
@@ -37,7 +46,7 @@ class StringContentsAstNode implements EvaluableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.contents, this.contents];
+    return [this.contents[0], this.contents.toReversed()[0]];
   }
 }
 
@@ -125,7 +134,7 @@ export class ComplexStringAstNode implements EvaluableAstNode {
 /* PARSER */
 
 const stringContents = apply(
-  tok(TokenKind.unspecified),
+  rep_sc(tok(TokenKind.stringContents)),
   (token) => new StringContentsAstNode({ contents: token }),
 );
 
