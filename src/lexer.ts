@@ -34,7 +34,9 @@ statements.push(
   [true, /^->/g, TokenKind.single_line_arrow],
   [true, /^"/g, TokenKind.stringDelimiter, stringLiteral],
   [true, /^{/g, TokenKind.standalonePunctuation, "push"],
-  [true, /^}/g, TokenKind.standalonePunctuation, "pop"],
+  // A closing brace is unspecified, because the lexer cannot recognize whether it
+  // is a standalone punctuation or a terminating string interpolation delimiter.
+  [true, /^}/g, TokenKind.unspecified, "pop"],
   [true, /^[()<>$"]/g, TokenKind.standalonePunctuation],
   [true, /^[!@=#%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenKind.punctuation],
   [true, /^\S/g, TokenKind.unspecified],
