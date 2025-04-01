@@ -1,4 +1,4 @@
-import { buildLexer, Token } from "typescript-parsec";
+import { buildLexer, LexerState, Token } from "typescript-parsec";
 import { InternalError } from "./util/error.ts";
 
 export enum TokenKind {
@@ -13,11 +13,16 @@ export enum TokenKind {
   single_line_arrow,
   standalonePunctuation,
   punctuation,
-  string,
+  stringContents,
+  stringDelimiter,
+  stringInterpolationDelimiter,
   unspecified,
 }
 
-const lexer = buildLexer([
+const statements: LexerState<TokenKind> = [];
+const stringLiteral: LexerState<TokenKind> = [];
+
+statements.push(
   [false, /^\/\*(.|\n)*?\*\//gm, TokenKind.blockComment],
   [false, /^\/\/[^\n]*\n?/g, TokenKind.lineComment],
   [true, /^\s*\n\s*/g, TokenKind.breakingWhitespace],
@@ -27,10 +32,21 @@ const lexer = buildLexer([
   [true, /^(function|structure|use|if|else|while)/g, TokenKind.keyword],
   [true, /^[_A-Za-z]+[\-_0-9A-Za-z]*/g, TokenKind.ident],
   [true, /^->/g, TokenKind.single_line_arrow],
-  [true, /^[{}()<>$"]/g, TokenKind.standalonePunctuation],
+  [false, /^"/g, TokenKind.stringDelimiter, stringLiteral],
+  [true, /^{/g, TokenKind.standalonePunctuation, "push"],
+  [true, /^}/g, TokenKind.standalonePunctuation, "pop"],
+  [true, /^[()<>$"]/g, TokenKind.standalonePunctuation],
   [true, /^[!@=#%^&*_+\[\]:;\|,.?~\\/\-]+/g, TokenKind.punctuation],
   [true, /^\S/g, TokenKind.unspecified],
-]);
+);
+
+stringLiteral.push(
+  [false, /^"/g, TokenKind.stringDelimiter, "pop"],
+  [false, /^\${/g, TokenKind.stringInterpolationDelimiter, statements],
+  [true, /^(?:(?:\\")|(?:\\\${)|(?:\$(?!{))|[^"$\\])+/g, TokenKind.stringContents],
+);
+
+const lexer = buildLexer(statements);
 
 /**
  * Split an input string into a sequence of Tokens.
