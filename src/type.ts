@@ -5,7 +5,7 @@ import { globalAutoincrement } from "./util/increment.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { surroundWithIfNonEmpty } from "./util/string.ts";
 
-type PrimitiveSymbolTypeKind = "Number" | "Boolean" | "String";
+export type FundamentalSymbolTypeKind = "Number" | "Boolean" | "String";
 
 /**
  * A type that allows callers of type comparisons to gain insight into why the type comparison failed.
@@ -122,9 +122,9 @@ export interface SymbolType {
   fork(memo?: Map<SymbolType, SymbolType>): SymbolType;
 
   /**
-   * Whether this type represents one of the primitive types.
+   * Whether this type represents one of the fundamental types.
    */
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean;
+  isFundamental(kind: FundamentalSymbolTypeKind): boolean;
 
   /**
    * Whether this type represents a function type.
@@ -338,7 +338,7 @@ export class FunctionSymbolType implements SymbolType {
     return copy;
   }
 
-  isPrimitive(): boolean {
+  isFundamental(): boolean {
     return false;
   }
 
@@ -550,7 +550,7 @@ export class CompositeSymbolType implements SymbolType {
     return copy;
   }
 
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(kind: FundamentalSymbolTypeKind): boolean {
     return this.id === kind;
   }
 
@@ -674,9 +674,9 @@ export class PlaceholderSymbolType implements SymbolType {
     return copy;
   }
 
-  isPrimitive(kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(kind: FundamentalSymbolTypeKind): boolean {
     return this.reference
-      .map((reference) => reference.isPrimitive(kind))
+      .map((reference) => reference.isFundamental(kind))
       .unwrapOr(false);
   }
 
@@ -751,6 +751,10 @@ export class IgnoreSymbolType implements SymbolType {
   }
 
   isPrimitive(): boolean {
+    return true;
+  }
+
+  isFundamental(): boolean {
     return true;
   }
 
@@ -841,7 +845,7 @@ export class UniqueSymbolType implements SymbolType {
     return copy;
   }
 
-  isPrimitive(_kind: PrimitiveSymbolTypeKind): boolean {
+  isFundamental(_kind: FundamentalSymbolTypeKind): boolean {
     return false;
   }
 

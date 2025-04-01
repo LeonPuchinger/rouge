@@ -18,7 +18,8 @@ npm run build
 ```
 
 Deno is used to run/debug the language locally.
-The entrypoint for the program can be found in `src/cli.ts`
+The entrypoint for the program can be found in `src/cli.ts`.
+Deno version >= 2.0 is required.
 
 ```
 deno run --allow-all src/cli.ts
