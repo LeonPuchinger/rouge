@@ -754,6 +754,10 @@ export class IgnoreSymbolType implements SymbolType {
     return true;
   }
 
+  isFundamental(): boolean {
+    return true;
+  }
+
   isFunction(): boolean {
     return true;
   }
