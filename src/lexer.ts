@@ -43,7 +43,10 @@ statements.push(
 stringLiteral.push(
   [false, /^"/g, TokenKind.stringDelimiter, "pop"],
   [false, /^\${/g, TokenKind.stringInterpolationDelimiter, statements],
-  [true, /^(?:(?:\\")|(?:\\\${)|(?:\$(?!{))|[^"$\\])+/g, TokenKind.stringContents],
+  [true, /^\\"/g, TokenKind.stringContents],
+  [true, /^\$/g, TokenKind.stringContents],
+  [true, /^\\\${/g, TokenKind.stringContents],
+  [true, /^[^"$\\]+/g, TokenKind.stringContents],
 );
 
 const lexer = buildLexer(statements);
