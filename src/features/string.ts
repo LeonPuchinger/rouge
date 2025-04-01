@@ -1,6 +1,19 @@
-import { alt_sc, apply, rep_sc, seq, str, tok, Token } from "typescript-parsec";
+import {
+  alt_sc,
+  apply,
+  opt_sc,
+  rep_sc,
+  seq,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
-import { AnalysisError, AnalysisFindings } from "../finding.ts";
+import {
+  AnalysisError,
+  AnalysisFindings,
+  AnalysisWarning,
+} from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { StringSymbolValue } from "../symbol.ts";
 import {
@@ -10,11 +23,13 @@ import {
 } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
-import { None } from "../util/monad/option.ts";
-import { Attributes } from "../util/type.ts";
+import { None, Some } from "../util/monad/option.ts";
+import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
 import { complexStringLiteral } from "./parser_declarations.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
+import { Option } from "../main.ts";
+import { DummyAstNode } from "../util/snippet.ts";
 
 /* AST NODES */
 
@@ -53,17 +68,20 @@ class StringContentsAstNode implements EvaluableAstNode {
 
 export class StringInterpolationAstNode implements EvaluableAstNode {
   beginDelimiter!: Token<TokenKind>;
-  expression!: EvaluableAstNode;
+  expression!: Option<EvaluableAstNode>;
   endDelimiter!: Token<TokenKind>;
 
-  constructor(params: Attributes<StringInterpolationAstNode>) {
+  constructor(params: WithOptionalAttributes<StringInterpolationAstNode>) {
     Object.assign(this, params);
+    this.expression = Some(params.expression);
   }
 
   evaluate(): StringSymbolValue {
     // analysis guarantees that the result of the expression
     // can be interpolated into a string.
-    const contents = this.expression.evaluate().value;
+    const contents = this.expression
+      .map((node) => node.evaluate().value)
+      .unwrapOr("");
     return new StringSymbolValue(`${contents}`);
   }
 
@@ -72,9 +90,21 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    const findings = this.expression.analyze();
+    const findings = this.expression
+      .map((node) => node.analyze())
+      .unwrapOr(AnalysisFindings.empty());
     if (findings.isErroneous()) {
       return findings;
+    }
+    if (!this.expression.hasValue()) {
+      findings.warnings.push(
+        AnalysisWarning({
+          message: "Empty interpolations have no effect.",
+          beginHighlight: DummyAstNode.fromToken(this.beginDelimiter),
+          endHighlight: Some(DummyAstNode.fromToken(this.endDelimiter)),
+          messageHighlight: "",
+        }),
+      );
     }
     const fundamentalTypeIds: FundamentalSymbolTypeKind[] = [
       "Boolean",
@@ -82,13 +112,18 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
       "String",
     ];
     const expressionIsFundamental = fundamentalTypeIds.map(
-      (id) => this.expression.resolveType().isFundamental(id),
+      (id) => {
+        return this.expression
+          .map((node) => node.resolveType())
+          .map((type) => type.isFundamental(id))
+          .unwrapOr(true);
+      },
     );
     if (!expressionIsFundamental) {
       findings.errors.push(
         AnalysisError({
           message: "Only fundamental types can be interpolated in a string.",
-          beginHighlight: this.expression,
+          beginHighlight: this.expression.unwrap(),
           endHighlight: None(),
         }),
       );
@@ -142,7 +177,7 @@ const stringContents = apply(
 const stringInterpolation = apply(
   seq(
     str<TokenKind>("${"),
-    expression,
+    opt_sc(expression),
     str<TokenKind>("}"),
   ),
   ([beginDelimiter, expression, endDelimiter]) =>
