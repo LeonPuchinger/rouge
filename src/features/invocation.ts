@@ -162,38 +162,22 @@ export class InvocationAstNode implements EvaluableAstNode {
     if (findings.isErroneous()) {
       return findings;
     }
-    const calledSymbol = analysisTable.findSymbol(this.name.text);
-    const [isFunction, symbolExists, ignoreFunction] = calledSymbol
-      .map(([symbol, _flags]) => [
-        symbol.valueType.isFunction(),
-        true,
-        symbol.valueType.ignore(),
-      ])
-      .unwrapOr([false, false, false]);
-    if (!symbolExists) {
+    const calledType = this.symbol.resolveType().peel();
+    const isFunction = calledType.isFunction();
+    const ignoreFunction = calledType.ignore();
+    if (!isFunction) {
       findings.errors.push(AnalysisError({
         message:
-          `Unable to resolve a type or symbol by the name '${this.name.text}'.`,
-        beginHighlight: DummyAstNode.fromToken(this.name),
+          "The expression cannot be invoked because it is neither a function nor a type.",
+        beginHighlight: this.symbol,
         endHighlight: None(),
-      }));
-    }
-    if (symbolExists && !isFunction) {
-      findings.errors.push(AnalysisError({
-        message:
-          `Cannot invoke '${this.name.text}' because it is neither a function nor a type.`,
-        beginHighlight: DummyAstNode.fromToken(this.name),
-        endHighlight: None(),
+        messageHighlight: "",
       }));
     }
     if (isFunction && !findings.isErroneous() && !ignoreFunction) {
       findings = AnalysisFindings.merge(
         findings,
-        this.analyzeFunctionInvocation(
-          calledSymbol
-            .map(([symbol, _flags]) => symbol.valueType.peel())
-            .unwrap() as FunctionSymbolType,
-        ),
+        this.analyzeFunctionInvocation(calledType as FunctionSymbolType),
       );
     }
     return findings;
