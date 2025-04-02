@@ -155,6 +155,13 @@ export class InvocationAstNode implements EvaluableAstNode {
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
+    findings = AnalysisFindings.merge(
+      findings,
+      this.symbol.analyze(),
+    );
+    if (findings.isErroneous()) {
+      return findings;
+    }
     const calledSymbol = analysisTable.findSymbol(this.name.text);
     const [isFunction, symbolExists, ignoreFunction] = calledSymbol
       .map(([symbol, _flags]) => [
