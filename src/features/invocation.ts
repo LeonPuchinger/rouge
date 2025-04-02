@@ -42,7 +42,7 @@ import { invocation } from "./parser_declarations.ts";
 /* AST NODES */
 
 export class InvocationAstNode implements EvaluableAstNode {
-  name!: Token<TokenKind>;
+  symbol!: EvaluableAstNode;
   parameters!: ExpressionAstNode[];
   placeholders!: Token<TokenKind>[];
   openParenthesis!: Token<TokenKind>;
@@ -294,7 +294,7 @@ const parameters = list_sc(
 
 invocation.setPattern(apply(
   seq(
-    tok(TokenKind.ident),
+    expression,
     opt_sc(starts_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(str("(")),
     opt(parameters),
