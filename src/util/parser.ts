@@ -1,4 +1,5 @@
 import {
+  alt_sc,
   apply,
   kleft,
   kmid,
@@ -10,6 +11,7 @@ import {
   tok,
 } from "typescript-parsec";
 import { TokenKind } from "../lexer.ts";
+import { InternalError } from "./error.ts";
 
 /**
  * Like `rep_sc(p)` from `typescript-parsec`, but consumes p at least once.
@@ -160,4 +162,25 @@ export function opt_sc_default<T>(
     opt_sc(p),
     (result) => result ?? defaultValue,
   );
+}
+
+/**
+ * Works like `alt_sc` from `typescript-parsec`, but accepts a variable number of parsers.
+ */
+export function alt_sc_var<T>(
+  ...parsers: Parser<TokenKind, T>[]
+): Parser<TokenKind, T> {
+  if (parsers.length < 2) {
+    throw new InternalError("alt_sc_var requires at least two parsers.");
+  }
+  // alt_sc can accept a fixed amount of two parsers, so we use it
+  // to apply the variable amount of parsers in pairs to form a hierachical
+  // "chain" of parsers.
+  return parsers
+    .slice(0, -2)
+    .toReversed()
+    .reduce(
+      (acc, parser) => alt_sc(parser, acc),
+      alt_sc(parsers.at(-2)!, parsers.at(-1)!),
+    );
 }
