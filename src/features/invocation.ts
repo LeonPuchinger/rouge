@@ -1,10 +1,13 @@
 import {
+  alt_sc,
   apply,
   kleft,
   kmid,
   list_sc,
   opt,
   opt_sc,
+  Parser,
+  rep_sc,
   seq,
   str,
   tok,
@@ -35,9 +38,15 @@ import {
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes, nothingInstance } from "../util/type.ts";
-import { expression, ExpressionAstNode } from "./expression.ts";
+import { configureExpression, ExpressionAstNode } from "./expression.ts";
 import { ReturnValueContainer } from "./function.ts";
 import { invocation } from "./parser_declarations.ts";
+import {
+  propertyAccess,
+  PropertyAccessAstNode,
+  referenceExpression,
+  ReferenceExpressionAstNode,
+} from "./symbol_expression.ts";
 
 /* AST NODES */
 
@@ -62,8 +71,9 @@ export class InvocationAstNode implements EvaluableAstNode {
       findings.errors.push(AnalysisError({
         message:
           `The ${construct} expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
-        beginHighlight: DummyAstNode
-          .fromToken(this.placeholders.at(0) ?? this.name),
+        beginHighlight: Some(this.placeholders.at(0))
+          .map(DummyAstNode.fromToken)
+          .unwrapOr(this.symbol),
         endHighlight: Some(this.placeholders.at(-1))
           .map(DummyAstNode.fromToken),
         messageHighlight: "",
@@ -276,6 +286,49 @@ const placeholders = kmid(
   str<TokenKind>("<"),
   surround_with_breaking_whitespace(opt_sc(placeholderNames)),
   str<TokenKind>(">"),
+);
+
+const memberAccess = apply(
+  seq(
+    referenceExpression,
+    rep_sc(
+      starts_with_breaking_whitespace(
+        propertyAccess,
+      ),
+    ),
+  ),
+  ([rootSymbol, propertyAccesses]) => {
+    const [parent, finalMember] = propertyAccesses.reduce<
+      [ReferenceExpressionAstNode | undefined, ReferenceExpressionAstNode]
+    >(
+      ([_, currentMember], property) => {
+        const newMember = new PropertyAccessAstNode({
+          identifierToken: property,
+          parent: currentMember,
+        });
+        return [currentMember, newMember];
+      },
+      [undefined, rootSymbol],
+    );
+    return [parent, finalMember] as [
+      ReferenceExpressionAstNode | undefined,
+      ReferenceExpressionAstNode,
+    ];
+  },
+);
+
+const expression: Parser<TokenKind, [
+  EvaluableAstNode | undefined,
+  EvaluableAstNode,
+]> = alt_sc(
+  apply(
+    configureExpression({
+      includeInvocation: false,
+      includeSymbolExpression: false,
+    }),
+    (result) => [undefined, result],
+  ),
+  memberAccess,
 );
 
 const parameters = list_sc(
