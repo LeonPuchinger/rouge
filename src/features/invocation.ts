@@ -16,6 +16,7 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { Option } from "../main.ts";
 import {
   analysisTable,
   FunctionSymbolValue,
@@ -37,8 +38,12 @@ import {
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
-import { Attributes, nothingInstance } from "../util/type.ts";
-import { configureExpression, ExpressionAstNode } from "./expression.ts";
+import { nothingInstance, WithOptionalAttributes } from "../util/type.ts";
+import {
+  configureExpression,
+  expression,
+  ExpressionAstNode,
+} from "./expression.ts";
 import { ReturnValueContainer } from "./function.ts";
 import { invocation } from "./parser_declarations.ts";
 import {
@@ -51,14 +56,16 @@ import {
 /* AST NODES */
 
 export class InvocationAstNode implements EvaluableAstNode {
+  parent!: Option<EvaluableAstNode>;
   symbol!: EvaluableAstNode;
   parameters!: ExpressionAstNode[];
   placeholders!: Token<TokenKind>[];
   openParenthesis!: Token<TokenKind>;
   closingParenthesis!: Token<TokenKind>;
 
-  constructor(params: Attributes<InvocationAstNode>) {
+  constructor(params: WithOptionalAttributes<InvocationAstNode>) {
     Object.assign(this, params);
+    this.parent = Some(params.parent);
   }
 
   analyzePlaceholders(
@@ -288,6 +295,11 @@ const placeholders = kmid(
   str<TokenKind>(">"),
 );
 
+const parameters = list_sc(
+  expression,
+  surround_with_breaking_whitespace(str(",")),
+);
+
 const memberAccess = apply(
   seq(
     referenceExpression,
@@ -317,7 +329,7 @@ const memberAccess = apply(
   },
 );
 
-const expression: Parser<TokenKind, [
+const customExpression: Parser<TokenKind, [
   EvaluableAstNode | undefined,
   EvaluableAstNode,
 ]> = alt_sc(
@@ -331,22 +343,26 @@ const expression: Parser<TokenKind, [
   memberAccess,
 );
 
-const parameters = list_sc(
-  expression,
-  surround_with_breaking_whitespace(str(",")),
-);
-
 invocation.setPattern(apply(
   seq(
-    expression,
+    customExpression,
     opt_sc(starts_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(str("(")),
     opt(parameters),
     starts_with_breaking_whitespace(str(")")),
   ),
-  ([name, placeholders, openParenthesis, parameters, closingParenthesis]) =>
+  (
+    [
+      [parent, member],
+      placeholders,
+      openParenthesis,
+      parameters,
+      closingParenthesis,
+    ],
+  ) =>
     new InvocationAstNode({
-      name: name,
+      parent: parent,
+      symbol: member,
       parameters: parameters ?? [],
       placeholders: placeholders ?? [],
       openParenthesis: openParenthesis,
