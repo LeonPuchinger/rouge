@@ -68,6 +68,29 @@ export class InvocationAstNode implements EvaluableAstNode {
     this.parent = Some(params.parent);
   }
 
+  /**
+   * Determines whether the called expression is a method or not.
+   * Can only safely be called after static analysis has successfully
+   * been performed on the parent and member (symbol) AST nodes.
+   */
+  isMethod(): boolean {
+    const isMember = this.parent.hasValue();
+    if (!isMember) {
+      return false;
+    }
+    const parent = this.parent.unwrap();
+    const parentType = parent.resolveType().peel();
+    const memberType = this.symbol.resolveType().peel() as FunctionSymbolType;
+    const memberInstance = this.symbol.evaluate() as FunctionSymbolValue;
+    const memberParameters = memberInstance.parameterNames;
+    const memberParameterTypes = memberType.parameterTypes;
+    const nameMatch = memberParameters.length >= 1 &&
+      memberParameters[0] == "this";
+    const typeMatch = memberParameterTypes.length >= 1 &&
+      memberParameterTypes[0].typeCompatibleWith(parentType);
+    return nameMatch && typeMatch;
+  }
+
   analyzePlaceholders(
     invokedType: FunctionSymbolType | CompositeSymbolType,
     construct: "structure" | "function",
