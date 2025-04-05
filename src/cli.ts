@@ -39,7 +39,11 @@ function run(input_file_path: string) {
     findings.errors.forEach(logger.error);
     findings.warnings.forEach(logger.warning);
   } catch (error) {
-    logger.error(error);
+    if (error instanceof Error) {
+      logger.error(`${error.message}\n${error.stack}`);
+    } else {
+      logger.error("Unrecognized error");
+    }
   }
   stdinReadSubscription.cancel();
   stdout.close();
