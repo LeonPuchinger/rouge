@@ -31,7 +31,6 @@ import {
   typeTable,
 } from "../type.ts";
 import { zip } from "../util/array.ts";
-import { InternalError } from "../util/error.ts";
 import { None, Some } from "../util/monad/option.ts";
 import {
   starts_with_breaking_whitespace,
@@ -237,10 +236,10 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   evaluateFunction(
-    functionSymbol: RuntimeSymbol<FunctionSymbolValue>,
+    functionSymbolValue: FunctionSymbolValue,
   ): SymbolValue<unknown> {
     runtimeTable.pushScope();
-    const parameterNames = functionSymbol.value.parameterNames;
+    const parameterNames = functionSymbolValue.parameterNames;
     for (let index = 0; index < this.parameters.length; index += 1) {
       const parameterName = parameterNames[index];
       const symbolValue = this.parameters[index].evaluate();
@@ -253,7 +252,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     let returnValue: SymbolValue = nothingInstance;
     try {
-      functionSymbol.value.value.interpret();
+      functionSymbolValue.value.interpret();
     } catch (exception) {
       if (exception instanceof ReturnValueContainer) {
         returnValue = exception.value;
@@ -264,26 +263,15 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   evaluate(): SymbolValue<unknown> {
-    const calledSymbol = runtimeTable.findSymbol(this.name.text);
-    const partOfStdlib = calledSymbol
-      .map(([_symbol, flags]) => flags.stdlib)
-      .unwrapOr(false);
+    const calledSymbol = this.symbol.evaluate();
+    const partOfStdlib = this.symbol.resolveFlags().get("stdlib") ?? false;
     if (partOfStdlib) {
       // grant the invocation access to the runtime
       runtimeTable.ignoreRuntimeBindings = false;
     }
-    if (calledSymbol.hasValue()) {
-      const [symbol, _flags] = calledSymbol.unwrap();
-      const result = this.evaluateFunction(
-        symbol as RuntimeSymbol<FunctionSymbolValue>,
-      );
-      runtimeTable.ignoreRuntimeBindings = true;
-      return result;
-    }
-    throw new InternalError(
-      `Unable to resolve a runtime symbol by the name '${this.name.text}'.`,
-      "This should have been caught during static analysis.",
-    );
+    const result = this.evaluateFunction(calledSymbol as FunctionSymbolValue);
+    runtimeTable.ignoreRuntimeBindings = true;
+    return result;
   }
 
   resolveType(): SymbolType {
