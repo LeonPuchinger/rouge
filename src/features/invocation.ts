@@ -18,7 +18,6 @@ import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { Option } from "../main.ts";
 import {
-  analysisTable,
   FunctionSymbolValue,
   RuntimeSymbol,
   runtimeTable,
@@ -274,30 +273,21 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    return analysisTable
-      .findSymbol(this.name.text)
-      .map(([symbol, _flags]) => {
-        const functionType = (symbol.valueType as FunctionSymbolType).fork();
-        // bind placeholdes to the supplied types
-        for (
-          const [placeholder, suppliedType] of zip(
-            Array.from(functionType.placeholders.values()),
-            this.placeholders.map((placeholder) =>
-              typeTable.findType(placeholder.text)
-                .map(([type, _flags]) => type)
-            ),
-          )
-        ) {
-          placeholder.bind(suppliedType.unwrap());
-        }
-        return functionType.returnType;
-      })
-      .unwrapOrElse(
-        typeTable
-          .findType(this.name.text)
-          .map(([type, _flags]) => type)
-          .unwrap,
-      );
+    const calledType = this.symbol.resolveType();
+    const functionType = (calledType as FunctionSymbolType).fork();
+    // bind placeholdes to the supplied types
+    for (
+      const [placeholder, suppliedType] of zip(
+        Array.from(functionType.placeholders.values()),
+        this.placeholders.map((placeholder) =>
+          typeTable.findType(placeholder.text)
+            .map(([type, _flags]) => type)
+        ),
+      )
+    ) {
+      placeholder.bind(suppliedType.unwrap());
+    }
+    return functionType.returnType;
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
