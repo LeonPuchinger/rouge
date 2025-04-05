@@ -301,7 +301,12 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.name, this.closingParenthesis];
+    return [
+      this.parent
+        .map((parent) => parent.tokenRange()[0])
+        .unwrapOr(this.symbol.tokenRange()[0]),
+      this.closingParenthesis,
+    ];
   }
 }
 
