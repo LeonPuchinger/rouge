@@ -92,14 +92,13 @@ export class InvocationAstNode implements EvaluableAstNode {
 
   analyzePlaceholders(
     invokedType: FunctionSymbolType | CompositeSymbolType,
-    construct: "structure" | "function",
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const expectedPlaceholders = invokedType.placeholders;
     if (expectedPlaceholders.size != this.placeholders.length) {
       findings.errors.push(AnalysisError({
         message:
-          `The ${construct} expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
+          `Expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
         beginHighlight: Some(this.placeholders.at(0))
           .map(DummyAstNode.fromToken)
           .unwrapOr(this.symbol),
@@ -126,8 +125,6 @@ export class InvocationAstNode implements EvaluableAstNode {
     functionType: FunctionSymbolType,
   ): AnalysisFindings {
     let findings = AnalysisFindings.empty();
-    const isConstructor = typeTable.findType(this.name.text).hasValue();
-    const construct = isConstructor ? "structure" : "function";
     functionType = functionType.fork();
     const expectedParameterTypes = functionType.parameterTypes;
     const foundParameterTypes = this.parameters
@@ -135,7 +132,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     if (expectedParameterTypes.length != foundParameterTypes.length) {
       findings.errors.push(AnalysisError({
         message:
-          `The ${construct} expected ${expectedParameterTypes.length} parameters but ${foundParameterTypes.length} were supplied.`,
+          `Expected ${expectedParameterTypes.length} parameters but ${foundParameterTypes.length} were supplied.`,
         beginHighlight: this.parameters.at(0) ??
           DummyAstNode.fromToken(this.openParenthesis),
         endHighlight: Some(
@@ -144,10 +141,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
-    const placeholdersFindings = this.analyzePlaceholders(
-      functionType,
-      "function",
-    );
+    const placeholdersFindings = this.analyzePlaceholders(functionType);
     findings = AnalysisFindings.merge(
       findings,
       placeholdersFindings,
@@ -181,10 +175,19 @@ export class InvocationAstNode implements EvaluableAstNode {
             `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
           beginHighlight: this.parameters[index],
           endHighlight: None(),
+          messageHighlight: "",
         }));
       }
     }
     return findings;
+  }
+
+  analyzeMethod(
+    functionType: FunctionSymbolType,
+  ): AnalysisFindings {
+    functionType = functionType.fork();
+    functionType.parameterTypes.shift();
+    return this.analyzeFunctionInvocation(functionType);
   }
 
   analyze(): AnalysisFindings {
@@ -204,6 +207,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     const calledType = this.symbol.resolveType().peel();
     const isFunction = calledType.isFunction();
     const ignoreFunction = calledType.ignore();
+    const isMethod = isFunction && this.isMethod();
     if (!isFunction) {
       findings.errors.push(AnalysisError({
         message:
@@ -213,10 +217,19 @@ export class InvocationAstNode implements EvaluableAstNode {
         messageHighlight: "",
       }));
     }
-    if (isFunction && !findings.isErroneous() && !ignoreFunction) {
+    if (ignoreFunction) {
+      return findings;
+    }
+    if (isFunction && !isMethod && !findings.isErroneous()) {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeFunctionInvocation(calledType as FunctionSymbolType),
+      );
+    }
+    if (isMethod && !findings.isErroneous()) {
+      findings = AnalysisFindings.merge(
+        findings,
+        this.analyzeMethod(calledType as FunctionSymbolType),
       );
     }
     return findings;
