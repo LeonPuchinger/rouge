@@ -217,16 +217,16 @@ export class InvocationAstNode implements EvaluableAstNode {
         messageHighlight: "",
       }));
     }
-    if (ignoreFunction) {
+    if (ignoreFunction || findings.isErroneous()) {
       return findings;
     }
-    if (isFunction && !isMethod && !findings.isErroneous()) {
+    if (isFunction && !isMethod) {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeFunctionInvocation(calledType as FunctionSymbolType),
       );
     }
-    if (isMethod && !findings.isErroneous()) {
+    if (isMethod) {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeMethod(calledType as FunctionSymbolType),
