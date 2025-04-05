@@ -21,6 +21,7 @@ import {
   FunctionSymbolValue,
   RuntimeSymbol,
   runtimeTable,
+  SymbolFlags,
   SymbolValue,
 } from "../symbol.ts";
 import {
@@ -301,6 +302,10 @@ export class InvocationAstNode implements EvaluableAstNode {
       placeholder.bind(suppliedType.unwrap());
     }
     return functionType.returnType;
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

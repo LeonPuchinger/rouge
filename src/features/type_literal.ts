@@ -13,6 +13,7 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { SymbolFlags } from "../symbol.ts";
 import {
   CompositeSymbolType,
   FunctionSymbolType,
@@ -79,6 +80,10 @@ export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
           this.closingParenthesis.unwrapOr(this.name),
         ),
     ];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
@@ -163,6 +168,10 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.name, this.closingBracket.unwrapOr(this.name)];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 

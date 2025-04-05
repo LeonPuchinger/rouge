@@ -12,7 +12,7 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { NumericSymbolValue, SymbolValue } from "../symbol.ts";
+import { NumericSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
 import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError, RuntimeError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
@@ -47,6 +47,10 @@ class NumericLiteralAstNode implements NumericExpressionAstNode {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.token, this.token];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
@@ -87,6 +91,10 @@ class UnaryNumericExpressionAstNode implements NumericExpressionAstNode {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.operatorToken, this.child.tokenRange()[1]];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
@@ -163,6 +171,10 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.lhs.tokenRange()[0], this.rhs.tokenRange()[1]];
   }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
+  }
 }
 
 /* Ambiguously typed expression */
@@ -200,6 +212,10 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return this.child.tokenRange();
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 

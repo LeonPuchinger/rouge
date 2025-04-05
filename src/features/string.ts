@@ -15,7 +15,8 @@ import {
   AnalysisWarning,
 } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { StringSymbolValue } from "../symbol.ts";
+import { Option } from "../main.ts";
+import { StringSymbolValue, SymbolFlags } from "../symbol.ts";
 import {
   CompositeSymbolType,
   FundamentalSymbolTypeKind,
@@ -24,12 +25,11 @@ import {
 import { InternalError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
 import { None, Some } from "../util/monad/option.ts";
+import { rep_at_least_once_sc } from "../util/parser.ts";
+import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
 import { complexStringLiteral } from "./parser_declarations.ts";
-import { rep_at_least_once_sc } from "../util/parser.ts";
-import { Option } from "../main.ts";
-import { DummyAstNode } from "../util/snippet.ts";
 
 /* AST NODES */
 
@@ -63,6 +63,10 @@ class StringContentsAstNode implements EvaluableAstNode {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.contents[0], this.contents.toReversed()[0]];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
@@ -134,6 +138,10 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.beginDelimiter, this.endDelimiter];
   }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
+  }
 }
 
 export class ComplexStringAstNode implements EvaluableAstNode {
@@ -164,6 +172,10 @@ export class ComplexStringAstNode implements EvaluableAstNode {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.openingQuotation, this.closingQuotation];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 

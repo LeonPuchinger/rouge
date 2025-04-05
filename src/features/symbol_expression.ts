@@ -6,16 +6,17 @@ import {
   analysisTable,
   CompositeSymbolValue,
   runtimeTable,
+  SymbolFlags,
   SymbolValue,
 } from "../symbol.ts";
 import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
-import { Attributes } from "../util/type.ts";
 import {
   ends_with_breaking_whitespace,
   starts_with_breaking_whitespace,
 } from "../util/parser.ts";
+import { Attributes } from "../util/type.ts";
 
 /* AST NODES */
 
@@ -66,6 +67,15 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
           "This should have been caught by static analysis.",
         ),
       );
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return analysisTable
+      .findSymbol(this.identifierToken.text)
+      .map(([_symbol, flags]) =>
+        new Map(Object.entries(flags)) as Map<keyof SymbolFlags, boolean>
+      )
+      .unwrapOr(new Map());
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -132,6 +142,10 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
       );
     }
     return accessedType;
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
