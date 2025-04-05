@@ -232,22 +232,28 @@ export class InvocationAstNode implements EvaluableAstNode {
 
   evaluateFunction(
     functionSymbolValue: FunctionSymbolValue,
-    additionalParameters: Map<string, SymbolValue> = new Map(),
+    defaultParameters: Map<string, SymbolValue> = new Map(),
   ): SymbolValue<unknown> {
     runtimeTable.pushScope();
     const parameterNames = functionSymbolValue.parameterNames;
-    for (let index = 0; index < this.parameters.length; index += 1) {
+    let offset = 0;
+    for (
+      let index = 0;
+      index < functionSymbolValue.parameterNames.length;
+      index += 1
+    ) {
       const parameterName = parameterNames[index];
-      const symbolValue = this.parameters[index].evaluate();
-      runtimeTable.setSymbol(
-        parameterName,
-        new RuntimeSymbol({
-          value: symbolValue,
-        }),
-      );
-    }
-    for (const parameter of additionalParameters.entries()) {
-      const [parameterName, symbolValue] = parameter;
+      if (defaultParameters.has(parameterName)) {
+        offset += 1;
+        runtimeTable.setSymbol(
+          parameterName,
+          new RuntimeSymbol({
+            value: defaultParameters.get(parameterName)!,
+          }),
+        );
+        continue;
+      }
+      const symbolValue = this.parameters[index - offset].evaluate();
       runtimeTable.setSymbol(
         parameterName,
         new RuntimeSymbol({
@@ -274,16 +280,16 @@ export class InvocationAstNode implements EvaluableAstNode {
       // grant the invocation access to the runtime
       runtimeTable.ignoreRuntimeBindings = false;
     }
-    const additionalParameters = new Map<string, SymbolValue>();
+    const defaultParameters = new Map<string, SymbolValue>();
     if (this.isMethod()) {
       const parentInstance = this.parent
         .map((parent) => parent.evaluate())
         .unwrapOr(nothingInstance);
-      additionalParameters.set("this", parentInstance);
+      defaultParameters.set("this", parentInstance);
     }
     const result = this.evaluateFunction(
       calledSymbol as FunctionSymbolValue,
-      additionalParameters,
+      defaultParameters,
     );
     runtimeTable.ignoreRuntimeBindings = true;
     return result;
