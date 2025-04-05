@@ -80,14 +80,9 @@ export class InvocationAstNode implements EvaluableAstNode {
     const parent = this.parent.unwrap();
     const parentType = parent.resolveType().peel();
     const memberType = this.symbol.resolveType().peel() as FunctionSymbolType;
-    const memberInstance = this.symbol.evaluate() as FunctionSymbolValue;
-    const memberParameters = memberInstance.parameterNames;
     const memberParameterTypes = memberType.parameterTypes;
-    const nameMatch = memberParameters.length >= 1 &&
-      memberParameters[0] == "this";
-    const typeMatch = memberParameterTypes.length >= 1 &&
+    return memberParameterTypes.length >= 1 &&
       memberParameterTypes[0].typeCompatibleWith(parentType);
-    return nameMatch && typeMatch;
   }
 
   analyzePlaceholders(
