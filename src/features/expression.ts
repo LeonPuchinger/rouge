@@ -2,7 +2,7 @@ import { apply, Parser, Token } from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { SymbolValue } from "../symbol.ts";
+import { SymbolFlags, SymbolValue } from "../symbol.ts";
 import { SymbolType } from "../type.ts";
 import { alt_sc_var } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
@@ -39,6 +39,10 @@ export class ExpressionAstNode
 
   resolveType(): SymbolType {
     return this.child.resolveType();
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return this.child.resolveFlags();
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
