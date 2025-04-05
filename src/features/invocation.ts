@@ -71,7 +71,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   /**
    * Determines whether the called expression is a method or not.
    * Can only safely be called after static analysis has successfully
-   * been performed on the parent and member (symbol) AST nodes.
+   * been performed on the member (symbol) AST nodes.
    */
   isMethod(): boolean {
     const isMember = this.parent.hasValue();
