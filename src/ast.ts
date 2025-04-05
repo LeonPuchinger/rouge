@@ -40,7 +40,7 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType>
   /**
    * Returns the corresponding `SymbolType` of the evaluated result.
    * Before this method can be called, it has to be made sure
-   * that `analyze` is called first on the AST node and its result is inspected.
+   * that `analyze` is called first on the AST node and its result is not erroneous.
    * Static analysis should catch any errors in regards to type resolving (e.g. the type does not exist).
    * Even though implementations of `resolveType` can assume that `analyze` has been called already,
    * an `InternalError` should still be thrown in case `analyze` has not been called and type resolving fails.
@@ -51,6 +51,8 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType>
    * Returns symbol flags associated with the evaluated symbol.
    * Flags are usually stored in the symbol table. In case process of evaluating the AST node
    * does not involve querying the symbol table, the returned flags will likely be empty.
+   * Before this method can be called, it has to be made sure
+   * that `analyze` is called first on the AST node and its result is not erroneous.
    */
   resolveFlags(): Map<keyof SymbolFlags, boolean>;
 }
