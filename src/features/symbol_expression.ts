@@ -73,7 +73,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
   }
 }
 
-class PropertyAccessAstNode implements EvaluableAstNode {
+export class PropertyAccessAstNode implements EvaluableAstNode {
   identifierToken!: Token<TokenKind>;
   parent!: EvaluableAstNode;
 
@@ -141,12 +141,12 @@ class PropertyAccessAstNode implements EvaluableAstNode {
 
 /* PARSER */
 
-const propertyAccess = kright(
+export const propertyAccess = kright(
   ends_with_breaking_whitespace(str<TokenKind>(".")),
   tok(TokenKind.ident),
 );
 
-const referenceExpression = apply(
+export const referenceExpression = apply(
   tok(TokenKind.ident),
   (identifier) => new ReferenceExpressionAstNode(identifier),
 );
