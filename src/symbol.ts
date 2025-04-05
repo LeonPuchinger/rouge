@@ -130,7 +130,7 @@ export class CompositeSymbolValue
 
 // Symbol Table
 
-type SymbolFlags = {
+export type SymbolFlags = {
   readonly: boolean;
   /**
    * Whether the symbol is part of the standard library.
