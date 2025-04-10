@@ -296,6 +296,12 @@ export class FunctionSymbolType implements SymbolType {
     if (memo.has(this)) {
       return memo.get(this) as FunctionSymbolType;
     }
+    const copy = new FunctionSymbolType({
+      parameterTypes: [],
+      returnType: this.returnType,
+      placeholders: new Map(),
+    });
+    memo.set(this, copy);
     const originalPlaceholders: SymbolType[] = Array.from(
       this.placeholders.values(),
     );
@@ -329,12 +335,9 @@ export class FunctionSymbolType implements SymbolType {
         forkedPlaceholders.set(name, type.fork(memo) as PlaceholderSymbolType);
       }
     }
-    const copy = new FunctionSymbolType({
-      parameterTypes: forkedParameters,
-      placeholders: forkedPlaceholders,
-      returnType: forkedReturnType,
-    });
-    memo.set(this, copy);
+    copy.parameterTypes = forkedParameters;
+    copy.placeholders = forkedPlaceholders;
+    copy.returnType = forkedReturnType;
     return copy;
   }
 
