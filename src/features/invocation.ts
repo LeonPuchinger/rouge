@@ -378,6 +378,7 @@ const customExpression: Parser<TokenKind, [
   EvaluableAstNode | undefined,
   EvaluableAstNode,
 ]> = alt_sc(
+  memberAccess,
   apply(
     configureExpression({
       includeInvocation: false,
@@ -385,7 +386,6 @@ const customExpression: Parser<TokenKind, [
     }),
     (result) => [undefined, result],
   ),
-  memberAccess,
 );
 
 invocation.setPattern(apply(
