@@ -115,20 +115,26 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
       "Number",
       "String",
     ];
-    const expressionIsFundamental = fundamentalTypeIds.map(
-      (id) => {
-        return this.expression
-          .map((node) => node.resolveType())
+    const expressionType = this.expression
+      .map((node) => node.resolveType());
+    const expressionIsFundamental = fundamentalTypeIds
+      .map((id) =>
+        expressionType
           .map((type) => type.isFundamental(id))
-          .unwrapOr(true);
-      },
-    );
+          .unwrapOr(true)
+      )
+      .some((isFundamental) => isFundamental);
     if (!expressionIsFundamental) {
       findings.errors.push(
         AnalysisError({
           message: "Only fundamental types can be interpolated in a string.",
           beginHighlight: this.expression.unwrap(),
           endHighlight: None(),
+          messageHighlight: `Type "${
+            expressionType
+              .map((type) => type.displayName())
+              .unwrapOr("")
+          }" cannot be used in a string interpolation.`,
         }),
       );
     }
