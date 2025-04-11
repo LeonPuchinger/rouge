@@ -202,7 +202,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     const calledType = this.symbol.resolveType().peel();
     const isFunction = calledType.isFunction();
     const ignoreFunction = calledType.ignore();
-    const isMethod = isFunction && this.isMethod();
+    const isMethod = isFunction && (!ignoreFunction) && this.isMethod();
     if (!isFunction) {
       findings.errors.push(AnalysisError({
         message:
