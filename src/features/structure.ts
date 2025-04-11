@@ -21,6 +21,7 @@ import {
   RuntimeSymbol,
   runtimeTable,
   StaticSymbol,
+  SymbolFlags,
   SymbolValue,
 } from "../symbol.ts";
 import {
@@ -143,6 +144,10 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
             .unwrapOr(this.name),
         ),
     ];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 

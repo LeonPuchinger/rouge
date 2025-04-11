@@ -6,16 +6,17 @@ import {
   analysisTable,
   CompositeSymbolValue,
   runtimeTable,
+  SymbolFlags,
   SymbolValue,
 } from "../symbol.ts";
 import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
-import { Attributes } from "../util/type.ts";
 import {
   ends_with_breaking_whitespace,
   starts_with_breaking_whitespace,
 } from "../util/parser.ts";
+import { Attributes } from "../util/type.ts";
 
 /* AST NODES */
 
@@ -68,12 +69,21 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
       );
   }
 
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return analysisTable
+      .findSymbol(this.identifierToken.text)
+      .map(([_symbol, flags]) =>
+        new Map(Object.entries(flags)) as Map<keyof SymbolFlags, boolean>
+      )
+      .unwrapOr(new Map());
+  }
+
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.identifierToken, this.identifierToken];
   }
 }
 
-class PropertyAccessAstNode implements EvaluableAstNode {
+export class PropertyAccessAstNode implements EvaluableAstNode {
   identifierToken!: Token<TokenKind>;
   parent!: EvaluableAstNode;
 
@@ -134,6 +144,10 @@ class PropertyAccessAstNode implements EvaluableAstNode {
     return accessedType;
   }
 
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
+  }
+
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.identifierToken, this.identifierToken];
   }
@@ -141,12 +155,12 @@ class PropertyAccessAstNode implements EvaluableAstNode {
 
 /* PARSER */
 
-const propertyAccess = kright(
+export const propertyAccess = kright(
   ends_with_breaking_whitespace(str<TokenKind>(".")),
   tok(TokenKind.ident),
 );
 
-const referenceExpression = apply(
+export const referenceExpression = apply(
   tok(TokenKind.ident),
   (identifier) => new ReferenceExpressionAstNode(identifier),
 );

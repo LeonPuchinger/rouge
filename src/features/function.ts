@@ -22,6 +22,7 @@ import {
   analysisTable,
   FunctionSymbolValue,
   StaticSymbol,
+  SymbolFlags,
   SymbolValue,
 } from "../symbol.ts";
 import {
@@ -325,6 +326,10 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       placeholders: placeholders,
       returnType: returnType,
     });
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

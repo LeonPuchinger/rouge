@@ -166,6 +166,9 @@ export class FunctionSymbolType implements SymbolType {
     if (!memo.has(this)) {
       memo.set(this, new Set());
     }
+    if (!memo.has(other)) {
+      memo.set(other, new Set());
+    }
     memo.get(this)!.add(other);
     if (
       other instanceof PlaceholderSymbolType ||
@@ -173,13 +176,19 @@ export class FunctionSymbolType implements SymbolType {
     ) {
       return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
-    // only fork types if no placeholders need to be assumed
+    // only fork types if placeholders need to be assumed
     let self = this as FunctionSymbolType;
     if (!self.complete()) {
+      const originalSelf = self;
       self = self.fork();
+      memo.set(self, memo.get(originalSelf)!);
     }
     if (!other.complete()) {
+      const originalOther = other;
       other = other.fork();
+      memo.set(other, memo.get(originalOther)!);
+      memo.get(other)!.add(self);
+      memo.get(self)!.add(other);
     }
     // trivial case
     if (!(other instanceof FunctionSymbolType)) {
@@ -296,6 +305,12 @@ export class FunctionSymbolType implements SymbolType {
     if (memo.has(this)) {
       return memo.get(this) as FunctionSymbolType;
     }
+    const copy = new FunctionSymbolType({
+      parameterTypes: [],
+      returnType: this.returnType,
+      placeholders: new Map(),
+    });
+    memo.set(this, copy);
     const originalPlaceholders: SymbolType[] = Array.from(
       this.placeholders.values(),
     );
@@ -329,12 +344,9 @@ export class FunctionSymbolType implements SymbolType {
         forkedPlaceholders.set(name, type.fork(memo) as PlaceholderSymbolType);
       }
     }
-    const copy = new FunctionSymbolType({
-      parameterTypes: forkedParameters,
-      placeholders: forkedPlaceholders,
-      returnType: forkedReturnType,
-    });
-    memo.set(this, copy);
+    copy.parameterTypes = forkedParameters;
+    copy.placeholders = forkedPlaceholders;
+    copy.returnType = forkedReturnType;
     return copy;
   }
 

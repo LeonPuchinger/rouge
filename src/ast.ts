@@ -2,7 +2,7 @@ import { Token } from "typescript-parsec";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
-import { SymbolValue } from "./symbol.ts";
+import { SymbolFlags, SymbolValue } from "./symbol.ts";
 import { SymbolType } from "./type.ts";
 
 /**
@@ -30,7 +30,8 @@ export interface AstNode {
  * This type of AST node is primarily used for expressions, which evaluate to a result.
  * In rare cases, the execution can produce side effects, however most of the time, the result should just be returned.
  */
-export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType> extends AstNode {
+export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType>
+  extends AstNode {
   /**
    * Executes the content of the AST node while yielding a result.
    */
@@ -39,12 +40,21 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType> exte
   /**
    * Returns the corresponding `SymbolType` of the evaluated result.
    * Before this method can be called, it has to be made sure
-   * that `analyze` is called first on the AST node and its result is inspected.
+   * that `analyze` is called first on the AST node and its result is not erroneous.
    * Static analysis should catch any errors in regards to type resolving (e.g. the type does not exist).
    * Even though implementations of `resolveType` can assume that `analyze` has been called already,
    * an `InternalError` should still be thrown in case `analyze` has not been called and type resolving fails.
    */
   resolveType(): S;
+
+  /**
+   * Returns symbol flags associated with the evaluated symbol.
+   * Flags are usually stored in the symbol table. In case process of evaluating the AST node
+   * does not involve querying the symbol table, the returned flags will likely be empty.
+   * Before this method can be called, it has to be made sure
+   * that `analyze` is called first on the AST node and its result is not erroneous.
+   */
+  resolveFlags(): Map<keyof SymbolFlags, boolean>;
 }
 
 /**

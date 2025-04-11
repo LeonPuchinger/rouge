@@ -1,9 +1,10 @@
-import { alt_sc, apply, Token } from "typescript-parsec";
+import { apply, Parser, Token } from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { SymbolValue } from "../symbol.ts";
+import { SymbolFlags, SymbolValue } from "../symbol.ts";
 import { SymbolType } from "../type.ts";
+import { alt_sc_var } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { booleanExpression } from "./boolean_expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
@@ -40,6 +41,10 @@ export class ExpressionAstNode
     return this.child.resolveType();
   }
 
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return this.child.resolveFlags();
+  }
+
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return this.child.tokenRange();
   }
@@ -47,15 +52,42 @@ export class ExpressionAstNode
 
 /* PARSER */
 
-export const expression = apply(
-  alt_sc(
-    invocation,
-    booleanExpression,
-    numericExpression,
-    complexStringLiteral,
-    symbolExpression,
-    functionDefinition,
-  ),
-  (expression: EvaluableAstNode) =>
-    new ExpressionAstNode({ child: expression }),
-);
+type ExpressionOptions = {
+  includeInvocation?: boolean;
+  includeBooleanExpression?: boolean;
+  includeNumericExpression?: boolean;
+  includeComplexStringLiteral?: boolean;
+  includeSymbolExpression?: boolean;
+  includeFunctionDefinition?: boolean;
+};
+
+/**
+ * Builds a parser for expressions, but allows the
+ * user to disable certain kinds of expressions.
+ */
+export function configureExpression({
+  includeInvocation = true,
+  includeBooleanExpression = true,
+  includeNumericExpression = true,
+  includeComplexStringLiteral = true,
+  includeSymbolExpression = true,
+  includeFunctionDefinition = true,
+}: ExpressionOptions): Parser<TokenKind, ExpressionAstNode> {
+  const enabledParsers = (<[Parser<TokenKind, EvaluableAstNode>, boolean][]> [
+    [invocation, includeInvocation],
+    [booleanExpression, includeBooleanExpression],
+    [numericExpression, includeNumericExpression],
+    [complexStringLiteral, includeComplexStringLiteral],
+    [symbolExpression, includeSymbolExpression],
+    [functionDefinition, includeFunctionDefinition],
+  ]).filter(([_, enabled]) => enabled)
+    .map(([parser, _]) => parser);
+
+  return apply(
+    alt_sc_var(...enabledParsers),
+    (expression: EvaluableAstNode) =>
+      new ExpressionAstNode({ child: expression }),
+  );
+}
+
+export const expression = configureExpression({});

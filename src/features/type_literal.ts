@@ -13,6 +13,7 @@ import {
 import { EvaluableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { SymbolFlags } from "../symbol.ts";
 import {
   CompositeSymbolType,
   FunctionSymbolType,
@@ -80,6 +81,10 @@ export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
         ),
     ];
   }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
+  }
 }
 
 export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
@@ -95,7 +100,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
   analyze(): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     const type = typeTable.findType(this.name.text)
-      .map(([type, _flags]) => type);
+      .map(([type, _flags]) => type as CompositeSymbolType);
     if (!type.hasValue()) {
       findings.errors.push(AnalysisError({
         beginHighlight: DummyAstNode.fromToken(this.name),
@@ -110,17 +115,19 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     if (findings.isErroneous()) {
       return findings;
     }
-    const descriptiveType = this.resolveType();
-    descriptiveType.typeCompatibleWith(type.unwrap(), {
-      onPlaceholderCountMismatch: ({ expected, found }) => {
-        findings.errors.push(AnalysisError({
-          beginHighlight: DummyAstNode.fromToken(this.name),
-          endHighlight: None(),
-          message:
-            `The type '${this.name.text}' expected ${expected} placeholders but ${found} were supplied.`,
-        }));
-      },
-    });
+    const requiredPlaceholders = type
+      .map((type) => type.placeholders?.size ?? 0)
+      .unwrapOr(0);
+    const suppliedPlaceholders = this.placeholders.length;
+    if (requiredPlaceholders !== suppliedPlaceholders) {
+      findings.errors.push(AnalysisError({
+        beginHighlight: DummyAstNode.fromToken(this.name),
+        endHighlight: None(),
+        message:
+          `The type '${this.name.text}' expected ${requiredPlaceholders} placeholders but ${suppliedPlaceholders} were supplied.`,
+        messageHighlight: "",
+      }));
+    }
     return findings;
   }
 
@@ -163,6 +170,10 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.name, this.closingBracket.unwrapOr(this.name)];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
