@@ -285,7 +285,9 @@ export class InvocationAstNode implements EvaluableAstNode {
       const parentInstance = this.parent
         .map((parent) => parent.evaluate())
         .unwrapOr(nothingInstance);
-      defaultParameters.set("this", parentInstance);
+      const thisParameterName =
+        (calledSymbol as FunctionSymbolValue).parameterNames[0];
+      defaultParameters.set(thisParameterName, parentInstance);
     }
     const result = this.evaluateFunction(
       calledSymbol as FunctionSymbolValue,
