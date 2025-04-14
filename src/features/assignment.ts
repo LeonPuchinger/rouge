@@ -1,4 +1,13 @@
-import { apply, kright, opt_sc, seq, str, tok, Token } from "typescript-parsec";
+import {
+  alt_sc,
+  apply,
+  kright,
+  opt_sc,
+  seq,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -16,12 +25,14 @@ import { memoize } from "../util/memoize.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
+  kouter,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
 import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
+import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
 
@@ -63,7 +74,7 @@ class PropertyWriteAstNode implements Partial<EvaluableAstNode> {
 class VariableWriteAstNode implements Partial<EvaluableAstNode> {
   name!: Token<TokenKind>;
 
-  constructor(params: Attributes<PropertyWriteAstNode>) {
+  constructor(params: Attributes<VariableWriteAstNode>) {
     Object.assign(this, params);
   }
 
@@ -111,7 +122,7 @@ class VariableWriteAstNode implements Partial<EvaluableAstNode> {
 }
 
 export class AssignmentAstNode implements InterpretableAstNode {
-  token!: Token<TokenKind>;
+  assignee!: PropertyWriteAstNode | VariableWriteAstNode;
   typeAnnotation!: Option<Token<TokenKind>>;
   child!: ExpressionAstNode;
 
@@ -240,17 +251,33 @@ const typeAnnotation = kright(
   tok(TokenKind.ident),
 );
 
+const rhs = kouter(
+  opt_sc(typeAnnotation),
+  surround_with_breaking_whitespace(str("=")),
+  expression,
+);
+
 export const assignment = apply(
-  seq(
-    tok(TokenKind.ident),
-    surround_with_breaking_whitespace(opt_sc(typeAnnotation)),
-    ends_with_breaking_whitespace(str("=")),
-    expression,
+  alt_sc(
+    seq(
+      apply(
+        tok(TokenKind.ident),
+        (name) => new VariableWriteAstNode({ name }),
+      ),
+      rhs,
+    ),
+    seq(
+      apply(
+        symbolExpression,
+        (expression) => new PropertyWriteAstNode({ expression }),
+      ),
+      rhs,
+    ),
   ),
-  ([name, typeAnnotation, _, expression]) =>
+  ([assignee, [typeAnnotation, expression]]) =>
     new AssignmentAstNode({
-      token: name,
-      typeAnnotation: typeAnnotation,
+      assignee,
+      typeAnnotation,
       child: expression,
     }),
 );
