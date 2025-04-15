@@ -1,4 +1,13 @@
-import { apply, kright, opt_sc, seq, str, tok, Token } from "typescript-parsec";
+import {
+  alt_sc,
+  apply,
+  kright,
+  opt_sc,
+  seq,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -12,12 +21,15 @@ import { typeTable } from "../type.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
+  kouter,
+  starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
-import { Attributes, WithOptionalAttributes } from "../util/type.ts";
+import { WithOptionalAttributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
+import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
 
@@ -149,8 +161,9 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
   typeAnnotation!: Option<Token<TokenKind>>;
   value!: EvaluableAstNode;
 
-  constructor(params: Attributes<PropertyWriteAstNode>) {
+  constructor(params: WithOptionalAttributes<PropertyWriteAstNode>) {
     Object.assign(this, params);
+    this.typeAnnotation = Some(params.typeAnnotation);
   }
 
   analyze(): AnalysisFindings {
@@ -201,17 +214,41 @@ const typeAnnotation = kright(
   tok(TokenKind.ident),
 );
 
-export const assignment = apply(
+const rhs = kouter(
+  opt_sc(typeAnnotation),
+  surround_with_breaking_whitespace(
+    ends_with_breaking_whitespace(str("=")),
+  ),
+  expression,
+);
+
+const variableAssignment = apply(
   seq(
     tok(TokenKind.ident),
-    surround_with_breaking_whitespace(opt_sc(typeAnnotation)),
-    ends_with_breaking_whitespace(str("=")),
-    expression,
+    starts_with_breaking_whitespace(rhs),
   ),
-  ([name, typeAnnotation, _, expression]) =>
+  ([name, [typeAnnotation, expression]]) =>
     new AssignmentAstNode({
       token: name,
       typeAnnotation: typeAnnotation,
       child: expression,
     }),
+);
+
+const propertyWrite = apply(
+  seq(
+    symbolExpression,
+    starts_with_breaking_whitespace(rhs),
+  ),
+  ([assignee, [typeAnnotation, expression]]) =>
+    new PropertyWriteAstNode({
+      assignee: assignee,
+      typeAnnotation: typeAnnotation,
+      value: expression,
+    }),
+);
+
+export const assignment = alt_sc(
+  variableAssignment,
+  propertyWrite,
 );
