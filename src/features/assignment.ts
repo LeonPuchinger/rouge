@@ -1,5 +1,5 @@
 import { apply, kright, opt_sc, seq, str, tok, Token } from "typescript-parsec";
-import { InterpretableAstNode } from "../ast.ts";
+import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -16,7 +16,7 @@ import {
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
-import { WithOptionalAttributes } from "../util/type.ts";
+import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 
 /* AST NODES */
@@ -144,6 +144,56 @@ export class AssignmentAstNode implements InterpretableAstNode {
   }
 }
 
+export class PropertyWriteAstNode implements InterpretableAstNode {
+  assignee!: EvaluableAstNode;
+  typeAnnotation!: Option<Token<TokenKind>>;
+  value!: EvaluableAstNode;
+
+  constructor(params: Attributes<PropertyWriteAstNode>) {
+    Object.assign(this, params);
+  }
+
+  analyze(): AnalysisFindings {
+    const findings = AnalysisFindings.merge(
+      this.assignee.analyze(),
+      this.value.analyze(),
+    );
+    this.typeAnnotation.then((annotation) => {
+      findings.errors.push(AnalysisError({
+        message: "Type annotations are not allowed on property writes.",
+        beginHighlight: DummyAstNode.fromToken(annotation),
+        endHighlight: None(),
+        messageHighlight: "",
+      }));
+    });
+    if (findings.isErroneous()) {
+      return findings;
+    }
+    const valueType = this.value.resolveType();
+    const assigneeType = this.assignee.resolveType();
+    if (!valueType.typeCompatibleWith(assigneeType)) {
+      findings.errors.push(AnalysisError({
+        message:
+          "The type of the value you are trying to assign is incompatible with the type of the field.",
+        beginHighlight: this.assignee,
+        endHighlight: None(),
+        messageHighlight:
+          `Type '${valueType.displayName()}' is incompatible with the type '${assigneeType.displayName()}'.`,
+      }));
+    }
+    return findings;
+  }
+
+  interpret(): void {
+    const currentValue = this.assignee.evaluate();
+    const newValue = this.value.evaluate();
+    currentValue.map((_current) => newValue.value);
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.assignee.tokenRange()[0], this.value.tokenRange()[1]];
+  }
+}
 /* PARSER */
 
 const typeAnnotation = kright(
