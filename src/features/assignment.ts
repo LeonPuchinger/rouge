@@ -1,5 +1,14 @@
-import { apply, kright, opt_sc, seq, str, tok, Token } from "typescript-parsec";
-import { InterpretableAstNode } from "../ast.ts";
+import {
+  alt_sc,
+  apply,
+  kright,
+  opt_sc,
+  seq,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
+import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -12,19 +21,22 @@ import { typeTable } from "../type.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
+  kouter,
+  starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
 import { WithOptionalAttributes } from "../util/type.ts";
-import { expression, ExpressionAstNode } from "./expression.ts";
+import { expression } from "./expression.ts";
+import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
 
 export class AssignmentAstNode implements InterpretableAstNode {
-  token!: Token<TokenKind>;
+  assignee!: Token<TokenKind>;
   typeAnnotation!: Option<Token<TokenKind>>;
-  child!: ExpressionAstNode;
+  value!: EvaluableAstNode;
 
   constructor(params: WithOptionalAttributes<AssignmentAstNode>) {
     Object.assign(this, params);
@@ -32,8 +44,8 @@ export class AssignmentAstNode implements InterpretableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    const findings = this.child.analyze();
-    const ident = this.token.text;
+    const findings = this.value.analyze();
+    const ident = this.assignee.text;
     const existingSymbol = analysisTable.findSymbol(ident);
     const isInitialAssignment = !existingSymbol.hasValue();
     const expressionFindingsErroneous = findings.isErroneous();
@@ -53,7 +65,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
       if (findings.isErroneous()) {
         return findings;
       }
-      const expressionType = this.child.resolveType();
+      const expressionType = this.value.resolveType();
       this.typeAnnotation.then((annotationName) => {
         const resolvedAnnotation = typeTable.findType(annotationName.text)
           .map(([type, _flags]) => type)
@@ -96,7 +108,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
       if (expressionFindingsErroneous) {
         return findings;
       }
-      const expressionType = this.child.resolveType();
+      const expressionType = this.value.resolveType();
       analysisTable.findSymbol(ident)
         .then(([existing, _flags]) => {
           if (existing.valueType.typeCompatibleWith(expressionType)) {
@@ -117,7 +129,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
         });
     }
     if (!findings.isErroneous()) {
-      const expressionType = this.child.resolveType();
+      const expressionType = this.value.resolveType();
       analysisTable.setSymbol(
         ident,
         new StaticSymbol({
@@ -129,21 +141,72 @@ export class AssignmentAstNode implements InterpretableAstNode {
   }
 
   interpret(): void {
-    const ident = this.token.text;
+    const ident = this.assignee.text;
     runtimeTable.setSymbol(
       ident,
       new RuntimeSymbol({
-        node: this.child,
-        value: this.child.evaluate(),
+        node: this.value,
+        value: this.value.evaluate(),
       }),
     );
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.token, this.child.tokenRange()[1]];
+    return [this.assignee, this.value.tokenRange()[1]];
   }
 }
 
+export class PropertyWriteAstNode implements InterpretableAstNode {
+  assignee!: EvaluableAstNode;
+  typeAnnotation!: Option<Token<TokenKind>>;
+  value!: EvaluableAstNode;
+
+  constructor(params: WithOptionalAttributes<PropertyWriteAstNode>) {
+    Object.assign(this, params);
+    this.typeAnnotation = Some(params.typeAnnotation);
+  }
+
+  analyze(): AnalysisFindings {
+    const findings = AnalysisFindings.merge(
+      this.assignee.analyze(),
+      this.value.analyze(),
+    );
+    this.typeAnnotation.then((annotation) => {
+      findings.errors.push(AnalysisError({
+        message: "Type annotations are not allowed on property writes.",
+        beginHighlight: DummyAstNode.fromToken(annotation),
+        endHighlight: None(),
+        messageHighlight: "",
+      }));
+    });
+    if (findings.isErroneous()) {
+      return findings;
+    }
+    const valueType = this.value.resolveType();
+    const assigneeType = this.assignee.resolveType();
+    if (!valueType.typeCompatibleWith(assigneeType)) {
+      findings.errors.push(AnalysisError({
+        message:
+          "The type of the value you are trying to assign is incompatible with the type of the field.",
+        beginHighlight: this.assignee,
+        endHighlight: Some(this.value),
+        messageHighlight:
+          `Type '${valueType.displayName()}' is incompatible with the type '${assigneeType.displayName()}'.`,
+      }));
+    }
+    return findings;
+  }
+
+  interpret(): void {
+    const currentValue = this.assignee.evaluate();
+    const newValue = this.value.evaluate();
+    currentValue.write(newValue.value);
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.assignee.tokenRange()[0], this.value.tokenRange()[1]];
+  }
+}
 /* PARSER */
 
 const typeAnnotation = kright(
@@ -151,17 +214,41 @@ const typeAnnotation = kright(
   tok(TokenKind.ident),
 );
 
-export const assignment = apply(
+const rhs = kouter(
+  opt_sc(typeAnnotation),
+  surround_with_breaking_whitespace(
+    ends_with_breaking_whitespace(str("=")),
+  ),
+  expression,
+);
+
+const variableAssignment = apply(
   seq(
     tok(TokenKind.ident),
-    surround_with_breaking_whitespace(opt_sc(typeAnnotation)),
-    ends_with_breaking_whitespace(str("=")),
-    expression,
+    starts_with_breaking_whitespace(rhs),
   ),
-  ([name, typeAnnotation, _, expression]) =>
+  ([assignee, [typeAnnotation, value]]) =>
     new AssignmentAstNode({
-      token: name,
-      typeAnnotation: typeAnnotation,
-      child: expression,
+      assignee,
+      typeAnnotation,
+      value,
     }),
+);
+
+const propertyWrite = apply(
+  seq(
+    symbolExpression,
+    starts_with_breaking_whitespace(rhs),
+  ),
+  ([assignee, [typeAnnotation, value]]) =>
+    new PropertyWriteAstNode({
+      assignee,
+      typeAnnotation,
+      value,
+    }),
+);
+
+export const assignment = alt_sc(
+  variableAssignment,
+  propertyWrite,
 );
