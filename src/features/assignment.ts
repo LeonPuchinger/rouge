@@ -189,7 +189,7 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
         message:
           "The type of the value you are trying to assign is incompatible with the type of the field.",
         beginHighlight: this.assignee,
-        endHighlight: None(),
+        endHighlight: Some(this.value),
         messageHighlight:
           `Type '${valueType.displayName()}' is incompatible with the type '${assigneeType.displayName()}'.`,
       }));
