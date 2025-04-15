@@ -200,7 +200,7 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
   interpret(): void {
     const currentValue = this.assignee.evaluate();
     const newValue = this.value.evaluate();
-    currentValue.map((_current) => newValue.value);
+    currentValue.write(newValue.value);
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

@@ -39,7 +39,16 @@ type Symbol = RuntimeSymbol | StaticSymbol;
 export interface SymbolValue<T = unknown> {
   valueType: SymbolType;
   value: T;
+
+  /**
+   * Create a new SymbolValue by transforming the current value.
+   */
   map(fn: (value: T) => T): SymbolValue<T>;
+
+  /**
+   * Replace the current value in the SymbolValue with a new value.
+   */
+  write(value: T): void;
 }
 
 export class BooleanSymbolValue implements SymbolValue<boolean> {
@@ -49,6 +58,10 @@ export class BooleanSymbolValue implements SymbolValue<boolean> {
 
   map(fn: (value: boolean) => boolean): SymbolValue<boolean> {
     return new BooleanSymbolValue(fn(this.value));
+  }
+
+  write(value: boolean): void {
+    this.value = value;
   }
 }
 
@@ -60,6 +73,10 @@ export class NumericSymbolValue implements SymbolValue<number> {
   map(fn: (value: number) => number): SymbolValue<number> {
     return new NumericSymbolValue(fn(this.value));
   }
+
+  write(value: number): void {
+    this.value = value;
+  }
 }
 
 export class StringSymbolValue implements SymbolValue<string> {
@@ -69,6 +86,10 @@ export class StringSymbolValue implements SymbolValue<string> {
 
   map(fn: (value: string) => string): SymbolValue<string> {
     return new StringSymbolValue(fn(this.value));
+  }
+
+  write(value: string): void {
+    this.value = value;
   }
 }
 
@@ -98,6 +119,10 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
   ): SymbolValue<StatementsAstNode> {
     return { ...this, value: fn(this.value) };
   }
+
+  write(value: StatementsAstNode): void {
+    this.value = value;
+  }
 }
 
 export class CompositeSymbolValue
@@ -125,6 +150,10 @@ export class CompositeSymbolValue
     fn: (value: Map<string, SymbolValue>) => Map<string, SymbolValue>,
   ): SymbolValue<Map<string, SymbolValue>> {
     return { ...this, value: fn(this.value) };
+  }
+
+  write(value: Map<string, SymbolValue>): void {
+    this.value = value;
   }
 }
 
