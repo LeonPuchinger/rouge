@@ -28,15 +28,15 @@ import {
 import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
 import { WithOptionalAttributes } from "../util/type.ts";
-import { expression, ExpressionAstNode } from "./expression.ts";
+import { expression } from "./expression.ts";
 import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
 
 export class AssignmentAstNode implements InterpretableAstNode {
-  token!: Token<TokenKind>;
+  assignee!: Token<TokenKind>;
   typeAnnotation!: Option<Token<TokenKind>>;
-  child!: ExpressionAstNode;
+  value!: EvaluableAstNode;
 
   constructor(params: WithOptionalAttributes<AssignmentAstNode>) {
     Object.assign(this, params);
@@ -44,8 +44,8 @@ export class AssignmentAstNode implements InterpretableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    const findings = this.child.analyze();
-    const ident = this.token.text;
+    const findings = this.value.analyze();
+    const ident = this.assignee.text;
     const existingSymbol = analysisTable.findSymbol(ident);
     const isInitialAssignment = !existingSymbol.hasValue();
     const expressionFindingsErroneous = findings.isErroneous();
@@ -65,7 +65,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
       if (findings.isErroneous()) {
         return findings;
       }
-      const expressionType = this.child.resolveType();
+      const expressionType = this.value.resolveType();
       this.typeAnnotation.then((annotationName) => {
         const resolvedAnnotation = typeTable.findType(annotationName.text)
           .map(([type, _flags]) => type)
@@ -108,7 +108,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
       if (expressionFindingsErroneous) {
         return findings;
       }
-      const expressionType = this.child.resolveType();
+      const expressionType = this.value.resolveType();
       analysisTable.findSymbol(ident)
         .then(([existing, _flags]) => {
           if (existing.valueType.typeCompatibleWith(expressionType)) {
@@ -129,7 +129,7 @@ export class AssignmentAstNode implements InterpretableAstNode {
         });
     }
     if (!findings.isErroneous()) {
-      const expressionType = this.child.resolveType();
+      const expressionType = this.value.resolveType();
       analysisTable.setSymbol(
         ident,
         new StaticSymbol({
@@ -141,18 +141,18 @@ export class AssignmentAstNode implements InterpretableAstNode {
   }
 
   interpret(): void {
-    const ident = this.token.text;
+    const ident = this.assignee.text;
     runtimeTable.setSymbol(
       ident,
       new RuntimeSymbol({
-        node: this.child,
-        value: this.child.evaluate(),
+        node: this.value,
+        value: this.value.evaluate(),
       }),
     );
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.token, this.child.tokenRange()[1]];
+    return [this.assignee, this.value.tokenRange()[1]];
   }
 }
 
@@ -227,11 +227,11 @@ const variableAssignment = apply(
     tok(TokenKind.ident),
     starts_with_breaking_whitespace(rhs),
   ),
-  ([name, [typeAnnotation, expression]]) =>
+  ([assignee, [typeAnnotation, value]]) =>
     new AssignmentAstNode({
-      token: name,
-      typeAnnotation: typeAnnotation,
-      child: expression,
+      assignee,
+      typeAnnotation,
+      value,
     }),
 );
 
@@ -240,11 +240,11 @@ const propertyWrite = apply(
     symbolExpression,
     starts_with_breaking_whitespace(rhs),
   ),
-  ([assignee, [typeAnnotation, expression]]) =>
+  ([assignee, [typeAnnotation, value]]) =>
     new PropertyWriteAstNode({
-      assignee: assignee,
-      typeAnnotation: typeAnnotation,
-      value: expression,
+      assignee,
+      typeAnnotation,
+      value,
     }),
 );
 
