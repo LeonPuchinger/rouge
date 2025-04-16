@@ -146,7 +146,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       forked, breaking the reference to the original instance.
       Example:
 
-      ```structure Bar<T> {
+      ```type Bar<T> {
         foo: T;
       }```
 

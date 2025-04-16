@@ -17,7 +17,7 @@ import {
   returnStatement,
   statements,
 } from "./parser_declarations.ts";
-import { structureDefinition, StructureDefinitonAstNode } from "./structure.ts";
+import { typeDefinition, TypeDefinitionAstNode } from "./typeDefinition.ts";
 
 /* AST NODES */
 
@@ -25,7 +25,7 @@ export type StatementAstNode =
   | ExpressionAstNode
   | ConditionAstNode
   | ReturnStatementAstNode
-  | StructureDefinitonAstNode
+  | TypeDefinitionAstNode
   | AssignmentAstNode
   | RuntimeStatementAstNode;
 
@@ -70,7 +70,7 @@ const statement = alt_sc(
   assignment,
   condition,
   returnStatement,
-  structureDefinition,
+  typeDefinition,
   expression,
 );
 
