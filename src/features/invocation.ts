@@ -267,6 +267,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     } catch (exception) {
       if (exception instanceof ReturnValueContainer) {
         returnValue = exception.value;
+      } else {
+        throw exception;
       }
     }
     runtimeTable.popScope();
