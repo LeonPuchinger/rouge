@@ -3,6 +3,7 @@ import {
   apply,
   kright,
   opt_sc,
+  Parser,
   seq,
   str,
   tok,
@@ -253,7 +254,7 @@ const propertyWrite = apply(
     }),
 );
 
-export const assignment = alt_sc(
+export const assignment: Parser<TokenKind, AssignmentAstNode> = alt_sc(
   variableAssignment,
   propertyWrite,
 );
