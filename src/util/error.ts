@@ -40,13 +40,16 @@ export class InternalError extends Error implements AppError {
    * @param message A concise summary of the error.
    * @param extendedMessage Additional information about the error.
    */
-  constructor(public message: string, public extendedMessage: string = "") {
+  constructor(
+    public override message: string,
+    public extendedMessage: string = "",
+  ) {
     super(concatLines(message, extendedMessage));
     this.message = message;
     this.extendedMessage = extendedMessage;
   }
 
-  toString(): string {
+  override toString(): string {
     return toMultiline(
       "INTERNAL ERROR: The language/interpreter reached an internal state which does not allow it to continue running.",
       "This error is not the result of the users input but an issue with the language itself and needs to be fixed.",
@@ -74,7 +77,7 @@ export function UnresolvableSymbolTypeError(): InternalError {
  */
 export class RuntimeError extends Error implements AppError {
   include!: [AstNode, AstNode] | [AstNode];
-  message!: string;
+  override message!: string;
   highlight: Option<[AstNode, AstNode] | [AstNode]>;
   highlightMessage: Option<string>;
 
@@ -96,7 +99,7 @@ export class RuntimeError extends Error implements AppError {
     this.highlightMessage = Some(params.highlightMessage);
   }
 
-  toString(): string {
+  override toString(): string {
     return toMultiline(
       this.message,
       createSnippet(
