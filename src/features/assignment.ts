@@ -33,12 +33,12 @@ import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
 
-export class AssignmentAstNode implements InterpretableAstNode {
+export class VariableAssignmentAstNode implements InterpretableAstNode {
   assignee!: Token<TokenKind>;
   typeAnnotation!: Option<Token<TokenKind>>;
   value!: EvaluableAstNode;
 
-  constructor(params: WithOptionalAttributes<AssignmentAstNode>) {
+  constructor(params: WithOptionalAttributes<VariableAssignmentAstNode>) {
     Object.assign(this, params);
     this.typeAnnotation = Some(params.typeAnnotation);
   }
@@ -207,6 +207,11 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     return [this.assignee.tokenRange()[0], this.value.tokenRange()[1]];
   }
 }
+
+export type AssignmentAstNode =
+  | VariableAssignmentAstNode
+  | PropertyWriteAstNode;
+
 /* PARSER */
 
 const typeAnnotation = kright(
@@ -228,7 +233,7 @@ const variableAssignment = apply(
     starts_with_breaking_whitespace(rhs),
   ),
   ([assignee, [typeAnnotation, value]]) =>
-    new AssignmentAstNode({
+    new VariableAssignmentAstNode({
       assignee,
       typeAnnotation,
       value,
