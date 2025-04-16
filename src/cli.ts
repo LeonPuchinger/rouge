@@ -1,6 +1,6 @@
 import * as interpreter from "./main.ts";
 import { VirtualTextFile } from "./streams.ts";
-import { InternalError, RuntimeError } from "./util/error.ts";
+import { InternalError, PanicError, RuntimeError } from "./util/error.ts";
 import { onReadLine } from "./util/file.ts";
 import * as logger from "./util/logger.ts";
 import { Loglevel, updateLoggerConfig } from "./util/logger.ts";
@@ -40,7 +40,11 @@ function run(input_file_path: string) {
     findings.errors.forEach(logger.error);
     findings.warnings.forEach(logger.warning);
   } catch (error) {
-    if (error instanceof InternalError || error instanceof RuntimeError) {
+    if (
+      error instanceof InternalError ||
+      error instanceof RuntimeError ||
+      error instanceof PanicError
+    ) {
       logger.error(error.toString());
     } else if (error instanceof Error) {
       logger.error(`${error.message}\n${error.stack}`);

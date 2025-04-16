@@ -14,8 +14,13 @@ import {
     StringSymbolValue,
     SymbolValue,
 } from "./symbol.ts";
-import { CompositeSymbolType, FunctionSymbolType, PlaceholderSymbolType, SymbolType } from "./type.ts";
-import { InternalError } from "./util/error.ts";
+import {
+    CompositeSymbolType,
+    FunctionSymbolType,
+    PlaceholderSymbolType,
+    SymbolType,
+} from "./type.ts";
+import { InternalError, PanicError } from "./util/error.ts";
 import { nothingInstance, nothingType } from "./util/type.ts";
 
 /**
@@ -209,6 +214,20 @@ export function injectRuntimeBindings(
         (params) => {
             const message = params.get("message")!.value as string;
             stdout?.writeChunk(message);
+        },
+        onlyAnalysis,
+    );
+
+    createRuntimeBinding(
+        "runtime_panic",
+        [{
+            name: "reason",
+            symbolType: new CompositeSymbolType({ id: "String" }),
+        }],
+        nothingType,
+        (params) => {
+            const reason = params.get("reason")!.value as string;
+            throw new PanicError(reason);
         },
         onlyAnalysis,
     );
