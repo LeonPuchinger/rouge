@@ -20,7 +20,7 @@ import {
     PlaceholderSymbolType,
     SymbolType,
 } from "./type.ts";
-import { InternalError } from "./util/error.ts";
+import { InternalError, PanicError } from "./util/error.ts";
 import { nothingInstance, nothingType } from "./util/type.ts";
 
 /**
@@ -227,7 +227,7 @@ export function injectRuntimeBindings(
         nothingType,
         (params) => {
             const reason = params.get("reason")!.value as string;
-            throw new InternalError(reason);
+            throw new PanicError(reason);
         },
         onlyAnalysis,
     );

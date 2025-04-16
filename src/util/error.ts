@@ -119,3 +119,26 @@ export class RuntimeError extends Error implements AppError {
     );
   }
 }
+
+/**
+ * Similar to `RuntimeError`, but features a simpler interface and does not produce a snippet.
+ * A `PanicError` is an unrecoverable error that is the result of the users input.
+ * It represents expected behavior and is not the result of erroneous internal behavior of the interpreter.
+ * Throwing a `PanicError` is supposed to terminate the execution of the interpreter.
+ */
+export class PanicError extends Error implements AppError {
+  constructor(
+    public reason: string,
+    public extendedMessage: string = "",
+  ) {
+    super(reason);
+  }
+
+  override toString(): string {
+    const header =
+      "The execution of the program was halted because an illegal operation was attempted:";
+    return `${header} ${this.reason}${
+      this.extendedMessage ? " " : ""
+    }${this.extendedMessage}`;
+  }
+}
