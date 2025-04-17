@@ -551,18 +551,24 @@ export class CompositeSymbolType implements SymbolType {
       id: this.id,
       fields: new Map(),
       placeholders: new Map(),
+      traits: [],
     });
     memo.set(this, copy);
     const originalPlaceholders: SymbolType[] = Array.from(
       this.placeholders.values(),
     );
     for (const [fieldName, field] of this.fields) {
+      // TODO: correctly fork field type when multiple fields are pointing to the same placeholder
       const forkedField = field.fork(memo);
       if (originalPlaceholders.includes(field)) {
         const forkedPlaceholder = forkedField as PlaceholderSymbolType;
         copy.placeholders.set(forkedPlaceholder.name, forkedPlaceholder);
       }
       copy.fields.set(fieldName, forkedField);
+    }
+    for (const trait of this.traits) {
+      const forkedTrait = trait.fork(memo);
+      copy.traits.push(forkedTrait);
     }
     // fork placeholders that are not utilized by a field
     for (const [name, type] of this.placeholders) {
