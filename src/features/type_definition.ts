@@ -336,11 +336,11 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         if (!implementedType.typeCompatibleWith(fieldType)) {
           findings.errors.push(AnalysisError({
             message:
-              `The type of the field '${fieldName}' is incompatible with the type required by the trait '${fieldType.displayName()}'.`,
+              `The type of the field '${fieldName}' is incompatible with the type required by the trait '${requiredBy.displayName()}'.`,
             beginHighlight: DummyAstNode.fromToken(implementedField.name),
             endHighlight: None(),
             messageHighlight:
-              `The field is expected to be of type '${fieldType.displayName()}' but is of type '${implementedType.displayName()}'.`,
+              `The field is expected to be of type '${fieldType.displayName()}' but instead is of type '${implementedType.displayName()}'.`,
           }));
         }
       }
