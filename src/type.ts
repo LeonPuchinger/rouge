@@ -378,6 +378,7 @@ export class CompositeSymbolType implements SymbolType {
   id!: string;
   fields!: Map<string, SymbolType>;
   placeholders!: Map<string, PlaceholderSymbolType>;
+  implements!: CompositeSymbolType[];
 
   constructor(
     params: {
@@ -385,11 +386,13 @@ export class CompositeSymbolType implements SymbolType {
       fields?: Map<string, SymbolType>;
       defaultValues?: Map<string, SymbolValue>;
       placeholders?: Map<string, PlaceholderSymbolType>;
+      implements?: CompositeSymbolType[];
     },
   ) {
     params.fields ??= new Map();
     params.placeholders ??= new Map();
     params.defaultValues ??= new Map();
+    params.implements ??= [];
     Object.assign(this, params);
   }
 
@@ -405,6 +408,14 @@ export class CompositeSymbolType implements SymbolType {
       memo.set(this, new Set());
     }
     memo.get(this)!.add(other);
+    const compatibleImplementation = this.implements
+      .some((type) => {
+        const memoCopy = new Map<SymbolType, Set<SymbolType>>(memo);
+        return type.typeCompatibleWith(other, mismatchHandler, memoCopy);
+      });
+    if (compatibleImplementation) {
+      return true;
+    }
     if (
       other instanceof PlaceholderSymbolType ||
       other instanceof IgnoreSymbolType
