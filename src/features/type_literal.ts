@@ -132,7 +132,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     return findings;
   }
 
-  resolveType(): SymbolType {
+  resolveType(): CompositeSymbolType {
     const placeholderTypes = this.placeholders
       .map((placeholder) => placeholder.resolveType());
     let resolvedType = typeTable
@@ -192,7 +192,7 @@ const typeLiterals = apply(
   (literals) => literals ?? [],
 );
 
-const compositeTypeName = apply(
+export const compositeTypeLiteral = apply(
   seq(
     tok(TokenKind.ident),
     opt_sc_default<
@@ -218,7 +218,7 @@ const compositeTypeName = apply(
     }),
 );
 
-const functionTypeLiteral = apply(
+export const functionTypeLiteral = apply(
   seq(
     str<TokenKind>("Function"),
     opt_sc_default<
@@ -260,6 +260,6 @@ const functionTypeLiteral = apply(
 typeLiteral.setPattern(
   alt_sc(
     functionTypeLiteral,
-    compositeTypeName,
+    compositeTypeLiteral,
   ),
 );

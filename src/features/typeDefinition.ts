@@ -42,7 +42,12 @@ import {
 import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
-import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
+import {
+  compositeTypeLiteral,
+  CompositeTypeLiteralAstNode,
+  typeLiteral,
+  TypeLiteralAstNode,
+} from "./type_literal.ts";
 
 /* AST NODES */
 
@@ -154,7 +159,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
 export class TypeDefinitionAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
-  traits!: TypeLiteralAstNode[];
+  traits!: CompositeTypeLiteralAstNode[];
   name!: Token<TokenKind>;
   fields!: FieldAstNode[];
   closingBrace!: Token<TokenKind>;
@@ -288,7 +293,9 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     const requiredBehavior = new Map<string, SymbolType>();
     for (const trait of this.traits.toReversed()) {
       const traitType = trait.resolveType();
-      requiredBehavior.set(trait.name.text, traitType);
+      for (const [fieldName, fieldType] of traitType.fields) {
+        requiredBehavior.set(fieldName, fieldType);
+      }
     }
     return requiredBehavior;
   }
@@ -398,6 +405,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         AnalysisFindings.empty(),
       );
     findings = AnalysisFindings.merge(findings, traitFindings);
+    const sharedBehavior = this.requiredBehavior();
     const incompletedefinitionType = this.generateBarebonesSymbolType(
       unproblematicPlaceholderTypes,
     );
@@ -576,7 +584,7 @@ const placeholders = kmid(
 
 const traitTypes = kleft(
   list_sc(
-    typeLiteral,
+    compositeTypeLiteral,
     surround_with_breaking_whitespace(str(",")),
   ),
   opt_sc(str(",")),
