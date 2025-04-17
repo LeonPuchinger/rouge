@@ -154,6 +154,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
 export class TypeDefinitionAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
+  implements!: TypeLiteralAstNode[];
   name!: Token<TokenKind>;
   fields!: FieldAstNode[];
   closingBrace!: Token<TokenKind>;
@@ -549,6 +550,19 @@ const placeholders = kmid(
   str<TokenKind>(">"),
 );
 
+const interfaceTypes = kleft(
+  list_sc(
+    typeLiteral,
+    surround_with_breaking_whitespace(str(",")),
+  ),
+  opt_sc(str(",")),
+);
+
+const interfaces = kright(
+  str<TokenKind>("implements"),
+  starts_with_breaking_whitespace(interfaceTypes),
+);
+
 const typeAnnotation = kright(
   str<TokenKind>(":"),
   starts_with_breaking_whitespace(typeLiteral),
@@ -592,6 +606,7 @@ export const typeDefinition = apply(
     opt_sc(surround_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(tok(TokenKind.ident)),
     opt_sc(surround_with_breaking_whitespace(placeholders)),
+    opt_sc(surround_with_breaking_whitespace(interfaces)),
     seq(
       kright(
         str("{"),
@@ -600,10 +615,20 @@ export const typeDefinition = apply(
       str("}"),
     ),
   ),
-  ([keyword, placeholdersA, typeName, placeholdersB, [fields, closingBrace]]) =>
+  (
+    [
+      keyword,
+      placeholdersA,
+      typeName,
+      placeholdersB,
+      interfaces,
+      [fields, closingBrace],
+    ],
+  ) =>
     new TypeDefinitionAstNode({
       keyword: keyword,
       placeholders: [...(placeholdersA ?? []), ...(placeholdersB ?? [])],
+      implements: interfaces ?? [],
       name: typeName,
       fields: fields ?? [],
       closingBrace: closingBrace,
