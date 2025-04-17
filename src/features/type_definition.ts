@@ -286,18 +286,66 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * type, imposed upon by the traits it implements. When multiple
    * traits share the same field, the type of the field is determined
    * by the trait that is listed first in the list of traits.
+   * The returned object maps the name of the field to the type of
+   * the field, as well as the trait that requires the field.
    * It is assumed that static analysis on the traits has passed
    * without errors before this method is called.
    */
-  requiredBehavior(): Map<string, SymbolType> {
-    const requiredBehavior = new Map<string, SymbolType>();
+  requiredBehavior(): Map<
+    string,
+    { fieldType: SymbolType; requiredBy: SymbolType }
+  > {
+    const requiredBehavior = new Map<
+      string,
+      { fieldType: SymbolType; requiredBy: SymbolType }
+    >();
     for (const trait of this.traits.toReversed()) {
       const traitType = trait.resolveType();
       for (const [fieldName, fieldType] of traitType.fields) {
-        requiredBehavior.set(fieldName, fieldType);
+        requiredBehavior.set(fieldName, {
+          fieldType: fieldType,
+          requiredBy: traitType,
+        });
       }
     }
     return requiredBehavior;
+  }
+
+  /**
+   * Ensures that the given set of fields is
+   * implemented using the correct types.
+   */
+  ensureBehaviorisImplemented(
+    behavior: Map<string, { fieldType: SymbolType; requiredBy: SymbolType }>,
+  ): AnalysisFindings {
+    const findings = AnalysisFindings.empty();
+    for (const [fieldName, { fieldType, requiredBy }] of behavior) {
+      const implementedField = this.fields.find((field) =>
+        field.name.text === fieldName
+      );
+      if (implementedField === undefined) {
+        findings.errors.push(AnalysisError({
+          message:
+            `The field '${fieldName}' is required by the trait '${requiredBy.displayName()}' but is not implemented on '${this.name.text}'.`,
+          beginHighlight: DummyAstNode.fromToken(this.name),
+          endHighlight: None(),
+          messageHighlight: "",
+        }));
+      } else {
+        const implementedType = implementedField.resolveType();
+        if (!implementedType.typeCompatibleWith(fieldType)) {
+          findings.errors.push(AnalysisError({
+            message:
+              `The type of the field '${fieldName}' is incompatible with the type required by the trait '${fieldType.displayName()}'.`,
+            beginHighlight: DummyAstNode.fromToken(implementedField.name),
+            endHighlight: None(),
+            messageHighlight:
+              `The field is expected to be of type '${fieldType.displayName()}' but is of type '${implementedType.displayName()}'.`,
+          }));
+        }
+      }
+    }
+    return findings;
   }
 
   analyze(): AnalysisFindings {
@@ -406,6 +454,10 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       );
     findings = AnalysisFindings.merge(findings, traitFindings);
     const sharedBehavior = this.requiredBehavior();
+    findings = AnalysisFindings.merge(
+      findings,
+      this.ensureBehaviorisImplemented(sharedBehavior),
+    );
     const incompletedefinitionType = this.generateBarebonesSymbolType(
       unproblematicPlaceholderTypes,
     );
