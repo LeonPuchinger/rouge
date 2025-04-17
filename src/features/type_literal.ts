@@ -106,6 +106,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
         beginHighlight: DummyAstNode.fromToken(this.name),
         endHighlight: None(),
         message: `The type called '${this.name.text}' could not be found.`,
+        messageHighlight: "",
       }));
       return findings;
     }

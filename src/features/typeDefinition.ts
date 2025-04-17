@@ -374,6 +374,13 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     ) {
       typeTable.setType(placeholerName, placeholderType);
     }
+    const interfaceFindings = this.implements
+      .map((interfaceType) => interfaceType.analyze())
+      .reduce(
+        (previous, current) => AnalysisFindings.merge(previous, current),
+        AnalysisFindings.empty(),
+      );
+    findings = AnalysisFindings.merge(findings, interfaceFindings);
     const incompletedefinitionType = this.generateBarebonesSymbolType(
       unproblematicPlaceholderTypes,
     );
