@@ -178,9 +178,11 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
   generateBarebonesSymbolType(
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
   ): CompositeSymbolType {
+    const traitTypes = this.traits.map((trait) => trait.resolveType());
     const definitionType = new CompositeSymbolType({
       id: this.name.text,
       placeholders: placeholderTypes,
+      implements: traitTypes,
     });
     for (const field of this.fields) {
       definitionType.fields.set(
