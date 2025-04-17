@@ -182,7 +182,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     const definitionType = new CompositeSymbolType({
       id: this.name.text,
       placeholders: placeholderTypes,
-      implements: traitTypes,
+      traits: traitTypes,
     });
     for (const field of this.fields) {
       definitionType.fields.set(
