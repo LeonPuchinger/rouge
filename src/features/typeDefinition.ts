@@ -276,6 +276,23 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     });
   }
 
+  /**
+   * Generates a map of fields that need to be implemented by this
+   * type, imposed upon by the traits it implements. When multiple
+   * traits share the same field, the type of the field is determined
+   * by the trait that is listed first in the list of traits.
+   * It is assumed that static analysis on the traits has passed
+   * without errors before this method is called.
+   */
+  requiredBehavior(): Map<string, SymbolType> {
+    const requiredBehavior = new Map<string, SymbolType>();
+    for (const trait of this.traits.toReversed()) {
+      const traitType = trait.resolveType();
+      requiredBehavior.set(trait.name.text, traitType);
+    }
+    return requiredBehavior;
+  }
+
   analyze(): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
