@@ -17,7 +17,7 @@ import {
   returnStatement,
   statements,
 } from "./parser_declarations.ts";
-import { typeDefinition, TypeDefinitionAstNode } from "./typeDefinition.ts";
+import { typeDefinition, TypeDefinitionAstNode } from "./type_definition.ts";
 
 /* AST NODES */
 
