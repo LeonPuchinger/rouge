@@ -154,7 +154,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
 export class TypeDefinitionAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
-  implements!: TypeLiteralAstNode[];
+  traits!: TypeLiteralAstNode[];
   name!: Token<TokenKind>;
   fields!: FieldAstNode[];
   closingBrace!: Token<TokenKind>;
@@ -374,13 +374,13 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     ) {
       typeTable.setType(placeholerName, placeholderType);
     }
-    const interfaceFindings = this.implements
-      .map((interfaceType) => interfaceType.analyze())
+    const traitFindings = this.traits
+      .map((trait) => trait.analyze())
       .reduce(
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
-    findings = AnalysisFindings.merge(findings, interfaceFindings);
+    findings = AnalysisFindings.merge(findings, traitFindings);
     const incompletedefinitionType = this.generateBarebonesSymbolType(
       unproblematicPlaceholderTypes,
     );
@@ -557,7 +557,7 @@ const placeholders = kmid(
   str<TokenKind>(">"),
 );
 
-const interfaceTypes = kleft(
+const traitTypes = kleft(
   list_sc(
     typeLiteral,
     surround_with_breaking_whitespace(str(",")),
@@ -565,9 +565,9 @@ const interfaceTypes = kleft(
   opt_sc(str(",")),
 );
 
-const interfaces = kright(
+const traits = kright(
   str<TokenKind>("implements"),
-  starts_with_breaking_whitespace(interfaceTypes),
+  starts_with_breaking_whitespace(traitTypes),
 );
 
 const typeAnnotation = kright(
@@ -613,7 +613,7 @@ export const typeDefinition = apply(
     opt_sc(surround_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(tok(TokenKind.ident)),
     opt_sc(surround_with_breaking_whitespace(placeholders)),
-    opt_sc(surround_with_breaking_whitespace(interfaces)),
+    opt_sc(surround_with_breaking_whitespace(traits)),
     seq(
       kright(
         str("{"),
@@ -628,14 +628,14 @@ export const typeDefinition = apply(
       placeholdersA,
       typeName,
       placeholdersB,
-      interfaces,
+      traits,
       [fields, closingBrace],
     ],
   ) =>
     new TypeDefinitionAstNode({
       keyword: keyword,
       placeholders: [...(placeholdersA ?? []), ...(placeholdersB ?? [])],
-      implements: interfaces ?? [],
+      traits: traits ?? [],
       name: typeName,
       fields: fields ?? [],
       closingBrace: closingBrace,
