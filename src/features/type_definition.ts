@@ -284,10 +284,43 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
   }
 
   /**
+   * Makes sure there are no two traits that require the same field
+   * to be implemented with incompatible types.
+   */
+  ensureNoOverlappingBehavior(): AnalysisFindings {
+    const findings = AnalysisFindings.empty();
+    const existingFields = new Map<
+      string,
+      { fieldType: SymbolType; requiredBy: SymbolType }
+    >();
+    for (const trait of this.traits) {
+      const traitType = trait.resolveType();
+      for (const [fieldName, fieldType] of traitType.fields) {
+        const existingField = existingFields.get(fieldName);
+        if (
+          existingField !== undefined &&
+          !existingField.fieldType.typeCompatibleWith(fieldType)
+        ) {
+          findings.errors.push(AnalysisError({
+            message:
+              `The field '${fieldName}' is required by the traits '${existingField.requiredBy.displayName()}' and '${traitType.displayName()}' with different types.`,
+            beginHighlight: DummyAstNode.fromToken(this.name),
+            endHighlight: None(),
+            messageHighlight:
+              `The field is expected to be of type '${existingField.fieldType.displayName()}' but instead is of type '${fieldType.displayName()}'.`,
+          }));
+        } else {
+          existingFields.set(fieldName, { fieldType, requiredBy: traitType });
+        }
+      }
+    }
+    return findings;
+  }
+
+  /**
    * Generates a map of fields that need to be implemented by this
-   * type, imposed upon by the traits it implements. When multiple
-   * traits share the same field, the type of the field is determined
-   * by the trait that is listed first in the list of traits.
+   * type, imposed upon by the traits it implements. It is assumed
+   * that the traits do not have any overlapping fields with different types.
    * The returned object maps the name of the field to the type of
    * the field, as well as the trait that requires the field.
    * It is assumed that static analysis on the traits has passed
@@ -454,7 +487,12 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
-    findings = AnalysisFindings.merge(findings, traitFindings);
+    const traitConflictFindings = this.ensureNoOverlappingBehavior();
+    findings = AnalysisFindings.merge(
+      findings,
+      traitFindings,
+      traitConflictFindings,
+    );
     const sharedBehavior = this.requiredBehavior();
     findings = AnalysisFindings.merge(
       findings,
