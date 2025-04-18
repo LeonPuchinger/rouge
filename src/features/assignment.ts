@@ -130,7 +130,10 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         });
     }
     if (!findings.isErroneous()) {
-      const expressionType = this.value.resolveType();
+      const expressionType = this.typeAnnotation
+        .flatMap((annotation) => typeTable.findType(annotation.text))
+        .map(([type, _flags]) => type)
+        .unwrapOr(this.value.resolveType());
       analysisTable.setSymbol(
         ident,
         new StaticSymbol({
