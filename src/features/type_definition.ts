@@ -11,7 +11,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { createRuntimeBindingRuntimeSymbol } from "../runtime.ts";
@@ -283,6 +283,12 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     });
   }
 
+  getFieldAstNodeByName(name: string): Option<AstNode> {
+    return Some(
+      this.fields.find((field) => field.name.text === name),
+    );
+  }
+
   /**
    * Makes sure there are no two traits that require the same field
    * to be implemented with incompatible types.
@@ -303,11 +309,13 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         ) {
           findings.errors.push(AnalysisError({
             message:
-              `The field '${fieldName}' is required by the traits '${existingField.requiredBy.displayName()}' and '${traitType.displayName()}' with different types.`,
-            beginHighlight: DummyAstNode.fromToken(this.name),
+              "It is not possible for two traits to require the same field, but with different types.",
+            beginHighlight: this
+              .getFieldAstNodeByName(fieldName)
+              .unwrapOr(DummyAstNode.fromToken(this.name)),
             endHighlight: None(),
             messageHighlight:
-              `The field is expected to be of type '${existingField.fieldType.displayName()}' but instead is of type '${fieldType.displayName()}'.`,
+              `The field '${fieldName}' is required by the traits '${existingField.requiredBy.displayName()}' and '${traitType.displayName()}' with different types.`,
           }));
         } else {
           existingFields.set(fieldName, { fieldType, requiredBy: traitType });
