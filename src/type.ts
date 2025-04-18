@@ -408,14 +408,6 @@ export class CompositeSymbolType implements SymbolType {
       memo.set(this, new Set());
     }
     memo.get(this)!.add(other);
-    const compatibleImplementation = this.traits
-      .some((type) => {
-        const memoCopy = new Map<SymbolType, Set<SymbolType>>(memo);
-        return type.typeCompatibleWith(other, mismatchHandler, memoCopy);
-      });
-    if (compatibleImplementation) {
-      return true;
-    }
     if (
       other instanceof PlaceholderSymbolType ||
       other instanceof IgnoreSymbolType
@@ -428,6 +420,19 @@ export class CompositeSymbolType implements SymbolType {
         found: other.displayName(),
       });
       return false;
+    }
+    const compatibleImplementation = this.traits
+      .some((type) => {
+        const memoCopy = new Map<SymbolType, Set<SymbolType>>(memo);
+        return type.typeCompatibleWith(other, mismatchHandler, memoCopy);
+      }) ||
+      other.traits
+        .some((type) => {
+          const memoCopy = new Map<SymbolType, Set<SymbolType>>(memo);
+          return this.typeCompatibleWith(type, mismatchHandler, memoCopy);
+        });
+    if (compatibleImplementation) {
+      return true;
     }
     if (this.id !== other.id) {
       mismatchHandler?.onIdMismatch?.({
