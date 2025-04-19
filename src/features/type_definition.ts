@@ -290,6 +290,28 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
   }
 
   /**
+   * Make sure none of the traits are placeholders.
+   */
+  ensureTraitsAreBound(): AnalysisFindings {
+    const errors = this.traits
+      .map((node) => [node, node.resolveType()] as [AstNode, SymbolType])
+      .filter(([_node, type]) => !type.bound())
+      .map(([node, _type]) => node)
+      .map((node) => {
+        return AnalysisError({
+          message: "Placeholders cannot be implemented.",
+          beginHighlight: node,
+          endHighlight: None(),
+          messageHighlight: "",
+        });
+      });
+    return new AnalysisFindings({
+      warnings: [],
+      errors: errors,
+    });
+  }
+
+  /**
    * Makes sure there are no two traits that require the same field
    * to be implemented with incompatible types.
    */
@@ -495,17 +517,25 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
-    const traitConflictFindings = this.ensureNoOverlappingBehavior();
+    const traitTypeFindings = this.ensureTraitsAreBound();
+    let traitConflictFindings = AnalysisFindings.empty();
+    const traitAnalysisCanContinue = !traitTypeFindings.isErroneous();
+    if (traitAnalysisCanContinue) {
+      traitConflictFindings = this.ensureNoOverlappingBehavior();
+    }
     findings = AnalysisFindings.merge(
       findings,
       traitFindings,
+      traitTypeFindings,
       traitConflictFindings,
     );
-    const sharedBehavior = this.requiredBehavior();
-    findings = AnalysisFindings.merge(
-      findings,
-      this.ensureBehaviorisImplemented(sharedBehavior),
-    );
+    if (traitAnalysisCanContinue) {
+      const sharedBehavior = this.requiredBehavior();
+      findings = AnalysisFindings.merge(
+        findings,
+        this.ensureBehaviorisImplemented(sharedBehavior),
+      );
+    }
     const incompletedefinitionType = this.generateBarebonesSymbolType(
       unproblematicPlaceholderTypes,
     );
