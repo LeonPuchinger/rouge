@@ -305,48 +305,20 @@ export class FunctionSymbolType implements SymbolType {
     if (memo.has(this)) {
       return memo.get(this) as FunctionSymbolType;
     }
+    const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
+    for (const [name, type] of this.placeholders) {
+      const forkedPlaceholder = type.fork(memo) as PlaceholderSymbolType;
+      forkedPlaceholders.set(name, forkedPlaceholder);
+    }
+    const forkedParameters = this.parameterTypes
+      .map((type) => type.fork(memo));
+    const forkedReturnType = this.returnType.fork(memo);
     const copy = new FunctionSymbolType({
-      parameterTypes: [],
-      returnType: this.returnType,
-      placeholders: new Map(),
+      parameterTypes: forkedParameters,
+      returnType: forkedReturnType,
+      placeholders: forkedPlaceholders,
     });
     memo.set(this, copy);
-    const originalPlaceholders: SymbolType[] = Array.from(
-      this.placeholders.values(),
-    );
-    const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
-    const forkedParameters = this.parameterTypes.map((type) => {
-      const forkedParameter = type.fork(memo);
-      if (originalPlaceholders.includes(type)) {
-        const forkedPlaceholder = forkedParameter as PlaceholderSymbolType;
-        forkedPlaceholders.set(forkedPlaceholder.name, forkedPlaceholder);
-      }
-      return forkedParameter;
-    });
-    const originalReturnType = this.returnType;
-    let forkedReturnType = originalReturnType.fork(memo);
-    const returnTypeIsPlaceholder = originalPlaceholders.includes(
-      originalReturnType,
-    );
-    if (returnTypeIsPlaceholder) {
-      const forkedPlaceholder = forkedReturnType as PlaceholderSymbolType;
-      const placeholderName = forkedPlaceholder.name;
-      if (forkedPlaceholders.has(placeholderName)) {
-        // the placeholder has already been used for a parameter
-        forkedReturnType = forkedPlaceholders.get(placeholderName)!;
-      } else {
-        forkedPlaceholders.set(placeholderName, forkedPlaceholder);
-      }
-    }
-    // fork placeholders that are not utilized by a parameter
-    for (const [name, type] of this.placeholders) {
-      if (!forkedPlaceholders.has(name)) {
-        forkedPlaceholders.set(name, type.fork(memo) as PlaceholderSymbolType);
-      }
-    }
-    copy.parameterTypes = forkedParameters;
-    copy.placeholders = forkedPlaceholders;
-    copy.returnType = forkedReturnType;
     return copy;
   }
 
@@ -697,6 +669,9 @@ export class PlaceholderSymbolType implements SymbolType {
   fork(
     memo = new Map<SymbolType, SymbolType>(),
   ): SymbolType {
+    if (memo.has(this)) {
+      return memo.get(this)!;
+    }
     const forkedReference = this.reference
       .map((reference) => reference.fork(memo));
     const copy = new PlaceholderSymbolType({
@@ -705,6 +680,7 @@ export class PlaceholderSymbolType implements SymbolType {
         ? forkedReference.unwrap()
         : undefined,
     });
+    memo.set(this, copy);
     return copy;
   }
 
