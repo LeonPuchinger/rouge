@@ -300,7 +300,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   resolveType(): SymbolType {
-    const calledType = this.symbol.resolveType();
+    const calledType = this.symbol.resolveType().peel();
     const functionType = (calledType as FunctionSymbolType).fork();
     // bind placeholdes to the supplied types
     for (
