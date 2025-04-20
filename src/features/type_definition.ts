@@ -178,11 +178,10 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
   generateBarebonesSymbolType(
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
   ): CompositeSymbolType {
-    const traitTypes = this.traits.map((trait) => trait.resolveType());
     const definitionType = new CompositeSymbolType({
       id: this.name.text,
       placeholders: placeholderTypes,
-      traits: traitTypes,
+      traits: [],
     });
     for (const field of this.fields) {
       definitionType.fields.set(
@@ -199,6 +198,8 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
   completeBarebonesSymbolType(
     definitionType: CompositeSymbolType,
   ): SymbolType {
+    const traitTypes = this.traits.map((trait) => trait.resolveType());
+    definitionType.traits = traitTypes;
     for (const field of this.fields) {
       const fieldName = field.name.text;
       const existingField = definitionType.fields.get(fieldName);
@@ -517,9 +518,17 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
-    const traitTypeFindings = this.ensureTraitsAreBound();
+    let traitAnalysisCanContinue = !traitFindings.isErroneous();
+    let traitTypeFindings = AnalysisFindings.empty();
+    if (traitAnalysisCanContinue) {
+      traitTypeFindings = AnalysisFindings.merge(
+        traitTypeFindings,
+        this.ensureTraitsAreBound(),
+      );
+    }
     let traitConflictFindings = AnalysisFindings.empty();
-    const traitAnalysisCanContinue = !traitTypeFindings.isErroneous();
+    traitAnalysisCanContinue = traitAnalysisCanContinue &&
+      !traitTypeFindings.isErroneous();
     if (traitAnalysisCanContinue) {
       traitConflictFindings = this.ensureNoOverlappingBehavior();
     }
