@@ -529,13 +529,6 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       traitTypeFindings,
       traitConflictFindings,
     );
-    if (traitAnalysisCanContinue) {
-      const sharedBehavior = this.requiredBehavior();
-      findings = AnalysisFindings.merge(
-        findings,
-        this.ensureBehaviorisImplemented(sharedBehavior),
-      );
-    }
     const incompletedefinitionType = this.generateBarebonesSymbolType(
       unproblematicPlaceholderTypes,
     );
@@ -543,6 +536,13 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       this.name.text,
       incompletedefinitionType,
     );
+    if (traitAnalysisCanContinue) {
+      const sharedBehavior = this.requiredBehavior();
+      findings = AnalysisFindings.merge(
+        findings,
+        this.ensureBehaviorisImplemented(sharedBehavior),
+      );
+    }
     const mockConstructor = this.generateMockConstructorStaticSymbol(
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
