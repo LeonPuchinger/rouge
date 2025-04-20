@@ -524,35 +524,25 @@ export class CompositeSymbolType implements SymbolType {
     if (memo.has(this)) {
       return memo.get(this)!;
     }
+    const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
+    for (const [name, type] of this.placeholders) {
+      const forkedPlaceholder = type.fork(memo) as PlaceholderSymbolType;
+      forkedPlaceholders.set(name, forkedPlaceholder);
+    }
+    const forkedFields = new Map<string, SymbolType>();
+    for (const [name, type] of this.fields) {
+      const forkedType = type.fork(memo);
+      forkedFields.set(name, forkedType);
+    }
+    const forkedTraits = this.traits
+      .map((trait) => trait.fork(memo));
     const copy = new CompositeSymbolType({
       id: this.id,
-      fields: new Map(),
-      placeholders: new Map(),
-      traits: [],
+      fields: forkedFields,
+      placeholders: forkedPlaceholders,
+      traits: forkedTraits,
     });
     memo.set(this, copy);
-    const originalPlaceholders: SymbolType[] = Array.from(
-      this.placeholders.values(),
-    );
-    for (const [fieldName, field] of this.fields) {
-      // TODO: correctly fork field type when multiple fields are pointing to the same placeholder
-      const forkedField = field.fork(memo);
-      if (originalPlaceholders.includes(field)) {
-        const forkedPlaceholder = forkedField as PlaceholderSymbolType;
-        copy.placeholders.set(forkedPlaceholder.name, forkedPlaceholder);
-      }
-      copy.fields.set(fieldName, forkedField);
-    }
-    for (const trait of this.traits) {
-      const forkedTrait = trait.fork(memo);
-      copy.traits.push(forkedTrait);
-    }
-    // fork placeholders that are not utilized by a field
-    for (const [name, type] of this.placeholders) {
-      if (!copy.placeholders.has(name)) {
-        copy.placeholders.set(name, type.fork(memo) as PlaceholderSymbolType);
-      }
-    }
     return copy;
   }
 
