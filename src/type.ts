@@ -585,6 +585,12 @@ export class PlaceholderSymbolType implements SymbolType {
   ): boolean {
     const resolvedA = this.peel();
     const resolvedB = other.peel();
+    if (
+      resolvedA instanceof IgnoreSymbolType ||
+      resolvedB instanceof IgnoreSymbolType
+    ) {
+      return true;
+    }
     const bothBound = resolvedA.bound() && resolvedB.bound();
     if (bothBound) {
       return resolvedA.typeCompatibleWith(resolvedB, mismatchHandler, memo);
