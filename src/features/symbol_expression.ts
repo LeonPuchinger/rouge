@@ -61,6 +61,10 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
     return analysisTable
       .findSymbol(this.identifierToken.text)
       .map(([symbol, _flags]) => symbol.valueType)
+      .or(
+        runtimeTable.findSymbol(this.identifierToken.text)
+          .map(([symbol, _flags]) => symbol.value.valueType),
+      )
       .unwrapOrThrow(
         new InternalError(
           "Unable to resolve a symbol in the symbol table.",
