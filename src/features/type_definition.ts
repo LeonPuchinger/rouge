@@ -176,12 +176,13 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * This is useful for working with self-referential types.
    */
   generateBarebonesSymbolType(
+    traitTypes: CompositeSymbolType[],
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
   ): CompositeSymbolType {
     const definitionType = new CompositeSymbolType({
       id: this.name.text,
       placeholders: placeholderTypes,
-      traits: [],
+      traits: traitTypes,
     });
     for (const field of this.fields) {
       definitionType.fields.set(
@@ -198,8 +199,6 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
   completeBarebonesSymbolType(
     definitionType: CompositeSymbolType,
   ): SymbolType {
-    const traitTypes = this.traits.map((trait) => trait.resolveType());
-    definitionType.traits = traitTypes;
     for (const field of this.fields) {
       const fieldName = field.name.text;
       const existingField = definitionType.fields.get(fieldName);
@@ -218,9 +217,13 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * Generates a composite symbol type of the type definition with all its fields.
    */
   generateSymbolType(
+    traitTypes: CompositeSymbolType[],
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
   ): SymbolType {
-    const definitionType = this.generateBarebonesSymbolType(placeholderTypes);
+    const definitionType = this.generateBarebonesSymbolType(
+      traitTypes,
+      placeholderTypes,
+    );
     typeTable.pushScope();
     typeTable.setType(
       this.name.text,
@@ -293,8 +296,10 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
   /**
    * Make sure none of the traits are placeholders.
    */
-  ensureTraitsAreBound(): AnalysisFindings {
-    const errors = this.traits
+  ensureTraitsAreBound(
+    unproblematicTraits: CompositeTypeLiteralAstNode[],
+  ): AnalysisFindings {
+    const errors = unproblematicTraits
       .map((node) => [node, node.resolveType()] as [AstNode, SymbolType])
       .filter(([_node, type]) => !type.bound())
       .map(([node, _type]) => node)
@@ -316,13 +321,15 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * Makes sure there are no two traits that require the same field
    * to be implemented with incompatible types.
    */
-  ensureNoOverlappingBehavior(): AnalysisFindings {
+  ensureNoOverlappingBehavior(
+    unproblematicTraits: CompositeTypeLiteralAstNode[],
+  ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const existingFields = new Map<
       string,
       { fieldType: SymbolType; requiredBy: SymbolType }
     >();
-    for (const trait of this.traits) {
+    for (const trait of unproblematicTraits) {
       const traitType = trait.resolveType();
       for (const [fieldName, fieldType] of traitType.fields) {
         const existingField = existingFields.get(fieldName);
@@ -357,7 +364,9 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * It is assumed that static analysis on the traits has passed
    * without errors before this method is called.
    */
-  requiredBehavior(): Map<
+  requiredBehavior(
+    unproblematicTraits: CompositeTypeLiteralAstNode[],
+  ): Map<
     string,
     { fieldType: SymbolType; requiredBy: SymbolType }
   > {
@@ -365,7 +374,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       string,
       { fieldType: SymbolType; requiredBy: SymbolType }
     >();
-    for (const trait of this.traits.toReversed()) {
+    for (const trait of unproblematicTraits.toReversed()) {
       const traitType = trait.resolveType();
       for (const [fieldName, fieldType] of traitType.fields) {
         requiredBehavior.set(fieldName, {
@@ -512,46 +521,51 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     ) {
       typeTable.setType(placeholerName, placeholderType);
     }
-    const traitFindings = this.traits
-      .map((trait) => trait.analyze())
+    const analyzedTraits = this.traits
+      .map((trait) =>
+        [trait, trait.analyze()] as [
+          CompositeTypeLiteralAstNode,
+          AnalysisFindings,
+        ]
+      );
+    const unproblematicTraits = analyzedTraits
+      .filter(([_trait, findings]) => !findings.isErroneous())
+      .map(([trait, _findings]) => trait);
+    const traitFindings = analyzedTraits
+      .map(([_trait, findings]) => findings)
       .reduce(
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
-    let traitAnalysisCanContinue = !traitFindings.isErroneous();
-    let traitTypeFindings = AnalysisFindings.empty();
-    if (traitAnalysisCanContinue) {
-      traitTypeFindings = AnalysisFindings.merge(
-        traitTypeFindings,
-        this.ensureTraitsAreBound(),
-      );
-    }
-    let traitConflictFindings = AnalysisFindings.empty();
-    traitAnalysisCanContinue = traitAnalysisCanContinue &&
-      !traitTypeFindings.isErroneous();
-    if (traitAnalysisCanContinue) {
-      traitConflictFindings = this.ensureNoOverlappingBehavior();
-    }
+    const traitTypeFindings = this.ensureTraitsAreBound(
+      unproblematicTraits,
+    );
+    const traitConflictFindings = this.ensureNoOverlappingBehavior(
+      unproblematicTraits,
+    );
     findings = AnalysisFindings.merge(
       findings,
       traitFindings,
       traitTypeFindings,
       traitConflictFindings,
     );
+    const unproblematicTraitsTypes = unproblematicTraits
+      .map((trait) => trait.resolveType());
     const incompletedefinitionType = this.generateBarebonesSymbolType(
+      unproblematicTraitsTypes,
       unproblematicPlaceholderTypes,
     );
     typeTable.setType(
       this.name.text,
       incompletedefinitionType,
     );
-    if (traitAnalysisCanContinue) {
-      const sharedBehavior = this.requiredBehavior();
-      findings = AnalysisFindings.merge(
-        findings,
-        this.ensureBehaviorisImplemented(sharedBehavior),
-      );
-    }
+    const sharedBehavior = this.requiredBehavior(
+      unproblematicTraits,
+    );
+    findings = AnalysisFindings.merge(
+      findings,
+      this.ensureBehaviorisImplemented(sharedBehavior),
+    );
     const mockConstructor = this.generateMockConstructorStaticSymbol(
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
@@ -690,7 +704,12 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     for (const [placeholderName, placeholderType] of placeholderTypes) {
       typeTable.setType(placeholderName, placeholderType);
     }
-    const definitionType = this.generateSymbolType(placeholderTypes);
+    const traitTypes = this.traits
+      .map((trait) => trait.resolveType());
+    const definitionType = this.generateSymbolType(
+      traitTypes,
+      placeholderTypes,
+    );
     typeTable.popScope();
     typeTable.setType(
       this.name.text,
