@@ -398,7 +398,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
         message: message,
         beginHighlight: DummyAstNode.fromToken(this.keyword),
         endHighlight: this.expression,
-        messageHighlight: messageHighlight,
+        messageHighlight: messageHighlight ?? "",
       });
     const returnValueRequired = !supposedReturnType.typeCompatibleWith(
       nothingType,
