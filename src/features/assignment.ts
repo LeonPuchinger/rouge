@@ -138,11 +138,16 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
 
   interpret(): void {
     const ident = this.assignee.text;
+    const type = this.typeAnnotation
+      .map((annotation) => annotation.resolveType())
+      .unwrapOr(this.value.resolveType());
+    const value = this.value.evaluate();
+    value.valueType = type;
     runtimeTable.setSymbol(
       ident,
       new RuntimeSymbol({
         node: this.value,
-        value: this.value.evaluate(),
+        value: value,
       }),
     );
   }
