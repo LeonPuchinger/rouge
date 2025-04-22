@@ -51,6 +51,7 @@ import {
   referenceExpression,
   ReferenceExpressionAstNode,
 } from "./symbol_expression.ts";
+import { memoize } from "../util/memoize.ts";
 
 /* AST NODES */
 
@@ -71,7 +72,11 @@ export class InvocationAstNode implements EvaluableAstNode {
    * Determines whether the called expression is a method or not.
    * Can only safely be called after static analysis has successfully
    * been performed on the member (symbol) AST nodes.
+   * This method is memoized so it does not have to be re-evaluated
+   * during interpretation when static analysis has already checked
+   * whether the invoked expression is a method or not.
    */
+  @memoize
   isMethod(): boolean {
     const isMember = this.parent.hasValue();
     if (!isMember) {
