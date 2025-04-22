@@ -278,10 +278,6 @@ export class InvocationAstNode implements EvaluableAstNode {
   evaluate(): SymbolValue<unknown> {
     const calledSymbol = this.symbol.evaluate();
     const partOfStdlib = this.symbol.resolveFlags().get("stdlib") ?? false;
-    if (partOfStdlib) {
-      // grant the invocation access to the runtime
-      runtimeTable.ignoreRuntimeBindings = false;
-    }
     const defaultParameters = new Map<string, SymbolValue>();
     if (this.isMethod()) {
       const parentInstance = this.parent
@@ -291,11 +287,16 @@ export class InvocationAstNode implements EvaluableAstNode {
         (calledSymbol as FunctionSymbolValue).parameterNames[0];
       defaultParameters.set(thisParameterName, parentInstance);
     }
+    const savedIgnoreRuntimeBindings = runtimeTable.ignoreRuntimeBindings;
+    if (partOfStdlib) {
+      // grant the invocation access to the runtime
+      runtimeTable.ignoreRuntimeBindings = false;
+    }
     const result = this.evaluateFunction(
       calledSymbol as FunctionSymbolValue,
       defaultParameters,
     );
-    runtimeTable.ignoreRuntimeBindings = true;
+    runtimeTable.ignoreRuntimeBindings = savedIgnoreRuntimeBindings;
     return result;
   }
 
