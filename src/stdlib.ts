@@ -18,6 +18,33 @@ const stdlib = `
     reverse = function(message: String) -> String {
         return runtime_reverse(message)
     }
+
+    type COption<T> {
+        has_value: Function() -> Boolean,
+        get_value: Function(COption<T>) -> T,
+    }
+
+    type CNothing<T> implements COption<T> {
+        has_value = function() -> Boolean {
+            return false
+        }
+
+        get_value = function(this: CNothing<T>) -> T {
+            panic("get_value called on a Nothing object")
+        }
+    }
+
+    type CSomething<T> implements COption<T> {
+        value: T
+
+        has_value = function() -> Boolean {
+            return true
+        }
+
+        get_value = function(this: CSomething<T>) -> T {
+            return this.value
+        }
+    }
 `;
 
 /**
