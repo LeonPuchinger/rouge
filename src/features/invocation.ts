@@ -51,6 +51,7 @@ import {
   referenceExpression,
   ReferenceExpressionAstNode,
 } from "./symbol_expression.ts";
+import { memoize } from "../util/memoize.ts";
 
 /* AST NODES */
 
@@ -71,7 +72,11 @@ export class InvocationAstNode implements EvaluableAstNode {
    * Determines whether the called expression is a method or not.
    * Can only safely be called after static analysis has successfully
    * been performed on the member (symbol) AST nodes.
+   * This method is memoized so it does not have to be re-evaluated
+   * during interpretation when static analysis has already checked
+   * whether the invoked expression is a method or not.
    */
+  @memoize
   isMethod(): boolean {
     const isMember = this.parent.hasValue();
     if (!isMember) {
@@ -278,10 +283,6 @@ export class InvocationAstNode implements EvaluableAstNode {
   evaluate(): SymbolValue<unknown> {
     const calledSymbol = this.symbol.evaluate();
     const partOfStdlib = this.symbol.resolveFlags().get("stdlib") ?? false;
-    if (partOfStdlib) {
-      // grant the invocation access to the runtime
-      runtimeTable.ignoreRuntimeBindings = false;
-    }
     const defaultParameters = new Map<string, SymbolValue>();
     if (this.isMethod()) {
       const parentInstance = this.parent
@@ -291,16 +292,21 @@ export class InvocationAstNode implements EvaluableAstNode {
         (calledSymbol as FunctionSymbolValue).parameterNames[0];
       defaultParameters.set(thisParameterName, parentInstance);
     }
+    const savedIgnoreRuntimeBindings = runtimeTable.ignoreRuntimeBindings;
+    if (partOfStdlib) {
+      // grant the invocation access to the runtime
+      runtimeTable.ignoreRuntimeBindings = false;
+    }
     const result = this.evaluateFunction(
       calledSymbol as FunctionSymbolValue,
       defaultParameters,
     );
-    runtimeTable.ignoreRuntimeBindings = true;
+    runtimeTable.ignoreRuntimeBindings = savedIgnoreRuntimeBindings;
     return result;
   }
 
   resolveType(): SymbolType {
-    const calledType = this.symbol.resolveType();
+    const calledType = this.symbol.resolveType().peel();
     const functionType = (calledType as FunctionSymbolType).fork();
     // bind placeholdes to the supplied types
     for (

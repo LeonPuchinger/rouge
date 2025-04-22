@@ -18,7 +18,6 @@ import {
   runtimeTable,
   StaticSymbol,
 } from "../symbol.ts";
-import { typeTable } from "../type.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
@@ -26,17 +25,17 @@ import {
   starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
-import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
 import { WithOptionalAttributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
 import { symbolExpression } from "./symbol_expression.ts";
+import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */
 
 export class VariableAssignmentAstNode implements InterpretableAstNode {
   assignee!: Token<TokenKind>;
-  typeAnnotation!: Option<Token<TokenKind>>;
+  typeAnnotation!: Option<TypeLiteralAstNode>;
   value!: EvaluableAstNode;
 
   constructor(params: WithOptionalAttributes<VariableAssignmentAstNode>) {
@@ -45,43 +44,37 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
   }
 
   analyze(): AnalysisFindings {
-    const findings = this.value.analyze();
+    let findings = this.value.analyze();
     const ident = this.assignee.text;
     const existingSymbol = analysisTable.findSymbol(ident);
     const isInitialAssignment = !existingSymbol.hasValue();
     const expressionFindingsErroneous = findings.isErroneous();
     if (isInitialAssignment) {
-      this.typeAnnotation.then((annotationName) => {
-        if (!typeTable.typeResolvable(annotationName.text)) {
-          findings.errors.push(AnalysisError({
-            message:
-              "The type that was explicitly annotated in the assignment could not be found.",
-            beginHighlight: DummyAstNode.fromToken(annotationName),
-            endHighlight: None(),
-            messageHighlight:
-              `Type "${annotationName.text}" could not be found.`,
-          }));
-        }
-      });
+      const typeAnnotationFindings = this.typeAnnotation
+        .map((annotation) => annotation.analyze())
+        .unwrapOr(AnalysisFindings.empty());
+      findings = AnalysisFindings.merge(
+        findings,
+        typeAnnotationFindings,
+      );
       if (findings.isErroneous()) {
         return findings;
       }
       const expressionType = this.value.resolveType();
-      this.typeAnnotation.then((annotationName) => {
-        const resolvedAnnotation = typeTable.findType(annotationName.text)
-          .map(([type, _flags]) => type)
-          .unwrap();
-        if (!resolvedAnnotation.typeCompatibleWith(expressionType)) {
-          findings.errors.push(AnalysisError({
-            message:
-              "The type that was explicitly annotated in the assignment is not compatible with the type of the assigned value.",
-            beginHighlight: DummyAstNode.fromToken(annotationName),
-            endHighlight: None(),
-            messageHighlight:
-              `Type '${resolvedAnnotation.displayName()}' is incompatible with the type '${expressionType.displayName()}' on the right side of the assignment.`,
-          }));
-        }
-      });
+      this.typeAnnotation
+        .map((annotation) => annotation.resolveType())
+        .then((annotation) => {
+          if (!annotation.typeCompatibleWith(expressionType)) {
+            findings.errors.push(AnalysisError({
+              message:
+                "The type of the assigned value is not compatible with the type that was explicitly annotated in the assignment.",
+              beginHighlight: this.value,
+              endHighlight: None(),
+              messageHighlight:
+                `Type '${expressionType.displayName()}' is incompatible with the type '${annotation.displayName()}'.`,
+            }));
+          }
+        });
     } else {
       const readonly = existingSymbol
         .map(([_symbol, flags]) => flags.readonly)
@@ -98,11 +91,11 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         );
         return findings;
       }
-      this.typeAnnotation.then((annotationName) => {
+      this.typeAnnotation.then((annotation) => {
         findings.errors.push(AnalysisError({
           message:
             "Type annotations on assignments are only allowed when the variable is first created.",
-          beginHighlight: DummyAstNode.fromToken(annotationName),
+          beginHighlight: annotation,
           endHighlight: None(),
         }));
       });
@@ -130,7 +123,9 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         });
     }
     if (!findings.isErroneous()) {
-      const expressionType = this.value.resolveType();
+      const expressionType = this.typeAnnotation
+        .map((annotation) => annotation.resolveType())
+        .unwrapOr(this.value.resolveType());
       analysisTable.setSymbol(
         ident,
         new StaticSymbol({
@@ -143,11 +138,16 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
 
   interpret(): void {
     const ident = this.assignee.text;
+    const type = this.typeAnnotation
+      .map((annotation) => annotation.resolveType())
+      .unwrapOr(this.value.resolveType());
+    const value = this.value.evaluate();
+    value.valueType = type;
     runtimeTable.setSymbol(
       ident,
       new RuntimeSymbol({
         node: this.value,
-        value: this.value.evaluate(),
+        value: value,
       }),
     );
   }
@@ -159,7 +159,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
 
 export class PropertyWriteAstNode implements InterpretableAstNode {
   assignee!: EvaluableAstNode;
-  typeAnnotation!: Option<Token<TokenKind>>;
+  typeAnnotation!: Option<TypeLiteralAstNode>;
   value!: EvaluableAstNode;
 
   constructor(params: WithOptionalAttributes<PropertyWriteAstNode>) {
@@ -175,7 +175,7 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     this.typeAnnotation.then((annotation) => {
       findings.errors.push(AnalysisError({
         message: "Type annotations are not allowed on property writes.",
-        beginHighlight: DummyAstNode.fromToken(annotation),
+        beginHighlight: annotation,
         endHighlight: None(),
         messageHighlight: "",
       }));
@@ -217,7 +217,7 @@ export type AssignmentAstNode =
 
 const typeAnnotation = kright(
   ends_with_breaking_whitespace(str<TokenKind>(":")),
-  tok(TokenKind.ident),
+  typeLiteral,
 );
 
 const rhs = kouter(

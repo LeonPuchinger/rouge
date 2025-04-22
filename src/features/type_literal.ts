@@ -106,6 +106,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
         beginHighlight: DummyAstNode.fromToken(this.name),
         endHighlight: None(),
         message: `The type called '${this.name.text}' could not be found.`,
+        messageHighlight: "",
       }));
       return findings;
     }
@@ -131,7 +132,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     return findings;
   }
 
-  resolveType(): SymbolType {
+  resolveType(): CompositeSymbolType {
     const placeholderTypes = this.placeholders
       .map((placeholder) => placeholder.resolveType());
     let resolvedType = typeTable
@@ -146,7 +147,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       forked, breaking the reference to the original instance.
       Example:
 
-      ```structure Bar<T> {
+      ```type Bar<T> {
         foo: T;
       }```
 
@@ -191,7 +192,7 @@ const typeLiterals = apply(
   (literals) => literals ?? [],
 );
 
-const compositeTypeName = apply(
+export const compositeTypeLiteral = apply(
   seq(
     tok(TokenKind.ident),
     opt_sc_default<
@@ -217,7 +218,7 @@ const compositeTypeName = apply(
     }),
 );
 
-const functionTypeLiteral = apply(
+export const functionTypeLiteral = apply(
   seq(
     str<TokenKind>("Function"),
     opt_sc_default<
@@ -259,6 +260,6 @@ const functionTypeLiteral = apply(
 typeLiteral.setPattern(
   alt_sc(
     functionTypeLiteral,
-    compositeTypeName,
+    compositeTypeLiteral,
   ),
 );

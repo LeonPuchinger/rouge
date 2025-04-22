@@ -11,7 +11,7 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { createRuntimeBindingRuntimeSymbol } from "../runtime.ts";
@@ -42,7 +42,12 @@ import {
 import { DummyAstNode } from "../util/snippet.ts";
 import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
-import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
+import {
+  compositeTypeLiteral,
+  CompositeTypeLiteralAstNode,
+  typeLiteral,
+  TypeLiteralAstNode,
+} from "./type_literal.ts";
 
 /* AST NODES */
 
@@ -69,7 +74,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
       .map((node) => node.resolveType())
       .unwrapOrThrow(
         new InternalError(
-          "A field for a structure has to have at least a type annotation or a default value.",
+          "A field has to have at least a type annotation or a default value.",
           "This should have been caught by static analysis.",
         ),
       );
@@ -151,71 +156,81 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
   }
 }
 
-export class StructureDefinitonAstNode implements InterpretableAstNode {
+export class TypeDefinitionAstNode implements InterpretableAstNode {
   keyword!: Token<TokenKind>;
   placeholders!: Token<TokenKind>[];
+  traits!: CompositeTypeLiteralAstNode[];
   name!: Token<TokenKind>;
   fields!: FieldAstNode[];
   closingBrace!: Token<TokenKind>;
 
-  constructor(params: Attributes<StructureDefinitonAstNode>) {
+  constructor(params: Attributes<TypeDefinitionAstNode>) {
     Object.assign(this, params);
   }
 
   /**
-   * Generates a composite symbol type of the struct with placeholders and fields.
+   * Generates a composite symbol type of the type definition with placeholders and fields.
    * However, the fields don't have their correct type yet.
    * The resulting type can be completed by calling `completeBarebonesSymbolType`,
    * which will add the missing field types.
    * This is useful for working with self-referential types.
    */
   generateBarebonesSymbolType(
+    traitTypes: CompositeSymbolType[],
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
   ): CompositeSymbolType {
-    const structureType = new CompositeSymbolType({
+    const definitionType = new CompositeSymbolType({
       id: this.name.text,
       placeholders: placeholderTypes,
+      traits: traitTypes,
     });
     for (const field of this.fields) {
-      structureType.fields.set(field.name.text, field.resolvePreliminaryType());
+      definitionType.fields.set(
+        field.name.text,
+        field.resolvePreliminaryType(),
+      );
     }
-    return structureType;
+    return definitionType;
   }
 
   /**
-   * Adds the fields of the struct to a barebones symbol type.
+   * Adds the fields of the type definition to a barebones symbol type.
    */
   completeBarebonesSymbolType(
-    structureType: CompositeSymbolType,
+    definitionType: CompositeSymbolType,
   ): SymbolType {
     for (const field of this.fields) {
       const fieldName = field.name.text;
-      const existingField = structureType.fields.get(fieldName);
+      const existingField = definitionType.fields.get(fieldName);
       if (existingField === undefined) {
         throw new InternalError(
-          `The field "${fieldName}" was not found in the structure "${this.name.text}".`,
+          `The field "${fieldName}" was not found in the type "${this.name.text}".`,
         );
       }
       const fieldType = field.resolveType();
       existingField.bind(fieldType);
     }
-    return structureType;
+    return definitionType;
   }
 
   /**
-   * Generates a composite symbol type of the struct with all its fields.
+   * Generates a composite symbol type of the type definition with all its fields.
    */
   generateSymbolType(
+    traitTypes: CompositeSymbolType[],
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
   ): SymbolType {
-    const structureType = this.generateBarebonesSymbolType(placeholderTypes);
+    const definitionType = this.generateBarebonesSymbolType(
+      traitTypes,
+      placeholderTypes,
+    );
     typeTable.pushScope();
     typeTable.setType(
       this.name.text,
-      structureType,
+      definitionType,
     );
     const completeType = this.completeBarebonesSymbolType(
-      structureType,
+      definitionType,
     );
     typeTable.popScope();
     return completeType;
@@ -228,7 +243,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    * parameters are located at the end of the list of fields.
    */
   generateConstructorStaticSymbol(
-    structureType: SymbolType,
+    definitionType: SymbolType,
     placeholders: Map<string, PlaceholderSymbolType>,
   ): StaticSymbol {
     const nonDefaultParameters: SymbolType[] = [];
@@ -240,7 +255,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     return new StaticSymbol({
       valueType: new FunctionSymbolType({
         parameterTypes: nonDefaultParameters,
-        returnType: structureType,
+        returnType: definitionType,
         placeholders: placeholders,
       }),
     });
@@ -254,7 +269,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    * for type compatibility.
    */
   generateMockConstructorStaticSymbol(
-    structureType: SymbolType,
+    definitionType: SymbolType,
     placeholders: Map<string, PlaceholderSymbolType>,
   ): StaticSymbol {
     const nonDefaultParameters: SymbolType[] = [];
@@ -266,10 +281,146 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     return new StaticSymbol({
       valueType: new FunctionSymbolType({
         parameterTypes: nonDefaultParameters,
-        returnType: structureType,
+        returnType: definitionType,
         placeholders: placeholders,
       }),
     });
+  }
+
+  getFieldAstNodeByName(name: string): Option<AstNode> {
+    return Some(
+      this.fields.find((field) => field.name.text === name),
+    );
+  }
+
+  /**
+   * Make sure none of the traits are placeholders.
+   */
+  ensureTraitsAreBound(
+    unproblematicTraits: CompositeTypeLiteralAstNode[],
+  ): AnalysisFindings {
+    const errors = unproblematicTraits
+      .map((node) => [node, node.resolveType()] as [AstNode, SymbolType])
+      .filter(([_node, type]) => !type.bound())
+      .map(([node, _type]) => node)
+      .map((node) => {
+        return AnalysisError({
+          message: "Placeholders cannot be implemented.",
+          beginHighlight: node,
+          endHighlight: None(),
+          messageHighlight: "",
+        });
+      });
+    return new AnalysisFindings({
+      warnings: [],
+      errors: errors,
+    });
+  }
+
+  /**
+   * Makes sure there are no two traits that require the same field
+   * to be implemented with incompatible types.
+   */
+  ensureNoOverlappingBehavior(
+    unproblematicTraits: CompositeTypeLiteralAstNode[],
+  ): AnalysisFindings {
+    const findings = AnalysisFindings.empty();
+    const existingFields = new Map<
+      string,
+      { fieldType: SymbolType; requiredBy: SymbolType }
+    >();
+    for (const trait of unproblematicTraits) {
+      const traitType = trait.resolveType();
+      for (const [fieldName, fieldType] of traitType.fields) {
+        const existingField = existingFields.get(fieldName);
+        if (
+          existingField !== undefined &&
+          !existingField.fieldType.typeCompatibleWith(fieldType)
+        ) {
+          findings.errors.push(AnalysisError({
+            message:
+              "It is not possible for two traits to require the same field, but with different types.",
+            beginHighlight: this
+              .getFieldAstNodeByName(fieldName)
+              .unwrapOr(DummyAstNode.fromToken(this.name)),
+            endHighlight: None(),
+            messageHighlight:
+              `The field '${fieldName}' is required by the traits '${existingField.requiredBy.displayName()}' and '${traitType.displayName()}' with different types.`,
+          }));
+        } else {
+          existingFields.set(fieldName, { fieldType, requiredBy: traitType });
+        }
+      }
+    }
+    return findings;
+  }
+
+  /**
+   * Generates a map of fields that need to be implemented by this
+   * type, imposed upon by the traits it implements. It is assumed
+   * that the traits do not have any overlapping fields with different types.
+   * The returned object maps the name of the field to the type of
+   * the field, as well as the trait that requires the field.
+   * It is assumed that static analysis on the traits has passed
+   * without errors before this method is called.
+   */
+  requiredBehavior(
+    unproblematicTraits: CompositeTypeLiteralAstNode[],
+  ): Map<
+    string,
+    { fieldType: SymbolType; requiredBy: SymbolType }
+  > {
+    const requiredBehavior = new Map<
+      string,
+      { fieldType: SymbolType; requiredBy: SymbolType }
+    >();
+    for (const trait of unproblematicTraits.toReversed()) {
+      const traitType = trait.resolveType();
+      for (const [fieldName, fieldType] of traitType.fields) {
+        requiredBehavior.set(fieldName, {
+          fieldType: fieldType,
+          requiredBy: traitType,
+        });
+      }
+    }
+    return requiredBehavior;
+  }
+
+  /**
+   * Ensures that the given set of fields is
+   * implemented using the correct types.
+   */
+  ensureBehaviorisImplemented(
+    behavior: Map<string, { fieldType: SymbolType; requiredBy: SymbolType }>,
+  ): AnalysisFindings {
+    const findings = AnalysisFindings.empty();
+    for (const [fieldName, { fieldType, requiredBy }] of behavior) {
+      const implementedField = this.fields.find((field) =>
+        field.name.text === fieldName
+      );
+      if (implementedField === undefined) {
+        findings.errors.push(AnalysisError({
+          message:
+            `The field '${fieldName}' is required by the trait '${requiredBy.displayName()}' but is not implemented on '${this.name.text}'.`,
+          beginHighlight: DummyAstNode.fromToken(this.name),
+          endHighlight: None(),
+          messageHighlight: "",
+        }));
+      } else {
+        const implementedType = implementedField.resolveType();
+        if (!implementedType.typeCompatibleWith(fieldType)) {
+          findings.errors.push(AnalysisError({
+            message:
+              `The type of the field '${fieldName}' is incompatible with the type required by the trait '${requiredBy.displayName()}'.`,
+            beginHighlight: DummyAstNode.fromToken(implementedField.name),
+            endHighlight: None(),
+            messageHighlight:
+              `The field is expected to be of type '${fieldType.displayName()}' but instead is of type '${implementedType.displayName()}'.`,
+          }));
+        }
+      }
+    }
+    return findings;
   }
 
   analyze(): AnalysisFindings {
@@ -286,11 +437,11 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
           }));
         } else {
           findings.errors.push(AnalysisError({
-            message: "Names for structures have to be unique.",
+            message: "Names for types have to be unique.",
             beginHighlight: DummyAstNode.fromToken(this.name),
             endHighlight: None(),
             messageHighlight:
-              `A structure by the name "${this.name.text}" already exists.`,
+              `A type by the name "${this.name.text}" already exists.`,
           }));
         }
       });
@@ -329,7 +480,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       if (placeholder.text === this.name.text) {
         findings.errors.push(AnalysisError({
           message:
-            "A placeholder cannot share the same name as its surrounding structure.",
+            "A placeholder cannot share the same name as its surrounding type.",
           beginHighlight: DummyAstNode.fromToken(placeholder),
           endHighlight: None(),
           messageHighlight: "",
@@ -350,7 +501,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
         beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
         endHighlight: None(),
         messageHighlight:
-          `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this structure.`,
+          `The placeholder called "${placeholder}" exists a total of ${duplicateCount} times in this type.`,
       }));
       unproblematicPlaceholders = removeAll(
         unproblematicPlaceholders,
@@ -370,15 +521,53 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     ) {
       typeTable.setType(placeholerName, placeholderType);
     }
-    const incompleteStructureType = this.generateBarebonesSymbolType(
+    const analyzedTraits = this.traits
+      .map((trait) =>
+        [trait, trait.analyze()] as [
+          CompositeTypeLiteralAstNode,
+          AnalysisFindings,
+        ]
+      );
+    const unproblematicTraits = analyzedTraits
+      .filter(([_trait, findings]) => !findings.isErroneous())
+      .map(([trait, _findings]) => trait);
+    const traitFindings = analyzedTraits
+      .map(([_trait, findings]) => findings)
+      .reduce(
+        (previous, current) => AnalysisFindings.merge(previous, current),
+        AnalysisFindings.empty(),
+      );
+    const traitTypeFindings = this.ensureTraitsAreBound(
+      unproblematicTraits,
+    );
+    const traitConflictFindings = this.ensureNoOverlappingBehavior(
+      unproblematicTraits,
+    );
+    findings = AnalysisFindings.merge(
+      findings,
+      traitFindings,
+      traitTypeFindings,
+      traitConflictFindings,
+    );
+    const unproblematicTraitsTypes = unproblematicTraits
+      .map((trait) => trait.resolveType());
+    const incompletedefinitionType = this.generateBarebonesSymbolType(
+      unproblematicTraitsTypes,
       unproblematicPlaceholderTypes,
     );
     typeTable.setType(
       this.name.text,
-      incompleteStructureType,
+      incompletedefinitionType,
+    );
+    const sharedBehavior = this.requiredBehavior(
+      unproblematicTraits,
+    );
+    findings = AnalysisFindings.merge(
+      findings,
+      this.ensureBehaviorisImplemented(sharedBehavior),
     );
     const mockConstructor = this.generateMockConstructorStaticSymbol(
-      incompleteStructureType,
+      incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
     analysisTable.setSymbol(
@@ -396,11 +585,11 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       const fieldName = field.name.text;
       if (fieldNames.includes(fieldName)) {
         findings.errors.push(AnalysisError({
-          message: "Fields inside of a structure have to have a unique name.",
+          message: "Fields inside of a type have to have a unique name.",
           beginHighlight: DummyAstNode.fromToken(field.name),
           endHighlight: None(),
           messageHighlight:
-            `The field called "${fieldName}" already exists in the structure.`,
+            `The field called "${fieldName}" already exists in the type.`,
         }));
       }
       fieldNames.push(fieldName);
@@ -409,8 +598,8 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       typeTable.popScope();
       return AnalysisFindings.merge(findings, preliminaryFindings);
     }
-    const structureType = this.completeBarebonesSymbolType(
-      incompleteStructureType,
+    const definitionType = this.completeBarebonesSymbolType(
+      incompletedefinitionType,
     );
     // Second pass of the analysis with field types set
     const fieldFindings = this.fields
@@ -421,7 +610,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
       );
     findings = AnalysisFindings.merge(findings, fieldFindings);
     const constructor = this.generateConstructorStaticSymbol(
-      incompleteStructureType,
+      incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
     typeTable.popScope();
@@ -430,7 +619,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     }
     typeTable.setType(
       this.name.text,
-      structureType,
+      definitionType,
     );
     analysisTable.setSymbol(this.name.text, constructor);
     return findings;
@@ -443,7 +632,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
    * it makes use of functionality that is also used by the runtime.
    */
   generateConstructorRuntimeSymbol(
-    structureType: SymbolType,
+    definitionType: SymbolType,
     placeholders: Map<string, PlaceholderSymbolType>,
   ): RuntimeSymbol {
     const nonDefaultParameters: {
@@ -467,7 +656,7 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     typeTable.popScope();
     return createRuntimeBindingRuntimeSymbol(
       nonDefaultParameters,
-      structureType,
+      definitionType,
       (params) => {
         typeTable.pushScope();
         for (const [placeholderName, placeholderType] of placeholders) {
@@ -515,14 +704,19 @@ export class StructureDefinitonAstNode implements InterpretableAstNode {
     for (const [placeholderName, placeholderType] of placeholderTypes) {
       typeTable.setType(placeholderName, placeholderType);
     }
-    const structureType = this.generateSymbolType(placeholderTypes);
+    const traitTypes = this.traits
+      .map((trait) => trait.resolveType());
+    const definitionType = this.generateSymbolType(
+      traitTypes,
+      placeholderTypes,
+    );
     typeTable.popScope();
     typeTable.setType(
       this.name.text,
-      structureType,
+      definitionType,
     );
     const constructor = this.generateConstructorRuntimeSymbol(
-      structureType,
+      definitionType,
       placeholderTypes,
     );
     runtimeTable.setSymbol(this.name.text, constructor);
@@ -544,6 +738,19 @@ const placeholders = kmid(
   str<TokenKind>("<"),
   surround_with_breaking_whitespace(opt_sc(placeholderNames)),
   str<TokenKind>(">"),
+);
+
+const traitTypes = kleft(
+  list_sc(
+    compositeTypeLiteral,
+    surround_with_breaking_whitespace(str(",")),
+  ),
+  opt_sc(str(",")),
+);
+
+const traits = kright(
+  str<TokenKind>("implements"),
+  starts_with_breaking_whitespace(traitTypes),
 );
 
 const typeAnnotation = kright(
@@ -583,12 +790,13 @@ const fields = kleft(
   opt_sc(str(",")),
 );
 
-export const structureDefinition = apply(
+export const typeDefinition = apply(
   seq(
-    str<TokenKind>("structure"),
+    str<TokenKind>("type"),
     opt_sc(surround_with_breaking_whitespace(placeholders)),
     surround_with_breaking_whitespace(tok(TokenKind.ident)),
     opt_sc(surround_with_breaking_whitespace(placeholders)),
+    opt_sc(surround_with_breaking_whitespace(traits)),
     seq(
       kright(
         str("{"),
@@ -597,10 +805,20 @@ export const structureDefinition = apply(
       str("}"),
     ),
   ),
-  ([keyword, placeholdersA, typeName, placeholdersB, [fields, closingBrace]]) =>
-    new StructureDefinitonAstNode({
+  (
+    [
+      keyword,
+      placeholdersA,
+      typeName,
+      placeholdersB,
+      traits,
+      [fields, closingBrace],
+    ],
+  ) =>
+    new TypeDefinitionAstNode({
       keyword: keyword,
       placeholders: [...(placeholdersA ?? []), ...(placeholdersB ?? [])],
+      traits: traits ?? [],
       name: typeName,
       fields: fields ?? [],
       closingBrace: closingBrace,
