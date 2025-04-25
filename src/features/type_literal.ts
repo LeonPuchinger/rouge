@@ -53,7 +53,7 @@ export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       parameter.resolveType()
     );
     const returnType = this.returnType.map((node) => node.resolveType())
-      .unwrapOr(nothingType);
+      .unwrapOr(nothingType());
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
       returnType: returnType,

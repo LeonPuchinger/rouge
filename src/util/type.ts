@@ -1,5 +1,5 @@
 import { CompositeSymbolValue } from "../symbol.ts";
-import { typeTable } from "../type.ts";
+import { SymbolType, typeTable } from "../type.ts";
 import { InternalError } from "./error.ts";
 import { Option } from "./monad/index.ts";
 
@@ -45,15 +45,17 @@ export type WithOptionalAttributes<T> = ConvertOptionals<Attributes<T>>;
 /**
  * The `Nothing` type from the standard library.
  */
-export const nothingType = typeTable
-  .findType("Nothing")
-  .map(([type, _flags]) => type)
-  .unwrapOrThrow(
-    new InternalError(
-      "The type called `Nothing` from the standard library could not be located.",
-      "This type is required for basic language functionality.",
-    ),
-  );
+export function nothingType(): SymbolType {
+  return typeTable
+    .findType("Nothing")
+    .map(([type, _flags]) => type)
+    .unwrapOrThrow(
+      new InternalError(
+        "The type called `Nothing` from the standard library could not be located.",
+        "This type is required for basic language functionality.",
+      ),
+    );
+}
 
 /**
  * An instance of the `Nothing` type from the standard library.
