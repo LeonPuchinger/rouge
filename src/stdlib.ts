@@ -7,6 +7,33 @@ import { updateEnvironment } from "./util/environment.ts";
 import { InternalError } from "./util/error.ts";
 
 const stdlib = `
+    type Option<T> {
+        has_value: Function() -> Boolean,
+        get_value: Function(Option<T>) -> T,
+    }
+
+    type Nothing<T> implements Option<T> {
+        has_value = function() -> Boolean {
+            return false
+        }
+
+        get_value = function(this: Nothing<T>) -> T {
+            panic("get_value called on a Nothing object")
+        }
+    }
+
+    type Something<T> implements Option<T> {
+        value: T
+
+        has_value = function() -> Boolean {
+            return true
+        }
+
+        get_value = function(this: Something<T>) -> T {
+            return this.value
+        }
+    }
+
     print = function(message: String) {
         runtime_print_newline(message)
     }
@@ -17,33 +44,6 @@ const stdlib = `
 
     reverse = function(message: String) -> String {
         return runtime_reverse(message)
-    }
-
-    type COption<T> {
-        has_value: Function() -> Boolean,
-        get_value: Function(COption<T>) -> T,
-    }
-
-    type CNothing<T> implements COption<T> {
-        has_value = function() -> Boolean {
-            return false
-        }
-
-        get_value = function(this: CNothing<T>) -> T {
-            panic("get_value called on a Nothing object")
-        }
-    }
-
-    type CSomething<T> implements COption<T> {
-        value: T
-
-        has_value = function() -> Boolean {
-            return true
-        }
-
-        get_value = function(this: CSomething<T>) -> T {
-            return this.value
-        }
     }
 `;
 
