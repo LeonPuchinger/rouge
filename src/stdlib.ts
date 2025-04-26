@@ -67,7 +67,7 @@ export function analyzeStdlib(stdlibAst: AST) {
     updateEnvironment({ source: stdlib });
     analysisTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
     analysisTable.ignoreRuntimeBindings = false;
-    typeTable.setGlobalFlagOverrides({ readonly: true });
+    typeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
     typeTable.ignoreRuntimeTypes = false;
     const analysisFindings = stdlibAst.analyze();
     updateEnvironment({ source: "" });
@@ -76,7 +76,7 @@ export function analyzeStdlib(stdlibAst: AST) {
         stdlib: "notset",
     });
     analysisTable.ignoreRuntimeBindings = true;
-    typeTable.setGlobalFlagOverrides({ readonly: "notset" });
+    typeTable.setGlobalFlagOverrides({ readonly: "notset", stdlib: "notset" });
     typeTable.ignoreRuntimeTypes = true;
     if (analysisFindings.errors.length !== 0) {
         throw new InternalError(
@@ -92,12 +92,12 @@ export function analyzeStdlib(stdlibAst: AST) {
 export function injectStdlib(stdlibAst: AST) {
     updateEnvironment({ source: stdlib });
     runtimeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    typeTable.setGlobalFlagOverrides({ readonly: true });
+    typeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
     stdlibAst.interpret();
     runtimeTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
     });
-    typeTable.setGlobalFlagOverrides({ readonly: "notset" });
+    typeTable.setGlobalFlagOverrides({ readonly: "notset", stdlib: "notset" });
     updateEnvironment({ source: "" });
 }

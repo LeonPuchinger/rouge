@@ -427,7 +427,10 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
       .then(([_type, flags]) => {
-        if (flags.readonly) {
+        if (!flags.readonly) {
+          return;
+        }
+        if (flags.stdlib) {
           findings.errors.push(AnalysisError({
             message:
               "This name cannot be used because it is part of the language.",

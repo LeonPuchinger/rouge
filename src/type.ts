@@ -874,6 +874,12 @@ type TypeFlags = {
    * Mainly used to protect stdlib contents from being reassigned.
    */
   readonly: boolean;
+  /**
+   * Whether the type is part of the standard library.
+   * Usually, this flag is used in conjunction with the `readonly` flag
+   * to provide a reason as to why a type cannot be reassigned.
+   */
+  stdlib: boolean;
 };
 
 type TypeEntry = TypeFlags & {
@@ -906,6 +912,7 @@ export class TypeTable {
     [K in keyof TypeFlags]: TypeFlags[K] | "notset";
   } = {
     readonly: "notset",
+    stdlib: "notset",
   };
   /**
    * When set to `true`, the table will act as if types stored
@@ -942,7 +949,7 @@ export class TypeTable {
     if (!this.ignoreRuntimeTypes) {
       const runtimeType = this.runtimeTypes.get(name);
       if (runtimeType !== undefined) {
-        return Some([runtimeType, { readonly: true, runtimeBinding: true }]);
+        return Some([runtimeType, { readonly: true, stdlib: false }]);
       }
     }
     const current = this.scopes.at(-1);
@@ -960,7 +967,7 @@ export class TypeTable {
     if (!this.ignoreRuntimeTypes) {
       const runtimeType = this.runtimeTypes.get(name);
       if (runtimeType !== undefined) {
-        return Some([runtimeType, { readonly: true, runtimeBinding: true }]);
+        return Some([runtimeType, { readonly: true, stdlib: false }]);
       }
     }
     for (const currentScope of this.scopes.toReversed()) {
@@ -1003,6 +1010,7 @@ export class TypeTable {
     const entry: TypeEntry = {
       type: symbolType,
       readonly: flags.readonly ?? this.getGlobalFlagOverride("readonly"),
+      stdlib: flags.stdlib ?? this.getGlobalFlagOverride("stdlib"),
     };
     currentScope.types.set(name, entry);
   }
