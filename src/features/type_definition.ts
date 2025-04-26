@@ -570,6 +570,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
+    analysisTable.pushScope();
     analysisTable.setSymbol(
       this.name.text,
       mockConstructor,
@@ -621,6 +622,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       this.name.text,
       definitionType,
     );
+    analysisTable.popScope();
     analysisTable.setSymbol(this.name.text, constructor);
     return findings;
   }
