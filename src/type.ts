@@ -1049,11 +1049,16 @@ export class TypeTable {
 
     // will be replaced by stdlib implementation in the future
 
-    /* this.setType(
+    this.setType(
       "Nothing",
-      new CompositeSymbolType({ id: "Nothing" }),
-      { readonly: true },
-    ); */
+      new CompositeSymbolType({
+        id: "Nothing",
+        placeholders: new Map([
+          ["T", new PlaceholderSymbolType({ name: "T" })],
+        ]),
+      }),
+      { readonly: false },
+    );
 
     /* ~~~ TEMPORARY ~~~ */
   }
