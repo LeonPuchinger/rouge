@@ -18,7 +18,7 @@ const stdlib = `
         }
 
         get_value = function(this: Nothing<T>) -> T {
-            panic("get_value called on a Nothing object")
+            runtime_panic("get_value called on a Nothing object")
         }
     }
 
