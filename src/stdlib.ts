@@ -53,7 +53,7 @@ const stdlib = `
         }
 
         get_error = function(this: Ok<T, E>) -> E {
-            panic("get_error called on an Ok object")
+            runtime_panic("get_error called on an Ok object")
         }
 
         map = function(
@@ -73,7 +73,7 @@ const stdlib = `
         }
 
         get_value = function(this: Error<T, E>) -> T {
-            panic("get_value called on an Error object")
+            runtime_panic("get_value called on an Error object")
         }
 
         get_error = function(this: Error<T, E>) -> E {
