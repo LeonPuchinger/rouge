@@ -34,6 +34,60 @@ const stdlib = `
         }
     }
 
+    type Result<T, E> {
+        is_ok: Function() -> Boolean
+        get_value: Function(Result<T, E>) -> T
+        get_error: Function(Result<T, E>) -> E
+        map: Function(Result<T, E>, Function(T) -> T) -> Result<T, E>
+    }
+
+    type Ok<T, E> implements Result<T, E> {
+        value: T
+
+        is_ok = function() -> Boolean {
+            return true
+        }
+
+        get_value = function(this: Ok<T, E>) -> T {
+            return this.value
+        }
+
+        get_error = function(this: Ok<T, E>) -> E {
+            panic("get_error called on an Ok object")
+        }
+
+        map = function(
+            this: Ok<T, E>,
+            transform: Function(T) -> T
+        ) -> Result<T, E> {
+            mapped_value = transform(this.value)
+            return Ok<T, E>(mapped_value)
+        }
+    }
+
+    type Error<T, E> implements Result<T, E> {
+        error: E
+
+        is_ok = function() -> Boolean {
+            return false
+        }
+
+        get_value = function(this: Error<T, E>) -> T {
+            panic("get_value called on an Error object")
+        }
+
+        get_error = function(this: Error<T, E>) -> E {
+            return this.error
+        }
+
+        map = function(
+            this: Error<T, E>,
+            transform: Function(T) -> T
+        ) -> Result<T, E> {
+            return this
+        }
+    }
+
     print = function(message: String) {
         runtime_print_newline(message)
     }
