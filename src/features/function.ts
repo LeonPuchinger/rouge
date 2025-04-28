@@ -380,6 +380,9 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     const findings = this.expression
       .map((node) => node.analyze())
       .unwrapOr(AnalysisFindings.empty());
+    if (findings.isErroneous()) {
+      return findings;
+    }
     const savedReturnType = typeTable.findReturnType();
     if (savedReturnType.kind === "none") {
       findings.errors.push(AnalysisError({
