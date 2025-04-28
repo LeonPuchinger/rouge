@@ -1053,10 +1053,12 @@ export class TypeTable {
       { readonly: true },
     );
 
-    /* ~~~ TEMPORARY ~~~ */
-
-    // will be replaced by stdlib implementation in the future
-
+    // The `Nothing` is initialized in the stdlib. However, to initialize the
+    // runtime bindings (which happens before the stdlib can be loaded),
+    // the `Nothing` type already needs to be present in the type table.
+    // Therefore, the type is created temporarily and is later overriden
+    // by the `Nothing` type from the stdlib. To allow overriding the type,
+    // the `readonly` flag is set to `false`.
     this.setType(
       "Nothing",
       new CompositeSymbolType({
@@ -1067,8 +1069,6 @@ export class TypeTable {
       }),
       { readonly: false },
     );
-
-    /* ~~~ TEMPORARY ~~~ */
   }
 
   reset() {
