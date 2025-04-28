@@ -124,7 +124,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     }
     const returnType = this.returnType
       .map((literal) => literal.resolveType())
-      .unwrapOr(nothingType);
+      .unwrapOr(nothingType());
     typeTable.popScope();
     return new FunctionSymbolValue({
       parameterTypes: parameterTypes,
@@ -288,9 +288,9 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     returnTypeAnalysis.then((findings) => {
       const returnType = this.returnType
         .map((literal) => literal.resolveType())
-        .unwrapOr(nothingType);
+        .unwrapOr(nothingType());
       typeTable.setReturnType(returnType);
-      if (!returnType.typeCompatibleWith(nothingType)) {
+      if (!returnType.typeCompatibleWith(nothingType())) {
         findings = AnalysisFindings.merge(
           findings,
           this.analyzeReturnPlacements(),
@@ -319,7 +319,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     );
     const returnType = this.returnType
       .map((literal) => literal.resolveType())
-      .unwrapOr(nothingType);
+      .unwrapOr(nothingType());
     typeTable.popScope();
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
@@ -380,6 +380,9 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     const findings = this.expression
       .map((node) => node.analyze())
       .unwrapOr(AnalysisFindings.empty());
+    if (findings.isErroneous()) {
+      return findings;
+    }
     const savedReturnType = typeTable.findReturnType();
     if (savedReturnType.kind === "none") {
       findings.errors.push(AnalysisError({
@@ -401,7 +404,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
         messageHighlight: messageHighlight ?? "",
       });
     const returnValueRequired = !supposedReturnType.typeCompatibleWith(
-      nothingType,
+      nothingType(),
     );
     const returnStatementEmpty = actualReturnType.kind === "none";
     if (returnValueRequired && returnStatementEmpty) {

@@ -135,7 +135,7 @@ export function createRuntimeBindingRuntimeSymbol(
  */
 function createRuntimeBindingStaticSymbol(
     parameters: HookParameter[],
-    returnType: SymbolType = nothingType,
+    returnType: SymbolType = nothingType(),
 ): StaticSymbol {
     const parameterTypes = parameters.map((param) => param.symbolType);
     return new StaticSymbol({
@@ -196,7 +196,7 @@ export function injectRuntimeBindings(
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType,
+        nothingType(),
         (params) => {
             const message = params.get("message")!.value as string;
             stdout?.writeLine(message);
@@ -210,7 +210,7 @@ export function injectRuntimeBindings(
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType,
+        nothingType(),
         (params) => {
             const message = params.get("message")!.value as string;
             stdout?.writeChunk(message);
@@ -224,7 +224,7 @@ export function injectRuntimeBindings(
             name: "reason",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType,
+        nothingType(),
         (params) => {
             const reason = params.get("reason")!.value as string;
             throw new PanicError(reason);

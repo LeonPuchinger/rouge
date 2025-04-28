@@ -874,6 +874,12 @@ type TypeFlags = {
    * Mainly used to protect stdlib contents from being reassigned.
    */
   readonly: boolean;
+  /**
+   * Whether the type is part of the standard library.
+   * Usually, this flag is used in conjunction with the `readonly` flag
+   * to provide a reason as to why a type cannot be reassigned.
+   */
+  stdlib: boolean;
 };
 
 type TypeEntry = TypeFlags & {
@@ -906,6 +912,7 @@ export class TypeTable {
     [K in keyof TypeFlags]: TypeFlags[K] | "notset";
   } = {
     readonly: "notset",
+    stdlib: "notset",
   };
   /**
    * When set to `true`, the table will act as if types stored
@@ -942,7 +949,7 @@ export class TypeTable {
     if (!this.ignoreRuntimeTypes) {
       const runtimeType = this.runtimeTypes.get(name);
       if (runtimeType !== undefined) {
-        return Some([runtimeType, { readonly: true, runtimeBinding: true }]);
+        return Some([runtimeType, { readonly: true, stdlib: false }]);
       }
     }
     const current = this.scopes.at(-1);
@@ -960,7 +967,7 @@ export class TypeTable {
     if (!this.ignoreRuntimeTypes) {
       const runtimeType = this.runtimeTypes.get(name);
       if (runtimeType !== undefined) {
-        return Some([runtimeType, { readonly: true, runtimeBinding: true }]);
+        return Some([runtimeType, { readonly: true, stdlib: false }]);
       }
     }
     for (const currentScope of this.scopes.toReversed()) {
@@ -1003,6 +1010,7 @@ export class TypeTable {
     const entry: TypeEntry = {
       type: symbolType,
       readonly: flags.readonly ?? this.getGlobalFlagOverride("readonly"),
+      stdlib: flags.stdlib ?? this.getGlobalFlagOverride("stdlib"),
     };
     currentScope.types.set(name, entry);
   }
@@ -1045,17 +1053,22 @@ export class TypeTable {
       { readonly: true },
     );
 
-    /* ~~~ TEMPORARY ~~~ */
-
-    // will be replaced by stdlib implementation in the future
-
+    // The `Nothing` is initialized in the stdlib. However, to initialize the
+    // runtime bindings (which happens before the stdlib can be loaded),
+    // the `Nothing` type already needs to be present in the type table.
+    // Therefore, the type is created temporarily and is later overriden
+    // by the `Nothing` type from the stdlib. To allow overriding the type,
+    // the `readonly` flag is set to `false`.
     this.setType(
       "Nothing",
-      new CompositeSymbolType({ id: "Nothing" }),
-      { readonly: true },
+      new CompositeSymbolType({
+        id: "Nothing",
+        placeholders: new Map([
+          ["T", new PlaceholderSymbolType({ name: "T" })],
+        ]),
+      }),
+      { readonly: false },
     );
-
-    /* ~~~ TEMPORARY ~~~ */
   }
 
   reset() {

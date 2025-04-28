@@ -427,7 +427,10 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
       .then(([_type, flags]) => {
-        if (flags.readonly) {
+        if (!flags.readonly) {
+          return;
+        }
+        if (flags.stdlib) {
           findings.errors.push(AnalysisError({
             message:
               "This name cannot be used because it is part of the language.",
@@ -570,6 +573,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
+    analysisTable.pushScope();
     analysisTable.setSymbol(
       this.name.text,
       mockConstructor,
@@ -621,6 +625,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       this.name.text,
       definitionType,
     );
+    analysisTable.popScope();
     analysisTable.setSymbol(this.name.text, constructor);
     return findings;
   }
