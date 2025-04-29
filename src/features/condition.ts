@@ -8,6 +8,7 @@ import {
   Token,
 } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { analysisTable, runtimeTable } from "../symbol.ts";
@@ -40,24 +41,24 @@ export class ConditionAstNode implements InterpretableAstNode {
     this.elseClosingBrace = Some(params.elseClosingBrace);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     analysisTable.pushScope();
-    const conditionFindings = this.condition.analyze();
-    const trueFindings = this.trueStatements.analyze();
+    const conditionFindings = this.condition.analyze(environment);
+    const trueFindings = this.trueStatements.analyze(environment);
     analysisTable.popScope();
     analysisTable.pushScope();
     const findings = AnalysisFindings.merge(
       conditionFindings,
       trueFindings,
       this.falseStatements
-        .map((statements) => statements.analyze())
+        .map((statements) => statements.analyze(environment))
         .unwrapOr(AnalysisFindings.empty()),
     );
     analysisTable.popScope();
     if (conditionFindings.isErroneous()) {
       return findings;
     }
-    const conditionType = this.condition.resolveType();
+    const conditionType = this.condition.resolveType(environment);
     if (!conditionType.isFundamental("Boolean")) {
       findings.errors.push(AnalysisError({
         message:
@@ -69,17 +70,19 @@ export class ConditionAstNode implements InterpretableAstNode {
     return findings;
   }
 
-  interpret(): void {
+  interpret(environment: ExecutionEnvironment): void {
     runtimeTable.pushScope();
     const conditionResult = (this.condition as BooleanExpressionAstNode)
-      .evaluate();
+      .evaluate(environment);
     if (conditionResult.value) {
-      this.trueStatements.interpret();
+      this.trueStatements.interpret(environment);
       runtimeTable.popScope();
     } else {
       runtimeTable.popScope();
       runtimeTable.pushScope();
-      this.falseStatements.then((statements) => statements.interpret());
+      this.falseStatements.then((statements) =>
+        statements.interpret(environment)
+      );
       runtimeTable.popScope();
     }
   }

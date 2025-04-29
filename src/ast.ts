@@ -1,4 +1,5 @@
 import { Token } from "typescript-parsec";
+import { ExecutionEnvironment } from "./execution.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
@@ -16,7 +17,7 @@ export interface AstNode {
    * This method is also responsible for gathering the analysis results of any of its
    * child AST nodes and merging them with the results of its own analysis.
    */
-  analyze(): AnalysisFindings;
+  analyze(environment: ExecutionEnvironment): AnalysisFindings;
 
   /**
    * Returns a range of tokens that represent the extent of the input source code that each AST node covers.
@@ -35,7 +36,7 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType>
   /**
    * Executes the content of the AST node while yielding a result.
    */
-  evaluate(): R;
+  evaluate(environment: ExecutionEnvironment): R;
 
   /**
    * Returns the corresponding `SymbolType` of the evaluated result.
@@ -45,7 +46,7 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType>
    * Even though implementations of `resolveType` can assume that `analyze` has been called already,
    * an `InternalError` should still be thrown in case `analyze` has not been called and type resolving fails.
    */
-  resolveType(): S;
+  resolveType(environment: ExecutionEnvironment): S;
 
   /**
    * Returns symbol flags associated with the evaluated symbol.
@@ -54,7 +55,9 @@ export interface EvaluableAstNode<R = SymbolValue<unknown>, S = SymbolType>
    * Before this method can be called, it has to be made sure
    * that `analyze` is called first on the AST node and its result is not erroneous.
    */
-  resolveFlags(): Map<keyof SymbolFlags, boolean>;
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean>;
 }
 
 /**
@@ -66,7 +69,7 @@ export interface InterpretableAstNode extends AstNode {
   /**
    * Executes the contents of the AST node without yielding a result.
    */
-  interpret(): void;
+  interpret(environment: ExecutionEnvironment): void;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { apply, kright, rep_sc, seq, str, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -27,7 +28,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
     this.identifierToken = identifier;
   }
 
-  evaluate(): SymbolValue<unknown> {
+  evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
     const ident = this.identifierToken.text;
     return runtimeTable
       .findSymbol(ident)
@@ -40,7 +41,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
       );
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const ident = this.identifierToken.text;
     const findings = AnalysisFindings.empty();
     analysisTable.findSymbol(ident).onNone(() => {
@@ -57,7 +58,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     return analysisTable
       .findSymbol(this.identifierToken.text)
       .map(([symbol, _flags]) => symbol.valueType)
@@ -73,7 +74,9 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
       );
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return analysisTable
       .findSymbol(this.identifierToken.text)
       .map(([_symbol, flags]) =>
@@ -95,8 +98,10 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): SymbolValue<unknown> {
-    const parentValue = this.parent.evaluate() as CompositeSymbolValue;
+  evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
+    const parentValue = this.parent.evaluate(
+      environment,
+    ) as CompositeSymbolValue;
     const accessedValue = parentValue.value.get(this.identifierToken.text);
     if (accessedValue === undefined) {
       throw new InternalError(
@@ -107,12 +112,12 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     return accessedValue;
   }
 
-  analyze(): AnalysisFindings {
-    const findings = this.parent.analyze();
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    const findings = this.parent.analyze(environment);
     if (findings.isErroneous()) {
       return findings;
     }
-    const parentType = this.parent.resolveType().peel();
+    const parentType = this.parent.resolveType(environment).peel();
     if (parentType instanceof CompositeSymbolType) {
       const fieldExists = parentType.fields.has(this.identifierToken.text);
       if (fieldExists) {
@@ -132,9 +137,9 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     const parentType = this.parent
-      .resolveType()
+      .resolveType(environment)
       .peel() as CompositeSymbolType;
     const accessedType = parentType.fields.get(
       this.identifierToken.text,
@@ -148,7 +153,9 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     return accessedType;
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
 

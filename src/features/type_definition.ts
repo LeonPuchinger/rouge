@@ -12,6 +12,7 @@ import {
   Token,
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { createRuntimeBindingRuntimeSymbol } from "../runtime.ts";
@@ -66,12 +67,12 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     return this.defaultValue.hasValue();
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     return (this.typeAnnotation as Option<
       TypeLiteralAstNode | ExpressionAstNode
     >)
       .or(this.defaultValue)
-      .map((node) => node.resolveType())
+      .map((node) => node.resolveType(environment))
       .unwrapOrThrow(
         new InternalError(
           "A field has to have at least a type annotation or a default value.",
@@ -95,12 +96,12 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     return reference;
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const typeAnnotationFindings = this.typeAnnotation
-      .map((typeAnnotation) => typeAnnotation.analyze())
+      .map((typeAnnotation) => typeAnnotation.analyze(environment))
       .unwrapOr(AnalysisFindings.empty());
     const defaultValueFindings = this.defaultValue
-      .map((defaultValue) => defaultValue.analyze())
+      .map((defaultValue) => defaultValue.analyze(environment))
       .unwrapOr(AnalysisFindings.empty());
     const findings = AnalysisFindings.merge(
       typeAnnotationFindings,
@@ -112,8 +113,8 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     if (this.typeAnnotation.hasValue() && this.defaultValue.hasValue()) {
       const typeAnnotation = this.typeAnnotation.unwrap();
       const expression = this.defaultValue.unwrap();
-      const typeAnnotationType = typeAnnotation.resolveType();
-      const expressionType = expression.resolveType();
+      const typeAnnotationType = typeAnnotation.resolveType(environment);
+      const expressionType = expression.resolveType(environment);
       if (!expressionType.typeCompatibleWith(typeAnnotationType)) {
         findings.errors.push(AnalysisError({
           message:
@@ -151,7 +152,9 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     ];
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
 }
@@ -197,6 +200,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * Adds the fields of the type definition to a barebones symbol type.
    */
   completeBarebonesSymbolType(
+    environment: ExecutionEnvironment,
     definitionType: CompositeSymbolType,
   ): SymbolType {
     for (const field of this.fields) {
@@ -207,7 +211,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
           `The field "${fieldName}" was not found in the type "${this.name.text}".`,
         );
       }
-      const fieldType = field.resolveType();
+      const fieldType = field.resolveType(environment);
       existingField.bind(fieldType);
     }
     return definitionType;
@@ -217,6 +221,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * Generates a composite symbol type of the type definition with all its fields.
    */
   generateSymbolType(
+    environment: ExecutionEnvironment,
     traitTypes: CompositeSymbolType[],
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
   ): SymbolType {
@@ -230,6 +235,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       definitionType,
     );
     const completeType = this.completeBarebonesSymbolType(
+      environment,
       definitionType,
     );
     typeTable.popScope();
@@ -243,13 +249,14 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * parameters are located at the end of the list of fields.
    */
   generateConstructorStaticSymbol(
+    environment: ExecutionEnvironment,
     definitionType: SymbolType,
     placeholders: Map<string, PlaceholderSymbolType>,
   ): StaticSymbol {
     const nonDefaultParameters: SymbolType[] = [];
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
-        nonDefaultParameters.push(field.resolveType());
+        nonDefaultParameters.push(field.resolveType(environment));
       }
     }
     return new StaticSymbol({
@@ -297,10 +304,13 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * Make sure none of the traits are placeholders.
    */
   ensureTraitsAreBound(
+    environment: ExecutionEnvironment,
     unproblematicTraits: CompositeTypeLiteralAstNode[],
   ): AnalysisFindings {
     const errors = unproblematicTraits
-      .map((node) => [node, node.resolveType()] as [AstNode, SymbolType])
+      .map((node) =>
+        [node, node.resolveType(environment)] as [AstNode, SymbolType]
+      )
       .filter(([_node, type]) => !type.bound())
       .map(([node, _type]) => node)
       .map((node) => {
@@ -322,6 +332,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * to be implemented with incompatible types.
    */
   ensureNoOverlappingBehavior(
+    environment: ExecutionEnvironment,
     unproblematicTraits: CompositeTypeLiteralAstNode[],
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
@@ -330,7 +341,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       { fieldType: SymbolType; requiredBy: SymbolType }
     >();
     for (const trait of unproblematicTraits) {
-      const traitType = trait.resolveType();
+      const traitType = trait.resolveType(environment);
       for (const [fieldName, fieldType] of traitType.fields) {
         const existingField = existingFields.get(fieldName);
         if (
@@ -365,6 +376,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * without errors before this method is called.
    */
   requiredBehavior(
+    environment: ExecutionEnvironment,
     unproblematicTraits: CompositeTypeLiteralAstNode[],
   ): Map<
     string,
@@ -375,7 +387,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       { fieldType: SymbolType; requiredBy: SymbolType }
     >();
     for (const trait of unproblematicTraits.toReversed()) {
-      const traitType = trait.resolveType();
+      const traitType = trait.resolveType(environment);
       for (const [fieldName, fieldType] of traitType.fields) {
         requiredBehavior.set(fieldName, {
           fieldType: fieldType,
@@ -392,6 +404,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    */
   ensureBehaviorisImplemented(
     behavior: Map<string, { fieldType: SymbolType; requiredBy: SymbolType }>,
+    environment: ExecutionEnvironment,
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     for (const [fieldName, { fieldType, requiredBy }] of behavior) {
@@ -407,7 +420,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
           messageHighlight: "",
         }));
       } else {
-        const implementedType = implementedField.resolveType();
+        const implementedType = implementedField.resolveType(environment);
         if (!implementedType.typeCompatibleWith(fieldType)) {
           findings.errors.push(AnalysisError({
             message:
@@ -423,7 +436,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     return findings;
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     typeTable.findType(this.name.text)
       .then(([_type, flags]) => {
@@ -526,7 +539,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     }
     const analyzedTraits = this.traits
       .map((trait) =>
-        [trait, trait.analyze()] as [
+        [trait, trait.analyze(environment)] as [
           CompositeTypeLiteralAstNode,
           AnalysisFindings,
         ]
@@ -541,9 +554,11 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         AnalysisFindings.empty(),
       );
     const traitTypeFindings = this.ensureTraitsAreBound(
+      environment,
       unproblematicTraits,
     );
     const traitConflictFindings = this.ensureNoOverlappingBehavior(
+      environment,
       unproblematicTraits,
     );
     findings = AnalysisFindings.merge(
@@ -553,7 +568,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       traitConflictFindings,
     );
     const unproblematicTraitsTypes = unproblematicTraits
-      .map((trait) => trait.resolveType());
+      .map((trait) => trait.resolveType(environment));
     const incompletedefinitionType = this.generateBarebonesSymbolType(
       unproblematicTraitsTypes,
       unproblematicPlaceholderTypes,
@@ -563,11 +578,12 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       incompletedefinitionType,
     );
     const sharedBehavior = this.requiredBehavior(
+      environment,
       unproblematicTraits,
     );
     findings = AnalysisFindings.merge(
       findings,
-      this.ensureBehaviorisImplemented(sharedBehavior),
+      this.ensureBehaviorisImplemented(sharedBehavior, environment),
     );
     const mockConstructor = this.generateMockConstructorStaticSymbol(
       incompletedefinitionType,
@@ -584,7 +600,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     for (const field of this.fields) {
       preliminaryFindings = AnalysisFindings.merge(
         preliminaryFindings,
-        field.analyze(),
+        field.analyze(environment),
       );
       const fieldName = field.name.text;
       if (fieldNames.includes(fieldName)) {
@@ -603,17 +619,19 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       return AnalysisFindings.merge(findings, preliminaryFindings);
     }
     const definitionType = this.completeBarebonesSymbolType(
+      environment,
       incompletedefinitionType,
     );
     // Second pass of the analysis with field types set
     const fieldFindings = this.fields
-      .map((field) => field.analyze())
+      .map((field) => field.analyze(environment))
       .reduce(
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
     findings = AnalysisFindings.merge(findings, fieldFindings);
     const constructor = this.generateConstructorStaticSymbol(
+      environment,
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
@@ -637,6 +655,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * it makes use of functionality that is also used by the runtime.
    */
   generateConstructorRuntimeSymbol(
+    environment: ExecutionEnvironment,
     definitionType: SymbolType,
     placeholders: Map<string, PlaceholderSymbolType>,
   ): RuntimeSymbol {
@@ -653,10 +672,10 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       if (!field.hasDefaultValue()) {
         nonDefaultParameters.push({
           name: field.name.text,
-          symbolType: field.resolveType(),
+          symbolType: field.resolveType(environment),
         });
       }
-      fieldTypes.set(field.name.text, field.resolveType());
+      fieldTypes.set(field.name.text, field.resolveType(environment));
     }
     typeTable.popScope();
     return createRuntimeBindingRuntimeSymbol(
@@ -676,7 +695,9 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
             );
           }
           if (field.hasDefaultValue()) {
-            const defaultValue = field.defaultValue.unwrap().evaluate();
+            const defaultValue = field.defaultValue.unwrap().evaluate(
+              environment,
+            );
             initializers.set(
               field.name.text,
               [defaultValue, fieldTypes.get(field.name.text)!],
@@ -694,7 +715,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     );
   }
 
-  interpret(): void {
+  interpret(environment: ExecutionEnvironment): void {
     const placeholderTypes = new Map(
       this.placeholders.map(
         (
@@ -710,8 +731,9 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       typeTable.setType(placeholderName, placeholderType);
     }
     const traitTypes = this.traits
-      .map((trait) => trait.resolveType());
+      .map((trait) => trait.resolveType(environment));
     const definitionType = this.generateSymbolType(
+      environment,
       traitTypes,
       placeholderTypes,
     );
@@ -721,6 +743,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       definitionType,
     );
     const constructor = this.generateConstructorRuntimeSymbol(
+      environment,
       definitionType,
       placeholderTypes,
     );

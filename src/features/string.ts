@@ -9,6 +9,7 @@ import {
   Token,
 } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import {
   AnalysisError,
   AnalysisFindings,
@@ -46,18 +47,18 @@ class StringContentsAstNode implements EvaluableAstNode {
   }
 
   @memoize
-  evaluate(): StringSymbolValue {
+  evaluate(environment: ExecutionEnvironment): StringSymbolValue {
     const concatenatedContents = this.contents
       .map((token) => token.text)
       .join("");
     return new StringSymbolValue(concatenatedContents);
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "String" });
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
@@ -65,7 +66,9 @@ class StringContentsAstNode implements EvaluableAstNode {
     return [this.contents[0], this.contents.toReversed()[0]];
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
 }
@@ -80,22 +83,22 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
     this.expression = Some(params.expression);
   }
 
-  evaluate(): StringSymbolValue {
+  evaluate(environment: ExecutionEnvironment): StringSymbolValue {
     // analysis guarantees that the result of the expression
     // can be interpolated into a string.
     const contents = this.expression
-      .map((node) => node.evaluate().value)
+      .map((node) => node.evaluate(environment).value)
       .unwrapOr("");
     return new StringSymbolValue(`${contents}`);
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "String" });
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = this.expression
-      .map((node) => node.analyze())
+      .map((node) => node.analyze(environment))
       .unwrapOr(AnalysisFindings.empty());
     if (findings.isErroneous()) {
       return findings;
@@ -116,7 +119,7 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
       "String",
     ];
     const expressionType = this.expression
-      .map((node) => node.resolveType());
+      .map((node) => node.resolveType(environment));
     const expressionIsFundamental = fundamentalTypeIds
       .map((id) =>
         expressionType
@@ -145,7 +148,9 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
     return [this.beginDelimiter, this.endDelimiter];
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
 }
@@ -159,20 +164,20 @@ export class ComplexStringAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): StringSymbolValue {
+  evaluate(environment: ExecutionEnvironment): StringSymbolValue {
     const contents = this.contents
-      .map((node) => node.evaluate().value)
+      .map((node) => node.evaluate(environment).value)
       .join("");
     return new StringSymbolValue(contents);
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "String" });
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.merge(
-      ...this.contents.map((node) => node.analyze()),
+      ...this.contents.map((node) => node.analyze(environment)),
     );
   }
 
@@ -180,7 +185,9 @@ export class ComplexStringAstNode implements EvaluableAstNode {
     return [this.openingQuotation, this.closingQuotation];
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
 }

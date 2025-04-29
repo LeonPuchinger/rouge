@@ -12,6 +12,7 @@ import {
   Token,
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import {
   AnalysisError,
   AnalysisFindings,
@@ -70,8 +71,8 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
-    const findings = this.type.analyze();
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    const findings = this.type.analyze(environment);
     const existingSymbol = analysisTable.findSymbol(this.name.text);
     if (existingSymbol.hasValue()) {
       findings.errors.push(AnalysisError({
@@ -86,8 +87,8 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
     return findings;
   }
 
-  resolveType(): SymbolType {
-    return this.type.resolveType();
+  resolveType(environment: ExecutionEnvironment): SymbolType {
+    return this.type.resolveType(environment);
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -107,7 +108,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): SymbolValue<Function> {
+  evaluate(environment: ExecutionEnvironment): SymbolValue<Function> {
     typeTable.pushScope();
     const placeholders = new Map(
       this.placeholders.map((placeholder) => [
@@ -120,10 +121,13 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     }
     const parameterTypes: Map<string, SymbolType> = new Map();
     for (const parameter of this.parameters) {
-      parameterTypes.set(parameter.name.text, parameter.resolveType());
+      parameterTypes.set(
+        parameter.name.text,
+        parameter.resolveType(environment),
+      );
     }
     const returnType = this.returnType
-      .map((literal) => literal.resolveType())
+      .map((literal) => literal.resolveType(environment))
       .unwrapOr(nothingType());
     typeTable.popScope();
     return new FunctionSymbolValue({
@@ -192,7 +196,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
    * Analyzes whether return statements in the function are placed in a legal way.
    * This method assumes that the function is required to return a non `Nothing` return value.
    */
-  analyzeReturnPlacements(): AnalysisFindings {
+  analyzeReturnPlacements(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     const functionEmpty = this.statements.children.length === 0;
     if (functionEmpty) {
@@ -218,7 +222,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
@@ -269,41 +273,44 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     }
     analysisTable.pushScope();
     for (const parameter of this.parameters) {
-      const parameterFindings = parameter.analyze();
+      const parameterFindings = parameter.analyze(environment);
       findings = AnalysisFindings.merge(findings, parameterFindings);
       if (parameterFindings.isErroneous()) {
         continue;
       }
-      const parameterType = parameter.resolveType();
+      const parameterType = parameter.resolveType(environment);
       analysisTable.setSymbol(
         parameter.name.text,
         new StaticSymbol({ valueType: parameterType }),
       );
     }
     const returnTypeAnalysis = this.returnType
-      .map((literal) => literal.analyze());
+      .map((literal) => literal.analyze(environment));
     const returnTypeFindings = returnTypeAnalysis
       .unwrapOr(AnalysisFindings.empty());
     findings = AnalysisFindings.merge(findings, returnTypeFindings);
     returnTypeAnalysis.then((findings) => {
       const returnType = this.returnType
-        .map((literal) => literal.resolveType())
+        .map((literal) => literal.resolveType(environment))
         .unwrapOr(nothingType());
       typeTable.setReturnType(returnType);
       if (!returnType.typeCompatibleWith(nothingType())) {
         findings = AnalysisFindings.merge(
           findings,
-          this.analyzeReturnPlacements(),
+          this.analyzeReturnPlacements(environment),
         );
       }
     });
-    findings = AnalysisFindings.merge(findings, this.statements.analyze());
+    findings = AnalysisFindings.merge(
+      findings,
+      this.statements.analyze(environment),
+    );
     analysisTable.popScope();
     typeTable.popScope();
     return findings;
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     typeTable.pushScope();
     const placeholders = new Map(
       this.placeholders.map((placeholder) => [
@@ -315,10 +322,10 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       typeTable.setType(placeholderName, placeholderType);
     }
     const parameterTypes = this.parameters.map((parameter) =>
-      parameter.resolveType()
+      parameter.resolveType(environment)
     );
     const returnType = this.returnType
-      .map((literal) => literal.resolveType())
+      .map((literal) => literal.resolveType(environment))
       .unwrapOr(nothingType());
     typeTable.popScope();
     return new FunctionSymbolType({
@@ -368,17 +375,17 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     this.expression = Some(params.expression);
   }
 
-  interpret(): void {
+  interpret(environment: ExecutionEnvironment): void {
     throw new ReturnValueContainer(
       this.expression
-        .map((node) => node.evaluate())
+        .map((node) => node.evaluate(environment))
         .unwrapOr(nothingInstance),
     );
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = this.expression
-      .map((node) => node.analyze())
+      .map((node) => node.analyze(environment))
       .unwrapOr(AnalysisFindings.empty());
     if (findings.isErroneous()) {
       return findings;
@@ -394,7 +401,9 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
       return findings;
     }
     const supposedReturnType = savedReturnType.unwrap();
-    const actualReturnType = this.expression.map((node) => node.resolveType());
+    const actualReturnType = this.expression.map((node) =>
+      node.resolveType(environment)
+    );
     // curried version of AnalysisError with the highlighted range pre-applied
     const ReturnTypeError = (message: string, messageHighlight?: string) =>
       AnalysisError({

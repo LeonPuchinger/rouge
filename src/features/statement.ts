@@ -8,6 +8,7 @@ import { Attributes } from "../util/type.ts";
 import { assignment, AssignmentAstNode } from "./assignment.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 // required for extension methods to be usable
+import { ExecutionEnvironment } from "../execution.ts";
 import { RuntimeStatementAstNode } from "../runtime.ts";
 import {} from "../util/array.ts";
 import { ConditionAstNode } from "./condition.ts";
@@ -36,13 +37,13 @@ export class StatementsAstNode implements InterpretableAstNode {
     Object.assign(this, params);
   }
 
-  interpret(): void {
-    this.children.forEach((child) => child.interpret());
+  interpret(environment: ExecutionEnvironment): void {
+    this.children.forEach((child) => child.interpret(environment));
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = this.children
-      .map((statement) => statement.analyze())
+      .map((statement) => statement.analyze(environment))
       .reduce(
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),

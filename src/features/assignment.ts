@@ -10,6 +10,7 @@ import {
   Token,
 } from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
@@ -43,15 +44,15 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
     this.typeAnnotation = Some(params.typeAnnotation);
   }
 
-  analyze(): AnalysisFindings {
-    let findings = this.value.analyze();
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    let findings = this.value.analyze(environment);
     const ident = this.assignee.text;
     const existingSymbol = analysisTable.findSymbol(ident);
     const isInitialAssignment = !existingSymbol.hasValue();
     const expressionFindingsErroneous = findings.isErroneous();
     if (isInitialAssignment) {
       const typeAnnotationFindings = this.typeAnnotation
-        .map((annotation) => annotation.analyze())
+        .map((annotation) => annotation.analyze(environment))
         .unwrapOr(AnalysisFindings.empty());
       findings = AnalysisFindings.merge(
         findings,
@@ -60,9 +61,9 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       if (findings.isErroneous()) {
         return findings;
       }
-      const expressionType = this.value.resolveType();
+      const expressionType = this.value.resolveType(environment);
       this.typeAnnotation
-        .map((annotation) => annotation.resolveType())
+        .map((annotation) => annotation.resolveType(environment))
         .then((annotation) => {
           if (!annotation.typeCompatibleWith(expressionType)) {
             findings.errors.push(AnalysisError({
@@ -102,7 +103,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       if (expressionFindingsErroneous) {
         return findings;
       }
-      const expressionType = this.value.resolveType();
+      const expressionType = this.value.resolveType(environment);
       analysisTable.findSymbol(ident)
         .then(([existing, _flags]) => {
           if (existing.valueType.typeCompatibleWith(expressionType)) {
@@ -124,8 +125,8 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
     }
     if (!findings.isErroneous()) {
       const expressionType = this.typeAnnotation
-        .map((annotation) => annotation.resolveType())
-        .unwrapOr(this.value.resolveType());
+        .map((annotation) => annotation.resolveType(environment))
+        .unwrapOr(this.value.resolveType(environment));
       analysisTable.setSymbol(
         ident,
         new StaticSymbol({
@@ -136,12 +137,12 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
     return findings;
   }
 
-  interpret(): void {
+  interpret(environment: ExecutionEnvironment): void {
     const ident = this.assignee.text;
     const type = this.typeAnnotation
-      .map((annotation) => annotation.resolveType())
-      .unwrapOr(this.value.resolveType());
-    const value = this.value.evaluate();
+      .map((annotation) => annotation.resolveType(environment))
+      .unwrapOr(this.value.resolveType(environment));
+    const value = this.value.evaluate(environment);
     value.valueType = type;
     runtimeTable.setSymbol(
       ident,
@@ -167,10 +168,10 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     this.typeAnnotation = Some(params.typeAnnotation);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = AnalysisFindings.merge(
-      this.assignee.analyze(),
-      this.value.analyze(),
+      this.assignee.analyze(environment),
+      this.value.analyze(environment),
     );
     this.typeAnnotation.then((annotation) => {
       findings.errors.push(AnalysisError({
@@ -183,8 +184,8 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     if (findings.isErroneous()) {
       return findings;
     }
-    const valueType = this.value.resolveType();
-    const assigneeType = this.assignee.resolveType();
+    const valueType = this.value.resolveType(environment);
+    const assigneeType = this.assignee.resolveType(environment);
     if (!valueType.typeCompatibleWith(assigneeType)) {
       findings.errors.push(AnalysisError({
         message:
@@ -198,9 +199,9 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     return findings;
   }
 
-  interpret(): void {
-    const currentValue = this.assignee.evaluate();
-    const newValue = this.value.evaluate();
+  interpret(environment: ExecutionEnvironment): void {
+    const currentValue = this.assignee.evaluate(environment);
+    const newValue = this.value.evaluate(environment);
     currentValue.write(newValue.value);
   }
 
