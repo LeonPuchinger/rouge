@@ -1,6 +1,9 @@
-import { AnalysisSymbolTable, InterpreterSymbolTable } from "./symbol.ts";
+import {
+  AnalysisSymbolTable,
+  InterpreterSymbolTable,
+  SymbolTable,
+} from "./symbol.ts";
 import { TypeTable } from "./type.ts";
-import { Attributes } from "./util/type.ts";
 
 export class ExecutionEnvironment {
   analysisTable!: AnalysisSymbolTable;
@@ -8,7 +11,15 @@ export class ExecutionEnvironment {
   typeTable!: TypeTable;
   source!: string;
 
-  constructor(params: Attributes<ExecutionEnvironment>) {
+  constructor(params: {
+    analysisTable?: AnalysisSymbolTable;
+    runtimeTable?: InterpreterSymbolTable;
+    typeTable?: TypeTable;
+    source: string;
+  }) {
+    params.analysisTable ??= new SymbolTable();
+    params.runtimeTable ??= new SymbolTable();
+    params.typeTable ??= new TypeTable();
     Object.assign(this, params);
   }
 }

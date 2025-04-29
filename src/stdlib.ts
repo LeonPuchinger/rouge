@@ -1,4 +1,5 @@
 import { AST } from "./ast.ts";
+import { ExecutionEnvironment } from "./execution.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { analysisTable, runtimeTable } from "./symbol.ts";
@@ -104,7 +105,10 @@ const stdlib = `
 /**
  * Parses a separate and independent AST for the standard library.
  */
-export function parseStdlib() {
+export function parseStdlib(
+    environment: ExecutionEnvironment,
+) {
+    // TODO: update new environment
     updateEnvironment({ source: stdlib });
     const tokenStream = tokenize(stdlib);
     const ast = parse(tokenStream);
@@ -117,13 +121,16 @@ export function parseStdlib() {
  * Should be called before the stdlib is injected into the symbol table
  * or the static analyis of the input source is performed.
  */
-export function analyzeStdlib(stdlibAst: AST) {
+export function analyzeStdlib(
+    environment: ExecutionEnvironment,
+    stdlibAst: AST,
+) {
     updateEnvironment({ source: stdlib });
     analysisTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
     analysisTable.ignoreRuntimeBindings = false;
     typeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
     typeTable.ignoreRuntimeTypes = false;
-    const analysisFindings = stdlibAst.analyze();
+    const analysisFindings = stdlibAst.analyze(environment);
     updateEnvironment({ source: "" });
     analysisTable.setGlobalFlagOverrides({
         readonly: "notset",
@@ -143,11 +150,14 @@ export function analyzeStdlib(stdlibAst: AST) {
  * Loads the standard library into the symbol and type table.
  * It is assumed that both tables are set to the global scope.
  */
-export function injectStdlib(stdlibAst: AST) {
+export function injectStdlib(
+    environment: ExecutionEnvironment,
+    stdlibAst: AST,
+) {
     updateEnvironment({ source: stdlib });
     runtimeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
     typeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    stdlibAst.interpret();
+    stdlibAst.interpret(environment);
     runtimeTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
