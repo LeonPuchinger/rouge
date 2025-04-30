@@ -108,7 +108,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     const type = typeTable.findType(this.name.text)
       .map(([type, _flags]) => type as CompositeSymbolType);
     if (!type.hasValue()) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         beginHighlight: DummyAstNode.fromToken(this.name),
         endHighlight: None(),
         message: `The type called '${this.name.text}' could not be found.`,
@@ -130,7 +130,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       .unwrapOr(0);
     const suppliedPlaceholders = this.placeholders.length;
     if (requiredPlaceholders !== suppliedPlaceholders) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         beginHighlight: DummyAstNode.fromToken(this.name),
         endHighlight: None(),
         message:

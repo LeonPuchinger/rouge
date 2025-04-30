@@ -105,7 +105,7 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
     }
     if (!this.expression.hasValue()) {
       findings.warnings.push(
-        AnalysisWarning({
+        AnalysisWarning(environment, {
           message: "Empty interpolations have no effect.",
           beginHighlight: DummyAstNode.fromToken(this.beginDelimiter),
           endHighlight: Some(DummyAstNode.fromToken(this.endDelimiter)),
@@ -129,7 +129,7 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
       .some((isFundamental) => isFundamental);
     if (!expressionIsFundamental) {
       findings.errors.push(
-        AnalysisError({
+        AnalysisError(environment, {
           message: "Only fundamental types can be interpolated in a string.",
           beginHighlight: this.expression.unwrap(),
           endHighlight: None(),

@@ -46,7 +46,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
     const findings = AnalysisFindings.empty();
     analysisTable.findSymbol(ident).onNone(() => {
       findings.errors.push(
-        AnalysisError({
+        AnalysisError(environment, {
           message:
             "You tried to use a variable that has not been defined at this point in the program.",
           beginHighlight: this,
@@ -125,7 +125,7 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
       }
     }
     findings.errors.push(
-      AnalysisError({
+      AnalysisError(environment, {
         message:
           "The property you tried to access does not exist on the object.",
         beginHighlight: this,

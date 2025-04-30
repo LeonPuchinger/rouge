@@ -116,7 +116,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
         environment,
       );
       if (divisorValue.value === 0) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message: "Cannot divide by zero.",
           beginHighlight: this.rhs,
           endHighlight: Some(this.rhs),
@@ -195,7 +195,7 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const analysisResult = this.child.analyze(environment);
     if (!this.child.resolveType(environment).isFundamental("Number")) {
-      analysisResult.errors.push(AnalysisError({
+      analysisResult.errors.push(AnalysisError(environment, {
         message:
           "You tried to use a numeric operation on something that is not a number.",
         beginHighlight: this,

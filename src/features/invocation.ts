@@ -95,12 +95,13 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   analyzePlaceholders(
+    environment: ExecutionEnvironment,
     invokedType: FunctionSymbolType | CompositeSymbolType,
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const expectedPlaceholders = invokedType.placeholders;
     if (expectedPlaceholders.size != this.placeholders.length) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           `Expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
         beginHighlight: Some(this.placeholders.at(0))
@@ -114,7 +115,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     for (const placeholder of this.placeholders) {
       const placeholderName = placeholder.text;
       if (!typeTable.findType(placeholderName).hasValue()) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message: `The type called '${placeholderName}' could not be found.`,
           beginHighlight: DummyAstNode.fromToken(placeholder),
           endHighlight: None(),
@@ -126,8 +127,8 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   analyzeFunctionInvocation(
-    functionType: FunctionSymbolType,
     environment: ExecutionEnvironment,
+    functionType: FunctionSymbolType,
   ): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     functionType = functionType.fork();
@@ -135,7 +136,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     const foundParameterTypes = this.parameters
       .map((parameter) => parameter.resolveType(environment));
     if (expectedParameterTypes.length != foundParameterTypes.length) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           `Expected ${expectedParameterTypes.length} parameters but ${foundParameterTypes.length} were supplied.`,
         beginHighlight: this.parameters.at(0) ??
@@ -146,7 +147,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
-    const placeholdersFindings = this.analyzePlaceholders(functionType);
+    const placeholdersFindings = this.analyzePlaceholders(
+      environment,
+      functionType,
+    );
     findings = AnalysisFindings.merge(
       findings,
       placeholdersFindings,
@@ -175,7 +179,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const expectedParameterType = expectedParameterTypes[index];
       const foundParameterType = foundParameterTypes[index];
       if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
           beginHighlight: this.parameters[index],
@@ -193,7 +197,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   ): AnalysisFindings {
     functionType = functionType.fork();
     functionType.parameterTypes.shift();
-    return this.analyzeFunctionInvocation(functionType, environment);
+    return this.analyzeFunctionInvocation(environment, functionType);
   }
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
@@ -216,7 +220,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     const isMethod = isFunction && (!ignoreFunction) &&
       this.isMethod(environment);
     if (!isFunction) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "The expression cannot be invoked because it is neither a function nor a type.",
         beginHighlight: this.symbol,
@@ -231,8 +235,8 @@ export class InvocationAstNode implements EvaluableAstNode {
       findings = AnalysisFindings.merge(
         findings,
         this.analyzeFunctionInvocation(
-          calledType as FunctionSymbolType,
           environment,
+          calledType as FunctionSymbolType,
         ),
       );
     }

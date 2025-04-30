@@ -116,7 +116,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
       const typeAnnotationType = typeAnnotation.resolveType(environment);
       const expressionType = expression.resolveType(environment);
       if (!expressionType.typeCompatibleWith(typeAnnotationType)) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             `The default value for field "${this.name.text}" is incompatible with its explicitly stated type.`,
           beginHighlight: typeAnnotation,
@@ -127,7 +127,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
       }
     }
     if (!this.typeAnnotation.hasValue() && !this.defaultValue.hasValue()) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           `For each field, you have to at least specify its type or provide a default value.`,
         beginHighlight: DummyAstNode.fromToken(this.name),
@@ -314,7 +314,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       .filter(([_node, type]) => !type.bound())
       .map(([node, _type]) => node)
       .map((node) => {
-        return AnalysisError({
+        return AnalysisError(environment, {
           message: "Placeholders cannot be implemented.",
           beginHighlight: node,
           endHighlight: None(),
@@ -348,7 +348,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
           existingField !== undefined &&
           !existingField.fieldType.typeCompatibleWith(fieldType)
         ) {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "It is not possible for two traits to require the same field, but with different types.",
             beginHighlight: this
@@ -412,7 +412,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         field.name.text === fieldName
       );
       if (implementedField === undefined) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             `The field '${fieldName}' is required by the trait '${requiredBy.displayName()}' but is not implemented on '${this.name.text}'.`,
           beginHighlight: DummyAstNode.fromToken(this.name),
@@ -422,7 +422,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       } else {
         const implementedType = implementedField.resolveType(environment);
         if (!implementedType.typeCompatibleWith(fieldType)) {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               `The type of the field '${fieldName}' is incompatible with the type required by the trait '${requiredBy.displayName()}'.`,
             beginHighlight: DummyAstNode.fromToken(implementedField.name),
@@ -444,7 +444,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
           return;
         }
         if (flags.stdlib) {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "This name cannot be used because it is part of the language.",
             beginHighlight: DummyAstNode.fromToken(this.name),
@@ -452,7 +452,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
             messageHighlight: "",
           }));
         } else {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message: "Names for types have to be unique.",
             beginHighlight: DummyAstNode.fromToken(this.name),
             endHighlight: None(),
@@ -465,7 +465,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     this.fields.reduce<FieldInitializerMode>(
       (mode, field) => {
         if (mode === "default" && !field.hasDefaultValue()) {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "Fields without default values have to come before fields with default values.",
             beginHighlight: DummyAstNode.fromToken(field.name),
@@ -483,7 +483,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       let problematic = false;
       typeTable.findType(placeholder.text)
         .then(() => {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "Placeholders cannot have the same name as types that already exist in an outer scope.",
             beginHighlight: DummyAstNode.fromToken(placeholder),
@@ -494,7 +494,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
           problematic = true;
         });
       if (placeholder.text === this.name.text) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             "A placeholder cannot share the same name as its surrounding type.",
           beginHighlight: DummyAstNode.fromToken(placeholder),
@@ -512,7 +512,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     );
     for (const [placeholder, indices] of placeholderDuplicates) {
       const duplicateCount = indices.length;
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message: "The names of placeholders have to be unique.",
         beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
         endHighlight: None(),
@@ -604,7 +604,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       );
       const fieldName = field.name.text;
       if (fieldNames.includes(fieldName)) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message: "Fields inside of a type have to have a unique name.",
           beginHighlight: DummyAstNode.fromToken(field.name),
           endHighlight: None(),

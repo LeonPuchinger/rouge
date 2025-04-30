@@ -66,7 +66,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         .map((annotation) => annotation.resolveType(environment))
         .then((annotation) => {
           if (!annotation.typeCompatibleWith(expressionType)) {
-            findings.errors.push(AnalysisError({
+            findings.errors.push(AnalysisError(environment, {
               message:
                 "The type of the assigned value is not compatible with the type that was explicitly annotated in the assignment.",
               beginHighlight: this.value,
@@ -82,7 +82,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         .unwrapOr(false);
       if (readonly) {
         findings.errors.push(
-          AnalysisError({
+          AnalysisError(environment, {
             message:
               "This variable cannot be reassigned because it is part of the language.",
             beginHighlight: this,
@@ -93,7 +93,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         return findings;
       }
       this.typeAnnotation.then((annotation) => {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             "Type annotations on assignments are only allowed when the variable is first created.",
           beginHighlight: annotation,
@@ -110,7 +110,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
             return;
           }
           findings.errors.push(
-            AnalysisError({
+            AnalysisError(environment, {
               message: concatLines(
                 `You tried setting the variable '${ident}' to a value that is incompatible with the variables type.`,
                 "When a variable is created its type is set in stone.",
@@ -174,7 +174,7 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
       this.value.analyze(environment),
     );
     this.typeAnnotation.then((annotation) => {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message: "Type annotations are not allowed on property writes.",
         beginHighlight: annotation,
         endHighlight: None(),
@@ -187,7 +187,7 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     const valueType = this.value.resolveType(environment);
     const assigneeType = this.assignee.resolveType(environment);
     if (!valueType.typeCompatibleWith(assigneeType)) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "The type of the value you are trying to assign is incompatible with the type of the field.",
         beginHighlight: this.assignee,

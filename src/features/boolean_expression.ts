@@ -106,7 +106,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
       ["==", "!="].includes(operator) &&
       !leftType.typeCompatibleWith(rightType)
     ) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "You tried to compare two values that don't have the same type. That is not possible.",
         beginHighlight: this,
@@ -117,7 +117,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
       [">", ">=", "<", "<="].includes(operator) &&
       (!leftType.isFundamental("Number") || !rightType.isFundamental("Number"))
     ) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           'The "greater/smaller than" operator can only be used on numbers.',
         beginHighlight: this,
@@ -129,7 +129,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
       (!leftType.isFundamental("Boolean") ||
         !rightType.isFundamental("Boolean"))
     ) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "You tried to use a boolean combination operators on something that is not a boolean.",
         beginHighlight: this,

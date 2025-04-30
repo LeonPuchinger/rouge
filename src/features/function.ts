@@ -75,7 +75,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
     const findings = this.type.analyze(environment);
     const existingSymbol = analysisTable.findSymbol(this.name.text);
     if (existingSymbol.hasValue()) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "Function parameter names have to be unique. Parameters can not share names with other variables.",
         messageHighlight:
@@ -212,7 +212,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       return !branchContainsReturn;
     });
     if (missingReturnStatement) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "This function is missing at least one return statement somewhere.",
         beginHighlight: DummyAstNode.fromToken(this.functionKeywordToken),
@@ -228,7 +228,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     for (const placeholder of this.placeholders) {
       typeTable.findType(placeholder.text)
         .then(() => {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "Placeholders cannot have the same name as types that already exist in an outer scope.",
             beginHighlight: DummyAstNode.fromToken(placeholder),
@@ -246,7 +246,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     );
     for (const [placeholder, indices] of placeholderDuplicates) {
       const duplicateCount = indices.length;
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message: "The names of placeholders have to be unique.",
         beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
         endHighlight: None(),
@@ -392,7 +392,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     }
     const savedReturnType = typeTable.findReturnType();
     if (savedReturnType.kind === "none") {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "Return statements are only allowed inside of functions or methods",
         beginHighlight: DummyAstNode.fromToken(this.keyword),
@@ -406,7 +406,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     );
     // curried version of AnalysisError with the highlighted range pre-applied
     const ReturnTypeError = (message: string, messageHighlight?: string) =>
-      AnalysisError({
+      AnalysisError(environment, {
         message: message,
         beginHighlight: DummyAstNode.fromToken(this.keyword),
         endHighlight: this.expression,
