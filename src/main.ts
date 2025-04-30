@@ -50,6 +50,29 @@ export function run(
   return analysisFindings;
 }
 
+/**
+ * Initializes and returns the state of the interpreter to the point
+ * where individual statements can be interpreted. The returned environment
+ * needs to be passed to every invocation of `repl`.
+ */
+export function openRepl(
+  stdout: FileLike<string> = new VirtualTextFile(),
+  stderr: FileLike<string> = new VirtualTextFile(),
+  stdin: FileLike<string> = new VirtualTextFile(),
+): ExecutionEnvironment {
+  const environment = new ExecutionEnvironment({ source: "" });
+  environment.typeTable.reset();
+  environment.analysisTable.reset(false);
+  environment.runtimeTable.reset(false);
+  injectRuntimeBindings(environment, false, stdout, stderr, stdin);
+  const stdlibAst = parseStdlib(environment);
+  analyzeStdlib(
+    environment,
+    stdlibAst,
+  );
+  return environment;
+}
+
 export function analyze(source: string): AnalysisFindings {
   const environment = new ExecutionEnvironment({ source });
   environment.typeTable.reset();
