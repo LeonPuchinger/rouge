@@ -19,7 +19,6 @@ import {
   CompositeSymbolType,
   FunctionSymbolType,
   SymbolType,
-  typeTable,
 } from "../type.ts";
 import { Option, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
@@ -56,7 +55,7 @@ export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     const returnType = this.returnType.map((node) =>
       node.resolveType(environment)
     )
-      .unwrapOr(nothingType());
+      .unwrapOr(nothingType(environment));
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
       returnType: returnType,
@@ -105,7 +104,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
-    const type = typeTable.findType(this.name.text)
+    const type = environment.typeTable.findType(this.name.text)
       .map(([type, _flags]) => type as CompositeSymbolType);
     if (!type.hasValue()) {
       findings.errors.push(AnalysisError(environment, {
@@ -144,7 +143,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
   resolveType(environment: ExecutionEnvironment): CompositeSymbolType {
     const placeholderTypes = this.placeholders
       .map((placeholder) => placeholder.resolveType(environment));
-    let resolvedType = typeTable
+    let resolvedType = environment.typeTable
       .findType(this.name.text)
       .map(([type, _flags]) => type)
       .unwrap() as CompositeSymbolType;

@@ -1,5 +1,6 @@
 import { Token } from "typescript-parsec";
 import { InterpretableAstNode } from "./ast.ts";
+import { ExecutionEnvironment } from "./execution.ts";
 import { ReturnValueContainer } from "./features/function.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
@@ -134,8 +135,9 @@ export function createRuntimeBindingRuntimeSymbol(
  * that will end up in the analysis table.
  */
 function createRuntimeBindingStaticSymbol(
+    environment: ExecutionEnvironment,
     parameters: HookParameter[],
-    returnType: SymbolType = nothingType(),
+    returnType: SymbolType = nothingType(environment),
 ): StaticSymbol {
     const parameterTypes = parameters.map((param) => param.symbolType);
     return new StaticSymbol({
@@ -153,6 +155,7 @@ function createRuntimeBindingStaticSymbol(
  * analysis table.
  */
 function createRuntimeBinding(
+    environment: ExecutionEnvironment,
     name: string,
     parameters: HookParameter[],
     returnType: SymbolType,
@@ -167,7 +170,7 @@ function createRuntimeBinding(
     }
     analysisTable.setRuntimeBinding(
         name,
-        createRuntimeBindingStaticSymbol(parameters, returnType),
+        createRuntimeBindingStaticSymbol(environment, parameters, returnType),
     );
 }
 
@@ -177,6 +180,7 @@ function createRuntimeBinding(
  * analysis table.
  */
 export function injectRuntimeBindings(
+    environment: ExecutionEnvironment,
     onlyAnalysis: boolean = false,
     stdout?: WritableSink<string>,
     stderr?: WritableSink<string>,
@@ -191,12 +195,13 @@ export function injectRuntimeBindings(
     }
 
     createRuntimeBinding(
+        environment,
         "runtime_print_newline",
         [{
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType(),
+        nothingType(environment),
         (params) => {
             const message = params.get("message")!.value as string;
             stdout?.writeLine(message);
@@ -205,12 +210,13 @@ export function injectRuntimeBindings(
     );
 
     createRuntimeBinding(
+        environment,
         "runtime_print_no_newline",
         [{
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType(),
+        nothingType(environment),
         (params) => {
             const message = params.get("message")!.value as string;
             stdout?.writeChunk(message);
@@ -219,12 +225,13 @@ export function injectRuntimeBindings(
     );
 
     createRuntimeBinding(
+        environment,
         "runtime_panic",
         [{
             name: "reason",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType(),
+        nothingType(environment),
         (params) => {
             const reason = params.get("reason")!.value as string;
             throw new PanicError(reason);
@@ -233,6 +240,7 @@ export function injectRuntimeBindings(
     );
 
     createRuntimeBinding(
+        environment,
         "runtime_reverse",
         [{
             name: "message",

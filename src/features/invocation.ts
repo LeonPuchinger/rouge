@@ -29,7 +29,6 @@ import {
   CompositeSymbolType,
   FunctionSymbolType,
   SymbolType,
-  typeTable,
 } from "../type.ts";
 import { zip } from "../util/array.ts";
 import { memoize } from "../util/memoize.ts";
@@ -114,7 +113,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     for (const placeholder of this.placeholders) {
       const placeholderName = placeholder.text;
-      if (!typeTable.findType(placeholderName).hasValue()) {
+      if (!environment.typeTable.findType(placeholderName).hasValue()) {
         findings.errors.push(AnalysisError(environment, {
           message: `The type called '${placeholderName}' could not be found.`,
           beginHighlight: DummyAstNode.fromToken(placeholder),
@@ -163,7 +162,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const [placeholder, suppliedType] of zip(
         Array.from(functionType.placeholders.values()),
         this.placeholders.map((placeholder) =>
-          typeTable.findType(placeholder.text)
+          environment.typeTable.findType(placeholder.text)
             .map(([type, _flags]) => type)
         ),
       )
@@ -330,7 +329,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const [placeholder, suppliedType] of zip(
         Array.from(functionType.placeholders.values()),
         this.placeholders.map((placeholder) =>
-          typeTable.findType(placeholder.text)
+          environment.typeTable.findType(placeholder.text)
             .map(([type, _flags]) => type)
         ),
       )

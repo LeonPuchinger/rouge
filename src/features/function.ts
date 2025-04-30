@@ -30,7 +30,6 @@ import {
   FunctionSymbolType,
   PlaceholderSymbolType,
   SymbolType,
-  typeTable,
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
@@ -109,7 +108,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
   }
 
   evaluate(environment: ExecutionEnvironment): SymbolValue<Function> {
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     const placeholders = new Map(
       this.placeholders.map((placeholder) => [
         placeholder.text,
@@ -117,7 +116,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       ]),
     );
     for (const [placeholderName, placeholderType] of placeholders) {
-      typeTable.setType(placeholderName, placeholderType);
+      environment.typeTable.setType(placeholderName, placeholderType);
     }
     const parameterTypes: Map<string, SymbolType> = new Map();
     for (const parameter of this.parameters) {
@@ -128,8 +127,8 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     }
     const returnType = this.returnType
       .map((literal) => literal.resolveType(environment))
-      .unwrapOr(nothingType());
-    typeTable.popScope();
+      .unwrapOr(nothingType(environment));
+    environment.typeTable.popScope();
     return new FunctionSymbolValue({
       parameterTypes: parameterTypes,
       placeholderTypes: placeholders,
@@ -227,7 +226,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     let findings = AnalysisFindings.empty();
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
-      typeTable.findType(placeholder.text)
+      environment.typeTable.findType(placeholder.text)
         .then(() => {
           findings.errors.push(AnalysisError(environment, {
             message:
@@ -266,11 +265,11 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
         ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
       ),
     );
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     for (
       const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
     ) {
-      typeTable.setType(placeholerName, placeholderType);
+      environment.typeTable.setType(placeholerName, placeholderType);
     }
     analysisTable.pushScope();
     for (const parameter of this.parameters) {
@@ -293,9 +292,9 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     returnTypeAnalysis.then((findings) => {
       const returnType = this.returnType
         .map((literal) => literal.resolveType(environment))
-        .unwrapOr(nothingType());
-      typeTable.setReturnType(returnType);
-      if (!returnType.typeCompatibleWith(nothingType())) {
+        .unwrapOr(nothingType(environment));
+      environment.typeTable.setReturnType(returnType);
+      if (!returnType.typeCompatibleWith(nothingType(environment))) {
         findings = AnalysisFindings.merge(
           findings,
           this.analyzeReturnPlacements(environment),
@@ -307,12 +306,12 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       this.statements.analyze(environment),
     );
     analysisTable.popScope();
-    typeTable.popScope();
+    environment.typeTable.popScope();
     return findings;
   }
 
   resolveType(environment: ExecutionEnvironment): SymbolType {
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     const placeholders = new Map(
       this.placeholders.map((placeholder) => [
         placeholder.text,
@@ -320,15 +319,15 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       ]),
     );
     for (const [placeholderName, placeholderType] of placeholders) {
-      typeTable.setType(placeholderName, placeholderType);
+      environment.typeTable.setType(placeholderName, placeholderType);
     }
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType(environment)
     );
     const returnType = this.returnType
       .map((literal) => literal.resolveType(environment))
-      .unwrapOr(nothingType());
-    typeTable.popScope();
+      .unwrapOr(nothingType(environment));
+    environment.typeTable.popScope();
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
       placeholders: placeholders,
@@ -391,7 +390,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     if (findings.isErroneous()) {
       return findings;
     }
-    const savedReturnType = typeTable.findReturnType();
+    const savedReturnType = environment.typeTable.findReturnType();
     if (savedReturnType.kind === "none") {
       findings.errors.push(AnalysisError(environment, {
         message:
@@ -414,7 +413,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
         messageHighlight: messageHighlight ?? "",
       });
     const returnValueRequired = !supposedReturnType.typeCompatibleWith(
-      nothingType(),
+      nothingType(environment),
     );
     const returnStatementEmpty = actualReturnType.kind === "none";
     if (returnValueRequired && returnStatementEmpty) {

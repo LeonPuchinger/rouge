@@ -1103,5 +1103,3 @@ export class TypeTable {
     }
   }
 }
-
-export const typeTable = new TypeTable();

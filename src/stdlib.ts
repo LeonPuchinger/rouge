@@ -3,7 +3,6 @@ import { ExecutionEnvironment } from "./execution.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { analysisTable, runtimeTable } from "./symbol.ts";
-import { typeTable } from "./type.ts";
 import { updateEnvironment } from "./util/environment.ts";
 import { InternalError } from "./util/error.ts";
 
@@ -128,8 +127,11 @@ export function analyzeStdlib(
     updateEnvironment({ source: stdlib });
     analysisTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
     analysisTable.ignoreRuntimeBindings = false;
-    typeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    typeTable.ignoreRuntimeTypes = false;
+    environment.typeTable.setGlobalFlagOverrides({
+        readonly: true,
+        stdlib: true,
+    });
+    environment.typeTable.ignoreRuntimeTypes = false;
     const analysisFindings = stdlibAst.analyze(environment);
     updateEnvironment({ source: "" });
     analysisTable.setGlobalFlagOverrides({
@@ -137,8 +139,11 @@ export function analyzeStdlib(
         stdlib: "notset",
     });
     analysisTable.ignoreRuntimeBindings = true;
-    typeTable.setGlobalFlagOverrides({ readonly: "notset", stdlib: "notset" });
-    typeTable.ignoreRuntimeTypes = true;
+    environment.typeTable.setGlobalFlagOverrides({
+        readonly: "notset",
+        stdlib: "notset",
+    });
+    environment.typeTable.ignoreRuntimeTypes = true;
     if (analysisFindings.errors.length !== 0) {
         throw new InternalError(
             "The standard library contains static analysis errors.",
@@ -156,12 +161,18 @@ export function injectStdlib(
 ) {
     updateEnvironment({ source: stdlib });
     runtimeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    typeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
+    environment.typeTable.setGlobalFlagOverrides({
+        readonly: true,
+        stdlib: true,
+    });
     stdlibAst.interpret(environment);
     runtimeTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
     });
-    typeTable.setGlobalFlagOverrides({ readonly: "notset", stdlib: "notset" });
+    environment.typeTable.setGlobalFlagOverrides({
+        readonly: "notset",
+        stdlib: "notset",
+    });
     updateEnvironment({ source: "" });
 }

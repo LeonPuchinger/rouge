@@ -31,7 +31,6 @@ import {
   IgnoreSymbolType,
   PlaceholderSymbolType,
   SymbolType,
-  typeTable,
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
 import { InternalError } from "../util/error.ts";
@@ -229,8 +228,8 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       traitTypes,
       placeholderTypes,
     );
-    typeTable.pushScope();
-    typeTable.setType(
+    environment.typeTable.pushScope();
+    environment.typeTable.setType(
       this.name.text,
       definitionType,
     );
@@ -238,7 +237,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       environment,
       definitionType,
     );
-    typeTable.popScope();
+    environment.typeTable.popScope();
     return completeType;
   }
 
@@ -438,7 +437,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
-    typeTable.findType(this.name.text)
+    environment.typeTable.findType(this.name.text)
       .then(([_type, flags]) => {
         if (!flags.readonly) {
           return;
@@ -481,7 +480,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
       let problematic = false;
-      typeTable.findType(placeholder.text)
+      environment.typeTable.findType(placeholder.text)
         .then(() => {
           findings.errors.push(AnalysisError(environment, {
             message:
@@ -531,11 +530,11 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
       ),
     );
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     for (
       const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
     ) {
-      typeTable.setType(placeholerName, placeholderType);
+      environment.typeTable.setType(placeholerName, placeholderType);
     }
     const analyzedTraits = this.traits
       .map((trait) =>
@@ -573,7 +572,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       unproblematicTraitsTypes,
       unproblematicPlaceholderTypes,
     );
-    typeTable.setType(
+    environment.typeTable.setType(
       this.name.text,
       incompletedefinitionType,
     );
@@ -615,7 +614,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       fieldNames.push(fieldName);
     }
     if (findings.isErroneous() || preliminaryFindings.isErroneous()) {
-      typeTable.popScope();
+      environment.typeTable.popScope();
       return AnalysisFindings.merge(findings, preliminaryFindings);
     }
     const definitionType = this.completeBarebonesSymbolType(
@@ -635,11 +634,11 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
-    typeTable.popScope();
+    environment.typeTable.popScope();
     if (findings.isErroneous()) {
       return findings;
     }
-    typeTable.setType(
+    environment.typeTable.setType(
       this.name.text,
       definitionType,
     );
@@ -664,9 +663,9 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       symbolType: SymbolType;
     }[] = [];
     const fieldTypes = new Map<string, SymbolType>();
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     for (const [placeholderName, placeholderType] of placeholders) {
-      typeTable.setType(placeholderName, placeholderType);
+      environment.typeTable.setType(placeholderName, placeholderType);
     }
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
@@ -677,14 +676,14 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       }
       fieldTypes.set(field.name.text, field.resolveType(environment));
     }
-    typeTable.popScope();
+    environment.typeTable.popScope();
     return createRuntimeBindingRuntimeSymbol(
       nonDefaultParameters,
       definitionType,
       (params) => {
-        typeTable.pushScope();
+        environment.typeTable.pushScope();
         for (const [placeholderName, placeholderType] of placeholders) {
-          typeTable.setType(placeholderName, placeholderType);
+          environment.typeTable.setType(placeholderName, placeholderType);
         }
         const initializers = new Map<string, [SymbolValue, SymbolType]>();
         for (const field of this.fields) {
@@ -704,7 +703,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
             );
           }
         }
-        typeTable.popScope();
+        environment.typeTable.popScope();
         const instance = new CompositeSymbolValue({
           fields: initializers,
           id: this.name.text,
@@ -726,9 +725,9 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         ],
       ),
     );
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     for (const [placeholderName, placeholderType] of placeholderTypes) {
-      typeTable.setType(placeholderName, placeholderType);
+      environment.typeTable.setType(placeholderName, placeholderType);
     }
     const traitTypes = this.traits
       .map((trait) => trait.resolveType(environment));
@@ -737,8 +736,8 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       traitTypes,
       placeholderTypes,
     );
-    typeTable.popScope();
-    typeTable.setType(
+    environment.typeTable.popScope();
+    environment.typeTable.setType(
       this.name.text,
       definitionType,
     );

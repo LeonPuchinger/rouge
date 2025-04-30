@@ -30,7 +30,7 @@ export function run(
   environment.typeTable.reset();
   environment.analysisTable.reset(false);
   environment.runtimeTable.reset(false);
-  injectRuntimeBindings(false, stdout, stderr, stdin);
+  injectRuntimeBindings(environment, false, stdout, stderr, stdin);
   const stdlibAst = parseStdlib(environment);
   analyzeStdlib(
     environment,
@@ -56,7 +56,7 @@ export function analyze(source: string): AnalysisFindings {
   const environment = new ExecutionEnvironment({ source });
   environment.typeTable.reset();
   environment.analysisTable.reset(true);
-  injectRuntimeBindings(true);
+  injectRuntimeBindings(environment, true);
   const stdlibAst = parseStdlib(environment);
   analyzeStdlib(environment, stdlibAst);
   // TODO: update new environment
