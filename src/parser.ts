@@ -32,7 +32,7 @@ export function parse(
   const parseResult = expectEOF(start.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
-    throw new RuntimeError({
+    throw new RuntimeError(environment, {
       message: "Encountered syntax error.",
       include: [DummyAstNode.fromTokenPosition(environment, parseError.pos!)],
       highlight: [DummyAstNode.fromTokenPosition(environment, parseError.pos!)],

@@ -149,7 +149,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
             return left.value * right.value;
           case "/":
             if (right.value === 0) {
-              throw new RuntimeError({
+              throw new RuntimeError(environment, {
                 message: "Division by zero is not possible.",
                 include: [this.lhs, this.rhs],
                 highlight: [this.rhs],
