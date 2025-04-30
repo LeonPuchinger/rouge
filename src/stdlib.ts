@@ -2,7 +2,7 @@ import { AST } from "./ast.ts";
 import { ExecutionEnvironment } from "./execution.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
-import { analysisTable, runtimeTable } from "./symbol.ts";
+import { runtimeTable } from "./symbol.ts";
 import { updateEnvironment } from "./util/environment.ts";
 import { InternalError } from "./util/error.ts";
 
@@ -125,8 +125,11 @@ export function analyzeStdlib(
     stdlibAst: AST,
 ) {
     updateEnvironment({ source: stdlib });
-    analysisTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    analysisTable.ignoreRuntimeBindings = false;
+    environment.analysisTable.setGlobalFlagOverrides({
+        readonly: true,
+        stdlib: true,
+    });
+    environment.analysisTable.ignoreRuntimeBindings = false;
     environment.typeTable.setGlobalFlagOverrides({
         readonly: true,
         stdlib: true,
@@ -134,11 +137,11 @@ export function analyzeStdlib(
     environment.typeTable.ignoreRuntimeTypes = false;
     const analysisFindings = stdlibAst.analyze(environment);
     updateEnvironment({ source: "" });
-    analysisTable.setGlobalFlagOverrides({
+    environment.analysisTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
     });
-    analysisTable.ignoreRuntimeBindings = true;
+    environment.analysisTable.ignoreRuntimeBindings = true;
     environment.typeTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",

@@ -17,7 +17,6 @@ import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { createRuntimeBindingRuntimeSymbol } from "../runtime.ts";
 import {
-  analysisTable,
   CompositeSymbolValue,
   RuntimeSymbol,
   runtimeTable,
@@ -588,8 +587,8 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
-    analysisTable.pushScope();
-    analysisTable.setSymbol(
+    environment.analysisTable.pushScope();
+    environment.analysisTable.setSymbol(
       this.name.text,
       mockConstructor,
     );
@@ -642,8 +641,8 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       this.name.text,
       definitionType,
     );
-    analysisTable.popScope();
-    analysisTable.setSymbol(this.name.text, constructor);
+    environment.analysisTable.popScope();
+    environment.analysisTable.setSymbol(this.name.text, constructor);
     return findings;
   }
 

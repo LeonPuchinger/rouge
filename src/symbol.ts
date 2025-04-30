@@ -341,5 +341,4 @@ export class SymbolTable<S extends Symbol> {
   }
 }
 
-export const analysisTable: AnalysisSymbolTable = new SymbolTable();
 export const runtimeTable: InterpreterSymbolTable = new SymbolTable();

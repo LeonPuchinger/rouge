@@ -4,7 +4,6 @@ import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
-  analysisTable,
   CompositeSymbolValue,
   runtimeTable,
   SymbolFlags,
@@ -44,7 +43,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const ident = this.identifierToken.text;
     const findings = AnalysisFindings.empty();
-    analysisTable.findSymbol(ident).onNone(() => {
+    environment.analysisTable.findSymbol(ident).onNone(() => {
       findings.errors.push(
         AnalysisError(environment, {
           message:
@@ -59,7 +58,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
   }
 
   resolveType(environment: ExecutionEnvironment): SymbolType {
-    return analysisTable
+    return environment.analysisTable
       .findSymbol(this.identifierToken.text)
       .map(([symbol, _flags]) => symbol.valueType)
       .or(
@@ -77,7 +76,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
   resolveFlags(
     environment: ExecutionEnvironment,
   ): Map<keyof SymbolFlags, boolean> {
-    return analysisTable
+    return environment.analysisTable
       .findSymbol(this.identifierToken.text)
       .map(([_symbol, flags]) =>
         new Map(Object.entries(flags)) as Map<keyof SymbolFlags, boolean>

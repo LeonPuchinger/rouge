@@ -13,12 +13,7 @@ import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  analysisTable,
-  RuntimeSymbol,
-  runtimeTable,
-  StaticSymbol,
-} from "../symbol.ts";
+import { RuntimeSymbol, runtimeTable, StaticSymbol } from "../symbol.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
@@ -47,7 +42,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = this.value.analyze(environment);
     const ident = this.assignee.text;
-    const existingSymbol = analysisTable.findSymbol(ident);
+    const existingSymbol = environment.analysisTable.findSymbol(ident);
     const isInitialAssignment = !existingSymbol.hasValue();
     const expressionFindingsErroneous = findings.isErroneous();
     if (isInitialAssignment) {
@@ -104,7 +99,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         return findings;
       }
       const expressionType = this.value.resolveType(environment);
-      analysisTable.findSymbol(ident)
+      environment.analysisTable.findSymbol(ident)
         .then(([existing, _flags]) => {
           if (existing.valueType.typeCompatibleWith(expressionType)) {
             return;
@@ -127,7 +122,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       const expressionType = this.typeAnnotation
         .map((annotation) => annotation.resolveType(environment))
         .unwrapOr(this.value.resolveType(environment));
-      analysisTable.setSymbol(
+      environment.analysisTable.setSymbol(
         ident,
         new StaticSymbol({
           valueType: expressionType,

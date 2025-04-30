@@ -7,7 +7,6 @@ import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
 import { ReadableStream, WritableSink } from "./streams.ts";
 import {
-    analysisTable,
     FunctionSymbolValue,
     RuntimeSymbol,
     runtimeTable,
@@ -168,7 +167,7 @@ function createRuntimeBinding(
             createRuntimeBindingRuntimeSymbol(parameters, returnType, hook),
         );
     }
-    analysisTable.setRuntimeBinding(
+    environment.analysisTable.setRuntimeBinding(
         name,
         createRuntimeBindingStaticSymbol(environment, parameters, returnType),
     );

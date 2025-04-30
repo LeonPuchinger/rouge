@@ -11,7 +11,7 @@ import { InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { analysisTable, runtimeTable } from "../symbol.ts";
+import { runtimeTable } from "../symbol.ts";
 import { None, Option } from "../util/monad/index.ts";
 import { Some } from "../util/monad/option.ts";
 import {
@@ -42,11 +42,11 @@ export class ConditionAstNode implements InterpretableAstNode {
   }
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
-    analysisTable.pushScope();
+    environment.analysisTable.pushScope();
     const conditionFindings = this.condition.analyze(environment);
     const trueFindings = this.trueStatements.analyze(environment);
-    analysisTable.popScope();
-    analysisTable.pushScope();
+    environment.analysisTable.popScope();
+    environment.analysisTable.pushScope();
     const findings = AnalysisFindings.merge(
       conditionFindings,
       trueFindings,
@@ -54,7 +54,7 @@ export class ConditionAstNode implements InterpretableAstNode {
         .map((statements) => statements.analyze(environment))
         .unwrapOr(AnalysisFindings.empty()),
     );
-    analysisTable.popScope();
+    environment.analysisTable.popScope();
     if (conditionFindings.isErroneous()) {
       return findings;
     }

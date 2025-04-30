@@ -20,7 +20,6 @@ import {
 } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
-  analysisTable,
   FunctionSymbolValue,
   StaticSymbol,
   SymbolFlags,
@@ -72,7 +71,7 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = this.type.analyze(environment);
-    const existingSymbol = analysisTable.findSymbol(this.name.text);
+    const existingSymbol = environment.analysisTable.findSymbol(this.name.text);
     if (existingSymbol.hasValue()) {
       findings.errors.push(AnalysisError(environment, {
         message:
@@ -271,7 +270,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     ) {
       environment.typeTable.setType(placeholerName, placeholderType);
     }
-    analysisTable.pushScope();
+    environment.analysisTable.pushScope();
     for (const parameter of this.parameters) {
       const parameterFindings = parameter.analyze(environment);
       findings = AnalysisFindings.merge(findings, parameterFindings);
@@ -279,7 +278,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
         continue;
       }
       const parameterType = parameter.resolveType(environment);
-      analysisTable.setSymbol(
+      environment.analysisTable.setSymbol(
         parameter.name.text,
         new StaticSymbol({ valueType: parameterType }),
       );
@@ -305,7 +304,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       findings,
       this.statements.analyze(environment),
     );
-    analysisTable.popScope();
+    environment.analysisTable.popScope();
     environment.typeTable.popScope();
     return findings;
   }
