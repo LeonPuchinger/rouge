@@ -2,7 +2,6 @@ import { AST } from "./ast.ts";
 import { ExecutionEnvironment } from "./execution.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
-import { runtimeTable } from "./symbol.ts";
 import { updateEnvironment } from "./util/environment.ts";
 import { InternalError } from "./util/error.ts";
 
@@ -163,13 +162,16 @@ export function injectStdlib(
     stdlibAst: AST,
 ) {
     updateEnvironment({ source: stdlib });
-    runtimeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
+    environment.runtimeTable.setGlobalFlagOverrides({
+        readonly: true,
+        stdlib: true,
+    });
     environment.typeTable.setGlobalFlagOverrides({
         readonly: true,
         stdlib: true,
     });
     stdlibAst.interpret(environment);
-    runtimeTable.setGlobalFlagOverrides({
+    environment.runtimeTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
     });

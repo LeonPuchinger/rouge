@@ -21,7 +21,6 @@ import { Option } from "../main.ts";
 import {
   FunctionSymbolValue,
   RuntimeSymbol,
-  runtimeTable,
   SymbolFlags,
   SymbolValue,
 } from "../symbol.ts";
@@ -253,7 +252,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     functionSymbolValue: FunctionSymbolValue,
     defaultParameters: Map<string, SymbolValue> = new Map(),
   ): SymbolValue<unknown> {
-    runtimeTable.pushScope();
+    environment.runtimeTable.pushScope();
     const parameterNames = functionSymbolValue.parameterNames;
     let offset = 0;
     for (
@@ -264,7 +263,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const parameterName = parameterNames[index];
       if (defaultParameters.has(parameterName)) {
         offset += 1;
-        runtimeTable.setSymbol(
+        environment.runtimeTable.setSymbol(
           parameterName,
           new RuntimeSymbol({
             value: defaultParameters.get(parameterName)!,
@@ -273,7 +272,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         continue;
       }
       const symbolValue = this.parameters[index - offset].evaluate(environment);
-      runtimeTable.setSymbol(
+      environment.runtimeTable.setSymbol(
         parameterName,
         new RuntimeSymbol({
           value: symbolValue,
@@ -290,7 +289,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         throw exception;
       }
     }
-    runtimeTable.popScope();
+    environment.runtimeTable.popScope();
     return returnValue;
   }
 
@@ -307,17 +306,18 @@ export class InvocationAstNode implements EvaluableAstNode {
         (calledSymbol as FunctionSymbolValue).parameterNames[0];
       defaultParameters.set(thisParameterName, parentInstance);
     }
-    const savedIgnoreRuntimeBindings = runtimeTable.ignoreRuntimeBindings;
+    const savedIgnoreRuntimeBindings =
+      environment.runtimeTable.ignoreRuntimeBindings;
     if (partOfStdlib) {
       // grant the invocation access to the runtime
-      runtimeTable.ignoreRuntimeBindings = false;
+      environment.runtimeTable.ignoreRuntimeBindings = false;
     }
     const result = this.evaluateFunction(
       environment,
       calledSymbol as FunctionSymbolValue,
       defaultParameters,
     );
-    runtimeTable.ignoreRuntimeBindings = savedIgnoreRuntimeBindings;
+    environment.runtimeTable.ignoreRuntimeBindings = savedIgnoreRuntimeBindings;
     return result;
   }
 

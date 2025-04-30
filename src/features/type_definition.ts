@@ -19,7 +19,6 @@ import { createRuntimeBindingRuntimeSymbol } from "../runtime.ts";
 import {
   CompositeSymbolValue,
   RuntimeSymbol,
-  runtimeTable,
   StaticSymbol,
   SymbolFlags,
   SymbolValue,
@@ -677,6 +676,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     }
     environment.typeTable.popScope();
     return createRuntimeBindingRuntimeSymbol(
+      environment,
       nonDefaultParameters,
       definitionType,
       (params) => {
@@ -745,7 +745,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       definitionType,
       placeholderTypes,
     );
-    runtimeTable.setSymbol(this.name.text, constructor);
+    environment.runtimeTable.setSymbol(this.name.text, constructor);
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

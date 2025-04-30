@@ -11,7 +11,6 @@ import { InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { runtimeTable } from "../symbol.ts";
 import { None, Option } from "../util/monad/index.ts";
 import { Some } from "../util/monad/option.ts";
 import {
@@ -71,19 +70,19 @@ export class ConditionAstNode implements InterpretableAstNode {
   }
 
   interpret(environment: ExecutionEnvironment): void {
-    runtimeTable.pushScope();
+    environment.runtimeTable.pushScope();
     const conditionResult = (this.condition as BooleanExpressionAstNode)
       .evaluate(environment);
     if (conditionResult.value) {
       this.trueStatements.interpret(environment);
-      runtimeTable.popScope();
+      environment.runtimeTable.popScope();
     } else {
-      runtimeTable.popScope();
-      runtimeTable.pushScope();
+      environment.runtimeTable.popScope();
+      environment.runtimeTable.pushScope();
       this.falseStatements.then((statements) =>
         statements.interpret(environment)
       );
-      runtimeTable.popScope();
+      environment.runtimeTable.popScope();
     }
   }
 

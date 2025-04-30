@@ -13,7 +13,7 @@ import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { RuntimeSymbol, runtimeTable, StaticSymbol } from "../symbol.ts";
+import { RuntimeSymbol, StaticSymbol } from "../symbol.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
@@ -139,7 +139,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       .unwrapOr(this.value.resolveType(environment));
     const value = this.value.evaluate(environment);
     value.valueType = type;
-    runtimeTable.setSymbol(
+    environment.runtimeTable.setSymbol(
       ident,
       new RuntimeSymbol({
         node: this.value,

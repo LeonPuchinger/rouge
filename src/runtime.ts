@@ -9,7 +9,6 @@ import { ReadableStream, WritableSink } from "./streams.ts";
 import {
     FunctionSymbolValue,
     RuntimeSymbol,
-    runtimeTable,
     StaticSymbol,
     StringSymbolValue,
     SymbolValue,
@@ -30,9 +29,10 @@ import { nothingInstance, nothingType } from "./util/type.ts";
  * It also asserts that the symbol exists in the table.
  */
 function resolveRuntimeParameter(
+    environment: ExecutionEnvironment,
     name: string,
 ): SymbolValue {
-    const symbol = runtimeTable.findSymbol(name)
+    const symbol = environment.runtimeTable.findSymbol(name)
         .map(([symbol, _flags]) => symbol)
         .unwrapOrThrow(
             new InternalError(
@@ -93,6 +93,7 @@ type HookParameter = {
  * that will end up in the runtime table.
  */
 export function createRuntimeBindingRuntimeSymbol(
+    environment: ExecutionEnvironment,
     parameters: HookParameter[],
     returnType: SymbolType,
     hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
@@ -108,7 +109,7 @@ export function createRuntimeBindingRuntimeSymbol(
                     const resolvedParameters = new Map<string, SymbolValue>(
                         parameters.map((param) => [
                             param.name,
-                            resolveRuntimeParameter(param.name),
+                            resolveRuntimeParameter(environment, param.name),
                         ]),
                     );
                     const returnValue = hook(resolvedParameters) ??
@@ -162,9 +163,14 @@ function createRuntimeBinding(
     onlyAnalysis: boolean = false,
 ) {
     if (!onlyAnalysis) {
-        runtimeTable.setRuntimeBinding(
+        environment.runtimeTable.setRuntimeBinding(
             name,
-            createRuntimeBindingRuntimeSymbol(parameters, returnType, hook),
+            createRuntimeBindingRuntimeSymbol(
+                environment,
+                parameters,
+                returnType,
+                hook,
+            ),
         );
     }
     environment.analysisTable.setRuntimeBinding(

@@ -3,12 +3,7 @@ import { EvaluableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  CompositeSymbolValue,
-  runtimeTable,
-  SymbolFlags,
-  SymbolValue,
-} from "../symbol.ts";
+import { CompositeSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
 import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
@@ -29,7 +24,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
 
   evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
     const ident = this.identifierToken.text;
-    return runtimeTable
+    return environment.runtimeTable
       .findSymbol(ident)
       .map(([symbol, _flags]) => symbol.value)
       .unwrapOrThrow(
@@ -62,7 +57,7 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
       .findSymbol(this.identifierToken.text)
       .map(([symbol, _flags]) => symbol.valueType)
       .or(
-        runtimeTable.findSymbol(this.identifierToken.text)
+        environment.runtimeTable.findSymbol(this.identifierToken.text)
           .map(([symbol, _flags]) => symbol.value.valueType),
       )
       .unwrapOrThrow(

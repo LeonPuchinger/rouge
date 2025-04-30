@@ -340,5 +340,3 @@ export class SymbolTable<S extends Symbol> {
     };
   }
 }
-
-export const runtimeTable: InterpreterSymbolTable = new SymbolTable();
