@@ -148,7 +148,7 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
   }
 
   resolveFlags(
-    environment: ExecutionEnvironment,
+    _environment: ExecutionEnvironment,
   ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }

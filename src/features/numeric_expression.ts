@@ -33,16 +33,16 @@ class NumericLiteralAstNode implements NumericExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
   @memoize
-  evaluate(environment: ExecutionEnvironment): SymbolValue<number> {
+  evaluate(_environment: ExecutionEnvironment): SymbolValue<number> {
     return new NumericSymbolValue(parseFloat(this.token.text));
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Number" });
   }
 
@@ -65,7 +65,7 @@ class UnaryNumericExpressionAstNode implements NumericExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+  analyze(): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
@@ -85,7 +85,7 @@ class UnaryNumericExpressionAstNode implements NumericExpressionAstNode {
       });
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(): SymbolType {
     return new CompositeSymbolType({ id: "Number" });
   }
 
@@ -169,7 +169,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
       .unwrap();
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Number" });
   }
 
@@ -211,7 +211,7 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
     return this.child.evaluate(environment) as SymbolValue<number>;
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Number" });
   }
 

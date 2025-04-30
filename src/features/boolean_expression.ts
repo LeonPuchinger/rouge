@@ -35,16 +35,16 @@ class BooleanLiteralAstNode implements BooleanExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
   @memoize
-  evaluate(environment: ExecutionEnvironment): SymbolValue<boolean> {
+  evaluate(_environment: ExecutionEnvironment): SymbolValue<boolean> {
     return new BooleanSymbolValue(this.token.text === "true");
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Boolean" });
   }
 
@@ -67,7 +67,7 @@ class BooleanNegationAstNode implements BooleanExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
@@ -75,7 +75,7 @@ class BooleanNegationAstNode implements BooleanExpressionAstNode {
     return this.child.evaluate(environment).map((value) => !value);
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Boolean" });
   }
 
@@ -192,7 +192,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
       .unwrap();
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Boolean" });
   }
 

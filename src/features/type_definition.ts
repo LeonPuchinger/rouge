@@ -150,7 +150,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
   }
 
   resolveFlags(
-    environment: ExecutionEnvironment,
+    _environment: ExecutionEnvironment,
   ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }

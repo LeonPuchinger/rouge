@@ -47,18 +47,18 @@ class StringContentsAstNode implements EvaluableAstNode {
   }
 
   @memoize
-  evaluate(environment: ExecutionEnvironment): StringSymbolValue {
+  evaluate(_environment: ExecutionEnvironment): StringSymbolValue {
     const concatenatedContents = this.contents
       .map((token) => token.text)
       .join("");
     return new StringSymbolValue(concatenatedContents);
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "String" });
   }
 
-  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
@@ -67,7 +67,7 @@ class StringContentsAstNode implements EvaluableAstNode {
   }
 
   resolveFlags(
-    environment: ExecutionEnvironment,
+    _environment: ExecutionEnvironment,
   ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
@@ -92,7 +92,7 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
     return new StringSymbolValue(`${contents}`);
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "String" });
   }
 
@@ -149,7 +149,7 @@ export class StringInterpolationAstNode implements EvaluableAstNode {
   }
 
   resolveFlags(
-    environment: ExecutionEnvironment,
+    _environment: ExecutionEnvironment,
   ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
@@ -171,7 +171,7 @@ export class ComplexStringAstNode implements EvaluableAstNode {
     return new StringSymbolValue(contents);
   }
 
-  resolveType(environment: ExecutionEnvironment): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "String" });
   }
 
@@ -186,7 +186,7 @@ export class ComplexStringAstNode implements EvaluableAstNode {
   }
 
   resolveFlags(
-    environment: ExecutionEnvironment,
+    _environment: ExecutionEnvironment,
   ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
