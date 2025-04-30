@@ -13,7 +13,7 @@ import { EvaluableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { BooleanSymbolValue, SymbolValue } from "../symbol.ts";
+import { BooleanSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
 import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
@@ -51,6 +51,10 @@ class BooleanLiteralAstNode implements BooleanExpressionAstNode {
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.token, this.token];
   }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
+  }
 }
 
 /* Negation */
@@ -77,6 +81,10 @@ class BooleanNegationAstNode implements BooleanExpressionAstNode {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.negationToken, this.child.tokenRange()[1]];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
@@ -190,6 +198,10 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.lhs.tokenRange()[0], this.rhs.tokenRange()[1]];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
