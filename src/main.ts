@@ -73,6 +73,18 @@ export function openRepl(
   return environment;
 }
 
+/**
+ * Free resouces used by the REPL. The environment itself can then
+ * be let out of scope safely.
+ */
+export function closeRepl(environment: ExecutionEnvironment) {
+  // TODO: close std streams (if requested)
+  environment.typeTable.reset();
+  environment.analysisTable.reset(false);
+  environment.runtimeTable.reset(false);
+  environment.source = "";
+}
+
 export function analyze(source: string): AnalysisFindings {
   const environment = new ExecutionEnvironment({ source });
   environment.typeTable.reset();
