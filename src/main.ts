@@ -5,7 +5,6 @@ import { parse } from "./parser.ts";
 import { injectRuntimeBindings } from "./runtime.ts";
 import { analyzeStdlib, injectStdlib, parseStdlib } from "./stdlib.ts";
 import { FileLike, VirtualTextFile } from "./streams.ts";
-import { updateEnvironment } from "./util/environment.ts";
 
 export type {
   AnalysisFinding,
@@ -36,8 +35,7 @@ export function run(
     environment,
     stdlibAst,
   );
-  // TODO: update new environment
-  updateEnvironment({ source: source });
+  environment.source = source;
   const tokenStream = tokenize(source);
   const ast = parse(environment, tokenStream);
   const analysisFindings = ast.analyze(environment);
@@ -59,8 +57,7 @@ export function analyze(source: string): AnalysisFindings {
   injectRuntimeBindings(environment, true);
   const stdlibAst = parseStdlib(environment);
   analyzeStdlib(environment, stdlibAst);
-  // TODO: update new environment
-  updateEnvironment({ source: source });
+  environment.source = source;
   const tokenStream = tokenize(source);
   const ast = parse(environment, tokenStream);
   const analysisFindings = ast.analyze(environment);

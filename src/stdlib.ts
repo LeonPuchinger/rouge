@@ -2,7 +2,6 @@ import { AST } from "./ast.ts";
 import { ExecutionEnvironment } from "./execution.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
-import { updateEnvironment } from "./util/environment.ts";
 import { InternalError } from "./util/error.ts";
 
 const stdlib = `
@@ -106,11 +105,10 @@ const stdlib = `
 export function parseStdlib(
     environment: ExecutionEnvironment,
 ) {
-    // TODO: update new environment
-    updateEnvironment({ source: stdlib });
+    environment.source = stdlib;
     const tokenStream = tokenize(stdlib);
     const ast = parse(environment, tokenStream);
-    updateEnvironment({ source: "" });
+    environment.source = "";
     return ast;
 }
 
@@ -123,7 +121,7 @@ export function analyzeStdlib(
     environment: ExecutionEnvironment,
     stdlibAst: AST,
 ) {
-    updateEnvironment({ source: stdlib });
+    environment.source = stdlib;
     environment.analysisTable.setGlobalFlagOverrides({
         readonly: true,
         stdlib: true,
@@ -135,7 +133,7 @@ export function analyzeStdlib(
     });
     environment.typeTable.ignoreRuntimeTypes = false;
     const analysisFindings = stdlibAst.analyze(environment);
-    updateEnvironment({ source: "" });
+    environment.source = "";
     environment.analysisTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
@@ -161,7 +159,7 @@ export function injectStdlib(
     environment: ExecutionEnvironment,
     stdlibAst: AST,
 ) {
-    updateEnvironment({ source: stdlib });
+    environment.source = stdlib;
     environment.runtimeTable.setGlobalFlagOverrides({
         readonly: true,
         stdlib: true,
@@ -179,5 +177,5 @@ export function injectStdlib(
         readonly: "notset",
         stdlib: "notset",
     });
-    updateEnvironment({ source: "" });
+    environment.source = "";
 }
