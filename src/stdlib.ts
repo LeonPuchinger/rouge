@@ -111,7 +111,7 @@ export function parseStdlib(
     // TODO: update new environment
     updateEnvironment({ source: stdlib });
     const tokenStream = tokenize(stdlib);
-    const ast = parse(tokenStream);
+    const ast = parse(environment, tokenStream);
     updateEnvironment({ source: "" });
     return ast;
 }

@@ -39,7 +39,7 @@ export function run(
   // TODO: update new environment
   updateEnvironment({ source: source });
   const tokenStream = tokenize(source);
-  const ast = parse(tokenStream);
+  const ast = parse(environment, tokenStream);
   const analysisFindings = ast.analyze(environment);
   environment.typeTable.reset();
   if (analysisFindings.errors.length == 0) {
@@ -62,7 +62,7 @@ export function analyze(source: string): AnalysisFindings {
   // TODO: update new environment
   updateEnvironment({ source: source });
   const tokenStream = tokenize(source);
-  const ast = parse(tokenStream);
+  const ast = parse(environment, tokenStream);
   const analysisFindings = ast.analyze(environment);
   return analysisFindings;
 }

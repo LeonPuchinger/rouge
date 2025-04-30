@@ -8,6 +8,7 @@ import { DummyAstNode } from "./util/snippet.ts";
 import { toMultiline } from "./util/string.ts";
 
 // required to initialize parsers declared in `parser_declarations`
+import { ExecutionEnvironment } from "./execution.ts";
 import "./features/condition.ts";
 import "./features/function.ts";
 import "./features/invocation.ts";
@@ -24,14 +25,17 @@ export const start = globalStatements;
  * @param tokenStream A linked list of tokens to parse
  * @returns An abstract syntax tree that has not been semantically analyzed yet
  */
-export function parse(tokenStream: Token<TokenKind>): AST {
+export function parse(
+  environment: ExecutionEnvironment,
+  tokenStream: Token<TokenKind>,
+): AST {
   const parseResult = expectEOF(start.parse(tokenStream));
   if (!parseResult.successful) {
     const parseError = parseResult.error;
     throw new RuntimeError({
       message: "Encountered syntax error.",
-      include: [DummyAstNode.fromTokenPosition(parseError.pos!)],
-      highlight: [DummyAstNode.fromTokenPosition(parseError.pos!)],
+      include: [DummyAstNode.fromTokenPosition(environment, parseError.pos!)],
+      highlight: [DummyAstNode.fromTokenPosition(environment, parseError.pos!)],
       highlightMessage: parseError.message,
     });
   }
