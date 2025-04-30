@@ -170,6 +170,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
    * When there are statements after a return statement, a warning is added to the findings.
    */
   analyzeBranch(
+    environment: ExecutionEnvironment,
     statements: AstNode[],
   ): { branchContainsReturn: boolean; branchFindings: AnalysisFindings } {
     const findings = AnalysisFindings.empty();
@@ -182,7 +183,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const remainingStatements = statements.slice(returnStatementIndex + 1);
     const unreachableCode = remainingStatements.length >= 1;
     if (unreachableCode) {
-      findings.warnings.push(AnalysisWarning({
+      findings.warnings.push(AnalysisWarning(environment, {
         message:
           "These statements are never going to be run because they are situated after a return statement.",
         beginHighlight: remainingStatements.at(0)!,
@@ -207,7 +208,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       const {
         branchContainsReturn,
         branchFindings,
-      } = this.analyzeBranch(branch);
+      } = this.analyzeBranch(environment, branch);
       findings = AnalysisFindings.merge(findings, branchFindings);
       return !branchContainsReturn;
     });
