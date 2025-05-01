@@ -9,13 +9,13 @@ import { FileLike, VirtualTextFile } from "./streams.ts";
 export type {
   AnalysisFinding,
   AnalysisFindingKind,
-  AnalysisFindings,
+  AnalysisFindings
 } from "./finding.ts";
 export { VirtualTextFile } from "./streams.ts";
 export type {
   ReadableStream,
   StreamSubscription,
-  WritableSink,
+  WritableSink
 } from "./streams.ts";
 export type { Option, Result } from "./util/monad/index.ts";
 
@@ -71,6 +71,24 @@ export function openRepl(
     stdlibAst,
   );
   return environment;
+}
+
+/**
+ * Run a single statement in the REPL.
+ */
+export function invokeRepl(
+  environment: ExecutionEnvironment,
+  statement: string,
+): AnalysisFindings {
+  environment.source = statement;
+  const tokenStream = tokenize(statement);
+  const ast = parse(environment, tokenStream);
+  const analysisFindings = ast.analyze(environment);
+  if (analysisFindings.errors.length == 0) {
+    // TODO: return a representation of the result
+    ast.interpret(environment);
+  }
+  return analysisFindings;
 }
 
 /**
