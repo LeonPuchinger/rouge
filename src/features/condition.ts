@@ -86,6 +86,10 @@ export class ConditionAstNode implements InterpretableAstNode {
     }
   }
 
+  get_representation(_environment: ExecutionEnvironment): string {
+    return "Nothing";
+  }
+
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [
       this.ifKeyword,

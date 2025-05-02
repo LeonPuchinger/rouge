@@ -64,6 +64,10 @@ export class RuntimeStatementAstNode implements InterpretableAstNode {
         this.hook();
     }
 
+    get_representation(_environment: ExecutionEnvironment): string {
+        return "Nothing";
+    }
+
     analyze(): AnalysisFindings {
         return AnalysisFindings.empty();
     }

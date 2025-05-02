@@ -748,6 +748,10 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     environment.runtimeTable.setSymbol(this.name.text, constructor);
   }
 
+  get_representation(_environment: ExecutionEnvironment): string {
+    return "Nothing";
+  }
+
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.keyword, this.closingBrace];
   }

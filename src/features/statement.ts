@@ -41,6 +41,12 @@ export class StatementsAstNode implements InterpretableAstNode {
     this.children.forEach((child) => child.interpret(environment));
   }
 
+  get_representation(environment: ExecutionEnvironment): string {
+    return this.children
+      .map((child) => child.get_representation(environment))
+      .join(",\n");
+  }
+
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = this.children
       .map((statement) => statement.analyze(environment))

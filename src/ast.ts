@@ -70,6 +70,14 @@ export interface InterpretableAstNode extends AstNode {
    * Executes the contents of the AST node without yielding a result.
    */
   interpret(environment: ExecutionEnvironment): void;
+
+  /**
+   * Similar to `interpret`, but returns a human-readable representation of the
+   * result of the statement. In case the statement is an expression, the result
+   * is the result of the expression. In case the statement is not an expression,
+   * the result is likely `"Nothing"`.
+   */
+  get_representation(environment: ExecutionEnvironment): string;
 }
 
 /**

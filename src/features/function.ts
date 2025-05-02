@@ -382,6 +382,10 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     );
   }
 
+  get_representation(_environment: ExecutionEnvironment): string {
+    return "Nothing";
+  }
+
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = this.expression
       .map((node) => node.analyze(environment))

@@ -38,6 +38,11 @@ export class ExpressionAstNode
     this.child.evaluate(environment);
   }
 
+  get_representation(environment: ExecutionEnvironment): string {
+    const value = this.child.evaluate(environment);
+    return value.representation();
+  }
+
   resolveType(environment: ExecutionEnvironment): SymbolType {
     return this.child.resolveType(environment);
   }

@@ -148,6 +148,10 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
     );
   }
 
+  get_representation(_environment: ExecutionEnvironment): string {
+    return "Nothing";
+  }
+
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.assignee, this.value.tokenRange()[1]];
   }
@@ -198,6 +202,10 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     const currentValue = this.assignee.evaluate(environment);
     const newValue = this.value.evaluate(environment);
     currentValue.write(newValue.value);
+  }
+
+  get_representation(_environment: ExecutionEnvironment): string {
+    return "Nothing";
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
