@@ -1,3 +1,4 @@
+import { Result } from "../dist/index.d.ts";
 import { ExecutionEnvironment } from "./execution.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { tokenize } from "./lexer.ts";
@@ -5,6 +6,8 @@ import { parse } from "./parser.ts";
 import { injectRuntimeBindings } from "./runtime.ts";
 import { analyzeStdlib, injectStdlib, parseStdlib } from "./stdlib.ts";
 import { FileLike, VirtualTextFile } from "./streams.ts";
+import { Ok } from "./util/monad/index.ts";
+import { Err } from "./util/monad/result.ts";
 
 export type {
   AnalysisFinding,
@@ -79,16 +82,16 @@ export function openRepl(
 export function invokeRepl(
   environment: ExecutionEnvironment,
   statement: string,
-): AnalysisFindings {
+): Result<string, AnalysisFindings> {
   environment.source = statement;
   const tokenStream = tokenize(statement);
   const ast = parse(environment, tokenStream);
   const analysisFindings = ast.analyze(environment);
   if (analysisFindings.errors.length == 0) {
-    // TODO: return a representation of the result
-    ast.interpret(environment);
+    const representation = ast.get_representation(environment);
+    return Ok(representation);
   }
-  return analysisFindings;
+  return Err(analysisFindings);
 }
 
 /**
