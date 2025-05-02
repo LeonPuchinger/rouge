@@ -1,4 +1,3 @@
-import { Result } from "../dist/index.d.ts";
 import { ExecutionEnvironment } from "./execution.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { tokenize } from "./lexer.ts";
@@ -6,19 +5,19 @@ import { parse } from "./parser.ts";
 import { injectRuntimeBindings } from "./runtime.ts";
 import { analyzeStdlib, injectStdlib, parseStdlib } from "./stdlib.ts";
 import { FileLike, VirtualTextFile } from "./streams.ts";
-import { Ok } from "./util/monad/index.ts";
+import { Ok, Result } from "./util/monad/index.ts";
 import { Err } from "./util/monad/result.ts";
 
 export type {
   AnalysisFinding,
   AnalysisFindingKind,
-  AnalysisFindings
+  AnalysisFindings,
 } from "./finding.ts";
 export { VirtualTextFile } from "./streams.ts";
 export type {
   ReadableStream,
   StreamSubscription,
-  WritableSink
+  WritableSink,
 } from "./streams.ts";
 export type { Option, Result } from "./util/monad/index.ts";
 
