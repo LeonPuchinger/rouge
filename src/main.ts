@@ -11,13 +11,13 @@ import { Err } from "./util/monad/result.ts";
 export type {
   AnalysisFinding,
   AnalysisFindingKind,
-  AnalysisFindings,
+  AnalysisFindings
 } from "./finding.ts";
 export { VirtualTextFile } from "./streams.ts";
 export type {
   ReadableStream,
   StreamSubscription,
-  WritableSink,
+  WritableSink
 } from "./streams.ts";
 export type { Option, Result } from "./util/monad/index.ts";
 
@@ -72,6 +72,11 @@ export function openRepl(
     environment,
     stdlibAst,
   );
+  environment.typeTable.reset();
+  injectStdlib(
+    environment,
+    stdlibAst,
+  );
   return environment;
 }
 
@@ -86,6 +91,7 @@ export function invokeRepl(
   const tokenStream = tokenize(statement);
   const ast = parse(environment, tokenStream);
   const analysisFindings = ast.analyze(environment);
+  // TODO: clear type table of changes created during analysis
   if (analysisFindings.errors.length == 0) {
     const representation = ast.get_representation(environment);
     return Ok(representation);
