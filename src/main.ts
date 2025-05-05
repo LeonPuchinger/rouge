@@ -32,11 +32,16 @@ export function run(
   stderr: FileLike<string> = new VirtualTextFile(),
   stdin: FileLike<string> = new VirtualTextFile(),
 ): AnalysisFindings {
-  const environment = new ExecutionEnvironment({ source });
+  const environment = new ExecutionEnvironment({
+    stdout,
+    stderr,
+    stdin,
+    source,
+  });
   environment.typeTable.reset();
   environment.analysisTable.reset(false);
   environment.runtimeTable.reset(false);
-  injectRuntimeBindings(environment, false, stdout, stderr, stdin);
+  injectRuntimeBindings(environment, false);
   const stdlibAst = parseStdlib(environment);
   analyzeStdlib(
     environment,
@@ -67,11 +72,16 @@ export function openRepl(
   stderr: FileLike<string> = new VirtualTextFile(),
   stdin: FileLike<string> = new VirtualTextFile(),
 ): ExecutionEnvironment {
-  const environment = new ExecutionEnvironment({ source: "" });
+  const environment = new ExecutionEnvironment({
+    stdout,
+    stderr,
+    stdin,
+    source: "",
+  });
   environment.typeTable.reset();
   environment.analysisTable.reset(false);
   environment.runtimeTable.reset(false);
-  injectRuntimeBindings(environment, false, stdout, stderr, stdin);
+  injectRuntimeBindings(environment, false);
   const stdlibAst = parseStdlib(environment);
   analyzeStdlib(
     environment,
@@ -113,14 +123,23 @@ export function invokeRepl(
 
 /**
  * Free resouces used by the REPL. The environment itself can then
- * be let out of scope safely.
+ * be let out of scope safely. `closeStdStreams` should be set to
+ * `false` if the standard streams were provided by the caller
+ * and should remain open after the REPL is closed.
  */
-export function closeRepl(environment: ExecutionEnvironment) {
-  // TODO: close std streams (if requested)
+export function closeRepl(
+  environment: ExecutionEnvironment,
+  closeStdStreams: boolean = true,
+) {
   environment.typeTable.reset();
   environment.analysisTable.reset(false);
   environment.runtimeTable.reset(false);
   environment.source = "";
+  if (closeStdStreams) {
+    environment.stdout.then((stream) => stream.close());
+    environment.stderr.then((stream) => stream.close());
+    environment.stdin.then((stream) => stream.close());
+  }
 }
 
 /**

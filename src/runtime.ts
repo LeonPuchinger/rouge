@@ -5,7 +5,6 @@ import { ReturnValueContainer } from "./features/function.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
-import { ReadableStream, WritableSink } from "./streams.ts";
 import {
     FunctionSymbolValue,
     RuntimeSymbol,
@@ -192,12 +191,13 @@ function createRuntimeBinding(
 export function injectRuntimeBindings(
     environment: ExecutionEnvironment,
     onlyAnalysis: boolean = false,
-    stdout?: WritableSink<string>,
-    stderr?: WritableSink<string>,
-    stdin?: ReadableStream<string>,
 ) {
-    const stdStreamsDefined = [stdout, stderr, stdin]
-        .every((stream) => stream !== undefined);
+    const stdStreamsDefined = [
+        environment.stdout,
+        environment.stderr,
+        environment.stdin,
+    ]
+        .every((stream) => stream.hasValue());
     if (!onlyAnalysis && !stdStreamsDefined) {
         throw new InternalError(
             "The standard streams may only be omitted when the runtime bindings are injected for static analysis.",
@@ -214,7 +214,7 @@ export function injectRuntimeBindings(
         nothingType(environment),
         (params) => {
             const message = params.get("message")!.value as string;
-            stdout?.writeLine(message);
+            environment.stdout.then((file) => file.writeLine(message));
         },
         onlyAnalysis,
     );
@@ -229,7 +229,7 @@ export function injectRuntimeBindings(
         nothingType(environment),
         (params) => {
             const message = params.get("message")!.value as string;
-            stdout?.writeChunk(message);
+            environment.stdout.then((file) => file.writeChunk(message));
         },
         onlyAnalysis,
     );
