@@ -95,8 +95,12 @@ export function invokeRepl(
   environment.source = statement;
   const tokenStream = tokenize(statement);
   const ast = parse(environment, tokenStream);
+  // Save the state of the type table before performing analysis as the
+  // modifications made during analysis can interfere with interpretation.
+  // The state is restored after static analysis concludes.
+  const typeTableWithoutAnalysis = environment.typeTable.createSnapshot();
   const analysisFindings = ast.analyze(environment);
-  // TODO: clear type table of changes created during analysis
+  environment.typeTable.reset(typeTableWithoutAnalysis);
   if (analysisFindings.errors.length == 0) {
     const representation = ast.get_representation(environment);
     return Ok(representation);
