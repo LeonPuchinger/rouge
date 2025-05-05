@@ -60,11 +60,12 @@ export class RuntimeStatementAstNode implements InterpretableAstNode {
         Object.assign(this, params);
     }
 
-    interpret(): void {
+    interpret(_environment: ExecutionEnvironment): void {
         this.hook();
     }
 
-    get_representation(_environment: ExecutionEnvironment): string {
+    get_representation(environment: ExecutionEnvironment): string {
+        this.interpret(environment);
         return "Nothing";
     }
 

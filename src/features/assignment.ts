@@ -148,7 +148,8 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
     );
   }
 
-  get_representation(_environment: ExecutionEnvironment): string {
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
     return "Nothing";
   }
 
@@ -204,7 +205,8 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     currentValue.write(newValue.value);
   }
 
-  get_representation(_environment: ExecutionEnvironment): string {
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
     return "Nothing";
   }
 

@@ -382,7 +382,8 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     );
   }
 
-  get_representation(_environment: ExecutionEnvironment): string {
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
     return "Nothing";
   }
 

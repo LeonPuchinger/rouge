@@ -748,7 +748,8 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     environment.runtimeTable.setSymbol(this.name.text, constructor);
   }
 
-  get_representation(_environment: ExecutionEnvironment): string {
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
     return "Nothing";
   }
 
