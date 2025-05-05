@@ -924,6 +924,26 @@ export class TypeTable {
     this.reset();
   }
 
+  /**
+   * Saves the current state of the table. It should be noted that
+   * the snapshot is not a deep copy of the table. Rather, only
+   * the references to the types are copied. When an underlying type
+   * is changed in the original table, the corresponding type in the
+   * copy is also affected. To restore the state of the table to the
+   * state of a snapshot, the snapshot can be passed to the `reset` method.
+   */
+  createSnapshot(): TypeTable {
+    const snapshot = new TypeTable();
+    snapshot.scopes = this.scopes.map(({ types, returnType }) => ({
+      types: new Map(types),
+      returnType,
+    }));
+    snapshot.runtimeTypes = new Map(this.runtimeTypes);
+    snapshot.globalFlagOverrides = { ...this.globalFlagOverrides };
+    snapshot.ignoreRuntimeTypes = this.ignoreRuntimeTypes;
+    return snapshot;
+  }
+
   pushScope() {
     this.scopes.push({ types: new Map(), returnType: None() });
   }
@@ -1071,7 +1091,20 @@ export class TypeTable {
     );
   }
 
-  reset() {
+  /**
+   * Resets the type table to its initial state. However, if a snapshot is
+   * provided, the type table is reset to the state of the snapshot instead.
+   */
+  reset(
+    snapshot?: TypeTable,
+  ) {
+    if (snapshot !== undefined) {
+      this.scopes = snapshot.scopes;
+      this.runtimeTypes = snapshot.runtimeTypes;
+      this.globalFlagOverrides = snapshot.globalFlagOverrides;
+      this.ignoreRuntimeTypes = snapshot.ignoreRuntimeTypes;
+      return;
+    }
     this.scopes = [];
     this.pushScope();
     this.initializeStandardLibraryTypes();
