@@ -86,14 +86,17 @@ export function openRepl(
 }
 
 /**
- * Perform static analysis and interpret a single statement in the REPL.
+ * Perform static analysis and interpret a set of statements in the REPL.
+ * In other words: Run a program on a given state without destryoying the
+ * state afterwards and return a text based representation of the result
+ * in case static analysis does not return any errors.
  */
 export function invokeRepl(
   environment: ExecutionEnvironment,
-  statement: string,
+  statements: string,
 ): Result<string, AnalysisFindings> {
-  environment.source = statement;
-  const tokenStream = tokenize(statement);
+  environment.source = statements;
+  const tokenStream = tokenize(statements);
   const ast = parse(environment, tokenStream);
   // Save the state of the type table before performing analysis as the
   // modifications made during analysis can interfere with interpretation.
