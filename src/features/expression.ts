@@ -1,5 +1,6 @@
 import { apply, Parser, Token } from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { SymbolFlags, SymbolValue } from "../symbol.ts";
@@ -25,24 +26,31 @@ export class ExpressionAstNode
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
-    return this.child.analyze();
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    return this.child.analyze(environment);
   }
 
-  evaluate(): SymbolValue<unknown> {
-    return this.child.evaluate();
+  evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
+    return this.child.evaluate(environment);
   }
 
-  interpret(): void {
-    this.child.evaluate();
+  interpret(environment: ExecutionEnvironment): void {
+    this.child.evaluate(environment);
   }
 
-  resolveType(): SymbolType {
-    return this.child.resolveType();
+  get_representation(environment: ExecutionEnvironment): string {
+    const value = this.child.evaluate(environment);
+    return value.representation();
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
-    return this.child.resolveFlags();
+  resolveType(environment: ExecutionEnvironment): SymbolType {
+    return this.child.resolveType(environment);
+  }
+
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
+    return this.child.resolveFlags(environment);
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

@@ -1,9 +1,7 @@
 import { AST } from "./ast.ts";
+import { ExecutionEnvironment } from "./execution.ts";
 import { tokenize } from "./lexer.ts";
 import { parse } from "./parser.ts";
-import { analysisTable, runtimeTable } from "./symbol.ts";
-import { typeTable } from "./type.ts";
-import { updateEnvironment } from "./util/environment.ts";
 import { InternalError } from "./util/error.ts";
 
 const stdlib = `
@@ -104,11 +102,13 @@ const stdlib = `
 /**
  * Parses a separate and independent AST for the standard library.
  */
-export function parseStdlib() {
-    updateEnvironment({ source: stdlib });
+export function parseStdlib(
+    environment: ExecutionEnvironment,
+) {
+    environment.source = stdlib;
     const tokenStream = tokenize(stdlib);
-    const ast = parse(tokenStream);
-    updateEnvironment({ source: "" });
+    const ast = parse(environment, tokenStream);
+    environment.source = "";
     return ast;
 }
 
@@ -117,21 +117,33 @@ export function parseStdlib() {
  * Should be called before the stdlib is injected into the symbol table
  * or the static analyis of the input source is performed.
  */
-export function analyzeStdlib(stdlibAst: AST) {
-    updateEnvironment({ source: stdlib });
-    analysisTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    analysisTable.ignoreRuntimeBindings = false;
-    typeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    typeTable.ignoreRuntimeTypes = false;
-    const analysisFindings = stdlibAst.analyze();
-    updateEnvironment({ source: "" });
-    analysisTable.setGlobalFlagOverrides({
+export function analyzeStdlib(
+    environment: ExecutionEnvironment,
+    stdlibAst: AST,
+) {
+    environment.source = stdlib;
+    environment.analysisTable.setGlobalFlagOverrides({
+        readonly: true,
+        stdlib: true,
+    });
+    environment.analysisTable.ignoreRuntimeBindings = false;
+    environment.typeTable.setGlobalFlagOverrides({
+        readonly: true,
+        stdlib: true,
+    });
+    environment.typeTable.ignoreRuntimeTypes = false;
+    const analysisFindings = stdlibAst.analyze(environment);
+    environment.source = "";
+    environment.analysisTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
     });
-    analysisTable.ignoreRuntimeBindings = true;
-    typeTable.setGlobalFlagOverrides({ readonly: "notset", stdlib: "notset" });
-    typeTable.ignoreRuntimeTypes = true;
+    environment.analysisTable.ignoreRuntimeBindings = true;
+    environment.typeTable.setGlobalFlagOverrides({
+        readonly: "notset",
+        stdlib: "notset",
+    });
+    environment.typeTable.ignoreRuntimeTypes = true;
     if (analysisFindings.errors.length !== 0) {
         throw new InternalError(
             "The standard library contains static analysis errors.",
@@ -143,15 +155,27 @@ export function analyzeStdlib(stdlibAst: AST) {
  * Loads the standard library into the symbol and type table.
  * It is assumed that both tables are set to the global scope.
  */
-export function injectStdlib(stdlibAst: AST) {
-    updateEnvironment({ source: stdlib });
-    runtimeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    typeTable.setGlobalFlagOverrides({ readonly: true, stdlib: true });
-    stdlibAst.interpret();
-    runtimeTable.setGlobalFlagOverrides({
+export function injectStdlib(
+    environment: ExecutionEnvironment,
+    stdlibAst: AST,
+) {
+    environment.source = stdlib;
+    environment.runtimeTable.setGlobalFlagOverrides({
+        readonly: true,
+        stdlib: true,
+    });
+    environment.typeTable.setGlobalFlagOverrides({
+        readonly: true,
+        stdlib: true,
+    });
+    stdlibAst.interpret(environment);
+    environment.runtimeTable.setGlobalFlagOverrides({
         readonly: "notset",
         stdlib: "notset",
     });
-    typeTable.setGlobalFlagOverrides({ readonly: "notset", stdlib: "notset" });
-    updateEnvironment({ source: "" });
+    environment.typeTable.setGlobalFlagOverrides({
+        readonly: "notset",
+        stdlib: "notset",
+    });
+    environment.source = "";
 }

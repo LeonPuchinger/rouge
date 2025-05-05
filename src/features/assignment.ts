@@ -10,14 +10,10 @@ import {
   Token,
 } from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  analysisTable,
-  RuntimeSymbol,
-  runtimeTable,
-  StaticSymbol,
-} from "../symbol.ts";
+import { RuntimeSymbol, StaticSymbol } from "../symbol.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
@@ -43,15 +39,15 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
     this.typeAnnotation = Some(params.typeAnnotation);
   }
 
-  analyze(): AnalysisFindings {
-    let findings = this.value.analyze();
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    let findings = this.value.analyze(environment);
     const ident = this.assignee.text;
-    const existingSymbol = analysisTable.findSymbol(ident);
+    const existingSymbol = environment.analysisTable.findSymbol(ident);
     const isInitialAssignment = !existingSymbol.hasValue();
     const expressionFindingsErroneous = findings.isErroneous();
     if (isInitialAssignment) {
       const typeAnnotationFindings = this.typeAnnotation
-        .map((annotation) => annotation.analyze())
+        .map((annotation) => annotation.analyze(environment))
         .unwrapOr(AnalysisFindings.empty());
       findings = AnalysisFindings.merge(
         findings,
@@ -60,12 +56,12 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       if (findings.isErroneous()) {
         return findings;
       }
-      const expressionType = this.value.resolveType();
+      const expressionType = this.value.resolveType(environment);
       this.typeAnnotation
-        .map((annotation) => annotation.resolveType())
+        .map((annotation) => annotation.resolveType(environment))
         .then((annotation) => {
           if (!annotation.typeCompatibleWith(expressionType)) {
-            findings.errors.push(AnalysisError({
+            findings.errors.push(AnalysisError(environment, {
               message:
                 "The type of the assigned value is not compatible with the type that was explicitly annotated in the assignment.",
               beginHighlight: this.value,
@@ -81,7 +77,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         .unwrapOr(false);
       if (readonly) {
         findings.errors.push(
-          AnalysisError({
+          AnalysisError(environment, {
             message:
               "This variable cannot be reassigned because it is part of the language.",
             beginHighlight: this,
@@ -92,7 +88,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
         return findings;
       }
       this.typeAnnotation.then((annotation) => {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             "Type annotations on assignments are only allowed when the variable is first created.",
           beginHighlight: annotation,
@@ -102,14 +98,14 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       if (expressionFindingsErroneous) {
         return findings;
       }
-      const expressionType = this.value.resolveType();
-      analysisTable.findSymbol(ident)
+      const expressionType = this.value.resolveType(environment);
+      environment.analysisTable.findSymbol(ident)
         .then(([existing, _flags]) => {
           if (existing.valueType.typeCompatibleWith(expressionType)) {
             return;
           }
           findings.errors.push(
-            AnalysisError({
+            AnalysisError(environment, {
               message: concatLines(
                 `You tried setting the variable '${ident}' to a value that is incompatible with the variables type.`,
                 "When a variable is created its type is set in stone.",
@@ -124,9 +120,9 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
     }
     if (!findings.isErroneous()) {
       const expressionType = this.typeAnnotation
-        .map((annotation) => annotation.resolveType())
-        .unwrapOr(this.value.resolveType());
-      analysisTable.setSymbol(
+        .map((annotation) => annotation.resolveType(environment))
+        .unwrapOr(this.value.resolveType(environment));
+      environment.analysisTable.setSymbol(
         ident,
         new StaticSymbol({
           valueType: expressionType,
@@ -136,20 +132,25 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
     return findings;
   }
 
-  interpret(): void {
+  interpret(environment: ExecutionEnvironment): void {
     const ident = this.assignee.text;
     const type = this.typeAnnotation
-      .map((annotation) => annotation.resolveType())
-      .unwrapOr(this.value.resolveType());
-    const value = this.value.evaluate();
+      .map((annotation) => annotation.resolveType(environment))
+      .unwrapOr(this.value.resolveType(environment));
+    const value = this.value.evaluate(environment);
     value.valueType = type;
-    runtimeTable.setSymbol(
+    environment.runtimeTable.setSymbol(
       ident,
       new RuntimeSymbol({
         node: this.value,
         value: value,
       }),
     );
+  }
+
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
+    return "Nothing";
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -167,13 +168,13 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     this.typeAnnotation = Some(params.typeAnnotation);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = AnalysisFindings.merge(
-      this.assignee.analyze(),
-      this.value.analyze(),
+      this.assignee.analyze(environment),
+      this.value.analyze(environment),
     );
     this.typeAnnotation.then((annotation) => {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message: "Type annotations are not allowed on property writes.",
         beginHighlight: annotation,
         endHighlight: None(),
@@ -183,10 +184,10 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     if (findings.isErroneous()) {
       return findings;
     }
-    const valueType = this.value.resolveType();
-    const assigneeType = this.assignee.resolveType();
+    const valueType = this.value.resolveType(environment);
+    const assigneeType = this.assignee.resolveType(environment);
     if (!valueType.typeCompatibleWith(assigneeType)) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "The type of the value you are trying to assign is incompatible with the type of the field.",
         beginHighlight: this.assignee,
@@ -198,10 +199,15 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     return findings;
   }
 
-  interpret(): void {
-    const currentValue = this.assignee.evaluate();
-    const newValue = this.value.evaluate();
+  interpret(environment: ExecutionEnvironment): void {
+    const currentValue = this.assignee.evaluate(environment);
+    const newValue = this.value.evaluate(environment);
     currentValue.write(newValue.value);
+  }
+
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
+    return "Nothing";
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

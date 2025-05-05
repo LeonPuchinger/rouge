@@ -1,15 +1,13 @@
 import { Token } from "typescript-parsec";
 import { InterpretableAstNode } from "./ast.ts";
+import { ExecutionEnvironment } from "./execution.ts";
 import { ReturnValueContainer } from "./features/function.ts";
 import { StatementsAstNode } from "./features/statement.ts";
 import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
-import { ReadableStream, WritableSink } from "./streams.ts";
 import {
-    analysisTable,
     FunctionSymbolValue,
     RuntimeSymbol,
-    runtimeTable,
     StaticSymbol,
     StringSymbolValue,
     SymbolValue,
@@ -30,9 +28,10 @@ import { nothingInstance, nothingType } from "./util/type.ts";
  * It also asserts that the symbol exists in the table.
  */
 function resolveRuntimeParameter(
+    environment: ExecutionEnvironment,
     name: string,
 ): SymbolValue {
-    const symbol = runtimeTable.findSymbol(name)
+    const symbol = environment.runtimeTable.findSymbol(name)
         .map(([symbol, _flags]) => symbol)
         .unwrapOrThrow(
             new InternalError(
@@ -60,8 +59,13 @@ export class RuntimeStatementAstNode implements InterpretableAstNode {
         Object.assign(this, params);
     }
 
-    interpret(): void {
+    interpret(_environment: ExecutionEnvironment): void {
         this.hook();
+    }
+
+    get_representation(environment: ExecutionEnvironment): string {
+        this.interpret(environment);
+        return "Nothing";
     }
 
     analyze(): AnalysisFindings {
@@ -93,6 +97,7 @@ type HookParameter = {
  * that will end up in the runtime table.
  */
 export function createRuntimeBindingRuntimeSymbol(
+    environment: ExecutionEnvironment,
     parameters: HookParameter[],
     returnType: SymbolType,
     hook: (params: Map<string, SymbolValue>) => SymbolValue | void,
@@ -108,7 +113,7 @@ export function createRuntimeBindingRuntimeSymbol(
                     const resolvedParameters = new Map<string, SymbolValue>(
                         parameters.map((param) => [
                             param.name,
-                            resolveRuntimeParameter(param.name),
+                            resolveRuntimeParameter(environment, param.name),
                         ]),
                     );
                     const returnValue = hook(resolvedParameters) ??
@@ -134,8 +139,9 @@ export function createRuntimeBindingRuntimeSymbol(
  * that will end up in the analysis table.
  */
 function createRuntimeBindingStaticSymbol(
+    environment: ExecutionEnvironment,
     parameters: HookParameter[],
-    returnType: SymbolType = nothingType(),
+    returnType: SymbolType = nothingType(environment),
 ): StaticSymbol {
     const parameterTypes = parameters.map((param) => param.symbolType);
     return new StaticSymbol({
@@ -153,6 +159,7 @@ function createRuntimeBindingStaticSymbol(
  * analysis table.
  */
 function createRuntimeBinding(
+    environment: ExecutionEnvironment,
     name: string,
     parameters: HookParameter[],
     returnType: SymbolType,
@@ -160,14 +167,19 @@ function createRuntimeBinding(
     onlyAnalysis: boolean = false,
 ) {
     if (!onlyAnalysis) {
-        runtimeTable.setRuntimeBinding(
+        environment.runtimeTable.setRuntimeBinding(
             name,
-            createRuntimeBindingRuntimeSymbol(parameters, returnType, hook),
+            createRuntimeBindingRuntimeSymbol(
+                environment,
+                parameters,
+                returnType,
+                hook,
+            ),
         );
     }
-    analysisTable.setRuntimeBinding(
+    environment.analysisTable.setRuntimeBinding(
         name,
-        createRuntimeBindingStaticSymbol(parameters, returnType),
+        createRuntimeBindingStaticSymbol(environment, parameters, returnType),
     );
 }
 
@@ -177,13 +189,15 @@ function createRuntimeBinding(
  * analysis table.
  */
 export function injectRuntimeBindings(
+    environment: ExecutionEnvironment,
     onlyAnalysis: boolean = false,
-    stdout?: WritableSink<string>,
-    stderr?: WritableSink<string>,
-    stdin?: ReadableStream<string>,
 ) {
-    const stdStreamsDefined = [stdout, stderr, stdin]
-        .every((stream) => stream !== undefined);
+    const stdStreamsDefined = [
+        environment.stdout,
+        environment.stderr,
+        environment.stdin,
+    ]
+        .every((stream) => stream.hasValue());
     if (!onlyAnalysis && !stdStreamsDefined) {
         throw new InternalError(
             "The standard streams may only be omitted when the runtime bindings are injected for static analysis.",
@@ -191,40 +205,43 @@ export function injectRuntimeBindings(
     }
 
     createRuntimeBinding(
+        environment,
         "runtime_print_newline",
         [{
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType(),
+        nothingType(environment),
         (params) => {
             const message = params.get("message")!.value as string;
-            stdout?.writeLine(message);
+            environment.stdout.then((file) => file.writeLine(message));
         },
         onlyAnalysis,
     );
 
     createRuntimeBinding(
+        environment,
         "runtime_print_no_newline",
         [{
             name: "message",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType(),
+        nothingType(environment),
         (params) => {
             const message = params.get("message")!.value as string;
-            stdout?.writeChunk(message);
+            environment.stdout.then((file) => file.writeChunk(message));
         },
         onlyAnalysis,
     );
 
     createRuntimeBinding(
+        environment,
         "runtime_panic",
         [{
             name: "reason",
             symbolType: new CompositeSymbolType({ id: "String" }),
         }],
-        nothingType(),
+        nothingType(environment),
         (params) => {
             const reason = params.get("reason")!.value as string;
             throw new PanicError(reason);
@@ -233,6 +250,7 @@ export function injectRuntimeBindings(
     );
 
     createRuntimeBinding(
+        environment,
         "runtime_reverse",
         [{
             name: "message",

@@ -1,6 +1,6 @@
 import { TokenPosition } from "typescript-parsec";
 import { AstNode } from "./ast.ts";
-import { accessEnvironment } from "./util/environment.ts";
+import { ExecutionEnvironment } from "./execution.ts";
 import { Option, Some } from "./util/monad/index.ts";
 import { createSnippet } from "./util/snippet.ts";
 import { toMultiline } from "./util/string.ts";
@@ -75,6 +75,7 @@ interface AnalysisFindingParams {
  * @param kind Whether or not the interpretation can continue with this issue or not.
  */
 function createAnalysisFinding(
+  environment: ExecutionEnvironment,
   params: AnalysisFindingParams,
   kind: AnalysisFindingKind,
 ): AnalysisFinding {
@@ -90,7 +91,7 @@ function createAnalysisFinding(
       return toMultiline(
         params.message,
         createSnippet(
-          accessEnvironment("source"),
+          environment.source,
           params.beginHighlight.tokenRange()[0].pos,
           params.endHighlight.map((node) => node.tokenRange()[1].pos),
           Some(params.beginHighlight.tokenRange()[0].pos),
@@ -106,14 +107,18 @@ function createAnalysisFinding(
 /**
  * A finding which prevents the interpretation from continuing.
  */
-export const AnalysisError = (params: AnalysisFindingParams) =>
-  createAnalysisFinding(params, "error");
+export const AnalysisError = (
+  environment: ExecutionEnvironment,
+  params: AnalysisFindingParams,
+) => createAnalysisFinding(environment, params, "error");
 
 /**
  * A finding which should be addressed, but allows the interpretation to continue.
  */
-export const AnalysisWarning = (params: AnalysisFindingParams) =>
-  createAnalysisFinding(params, "warning");
+export const AnalysisWarning = (
+  enviornment: ExecutionEnvironment,
+  params: AnalysisFindingParams,
+) => createAnalysisFinding(enviornment, params, "warning");
 
 /**
  * A type that bundles warning and error findings together.

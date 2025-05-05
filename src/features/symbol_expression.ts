@@ -1,14 +1,9 @@
 import { apply, kright, rep_sc, seq, str, tok, Token } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import {
-  analysisTable,
-  CompositeSymbolValue,
-  runtimeTable,
-  SymbolFlags,
-  SymbolValue,
-} from "../symbol.ts";
+import { CompositeSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
 import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
@@ -27,9 +22,9 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
     this.identifierToken = identifier;
   }
 
-  evaluate(): SymbolValue<unknown> {
+  evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
     const ident = this.identifierToken.text;
-    return runtimeTable
+    return environment.runtimeTable
       .findSymbol(ident)
       .map(([symbol, _flags]) => symbol.value)
       .unwrapOrThrow(
@@ -40,12 +35,12 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
       );
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const ident = this.identifierToken.text;
     const findings = AnalysisFindings.empty();
-    analysisTable.findSymbol(ident).onNone(() => {
+    environment.analysisTable.findSymbol(ident).onNone(() => {
       findings.errors.push(
-        AnalysisError({
+        AnalysisError(environment, {
           message:
             "You tried to use a variable that has not been defined at this point in the program.",
           beginHighlight: this,
@@ -57,12 +52,12 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  resolveType(): SymbolType {
-    return analysisTable
+  resolveType(environment: ExecutionEnvironment): SymbolType {
+    return environment.analysisTable
       .findSymbol(this.identifierToken.text)
       .map(([symbol, _flags]) => symbol.valueType)
       .or(
-        runtimeTable.findSymbol(this.identifierToken.text)
+        environment.runtimeTable.findSymbol(this.identifierToken.text)
           .map(([symbol, _flags]) => symbol.value.valueType),
       )
       .unwrapOrThrow(
@@ -73,8 +68,10 @@ export class ReferenceExpressionAstNode implements EvaluableAstNode {
       );
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
-    return analysisTable
+  resolveFlags(
+    environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
+    return environment.analysisTable
       .findSymbol(this.identifierToken.text)
       .map(([_symbol, flags]) =>
         new Map(Object.entries(flags)) as Map<keyof SymbolFlags, boolean>
@@ -95,8 +92,10 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): SymbolValue<unknown> {
-    const parentValue = this.parent.evaluate() as CompositeSymbolValue;
+  evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
+    const parentValue = this.parent.evaluate(
+      environment,
+    ) as CompositeSymbolValue;
     const accessedValue = parentValue.value.get(this.identifierToken.text);
     if (accessedValue === undefined) {
       throw new InternalError(
@@ -107,12 +106,12 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     return accessedValue;
   }
 
-  analyze(): AnalysisFindings {
-    const findings = this.parent.analyze();
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    const findings = this.parent.analyze(environment);
     if (findings.isErroneous()) {
       return findings;
     }
-    const parentType = this.parent.resolveType().peel();
+    const parentType = this.parent.resolveType(environment).peel();
     if (parentType instanceof CompositeSymbolType) {
       const fieldExists = parentType.fields.has(this.identifierToken.text);
       if (fieldExists) {
@@ -120,7 +119,7 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
       }
     }
     findings.errors.push(
-      AnalysisError({
+      AnalysisError(environment, {
         message:
           "The property you tried to access does not exist on the object.",
         beginHighlight: this,
@@ -132,9 +131,9 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     const parentType = this.parent
-      .resolveType()
+      .resolveType(environment)
       .peel() as CompositeSymbolType;
     const accessedType = parentType.fields.get(
       this.identifierToken.text,
@@ -148,7 +147,9 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     return accessedType;
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    _environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
 

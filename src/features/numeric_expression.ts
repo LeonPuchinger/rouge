@@ -10,6 +10,7 @@ import {
   Token,
 } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { NumericSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
@@ -32,16 +33,16 @@ class NumericLiteralAstNode implements NumericExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
   @memoize
-  evaluate(): SymbolValue<number> {
+  evaluate(_environment: ExecutionEnvironment): SymbolValue<number> {
     return new NumericSymbolValue(parseFloat(this.token.text));
   }
 
-  resolveType(): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Number" });
   }
 
@@ -68,15 +69,14 @@ class UnaryNumericExpressionAstNode implements NumericExpressionAstNode {
     return AnalysisFindings.empty();
   }
 
-  evaluate(): SymbolValue<number> {
+  evaluate(environment: ExecutionEnvironment): SymbolValue<number> {
     if (!["+", "-"].includes(this.operatorToken.text)) {
       throw new InternalError(
         `The interpreter recieved instructions to perform the following unknown operation on a number: ${this.operatorToken.text}`,
         "This should have either been caught during static analysis or be prevented by the parser.",
       );
     }
-    this.child;
-    return this.child.evaluate()
+    return this.child.evaluate(environment)
       .map((result) => {
         if (this.operatorToken.text === "-") {
           return -result;
@@ -109,12 +109,14 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     if (this.rhs instanceof NumericLiteralAstNode) {
-      const divisorValue = (this.rhs as NumericLiteralAstNode).evaluate();
+      const divisorValue = (this.rhs as NumericLiteralAstNode).evaluate(
+        environment,
+      );
       if (divisorValue.value === 0) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message: "Cannot divide by zero.",
           beginHighlight: this.rhs,
           endHighlight: Some(this.rhs),
@@ -126,14 +128,17 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
     return findings;
   }
 
-  evaluate(): SymbolValue<number> {
+  evaluate(environment: ExecutionEnvironment): SymbolValue<number> {
     if (!["+", "-", "*", "/", "%"].includes(this.operatorToken.text)) {
       throw new InternalError(
         `The interpreter recieved instructions to perform the following unknown operation on two numbers: ${this.operatorToken.text}`,
         "This should have either been caught during static analysis or be prevented by the parser.",
       );
     }
-    return new Wrapper([this.lhs.evaluate(), this.rhs.evaluate()])
+    return new Wrapper([
+      this.lhs.evaluate(environment),
+      this.rhs.evaluate(environment),
+    ])
       .map(([left, right]) => {
         switch (this.operatorToken.text) {
           case "+":
@@ -144,7 +149,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
             return left.value * right.value;
           case "/":
             if (right.value === 0) {
-              throw new RuntimeError({
+              throw new RuntimeError(environment, {
                 message: "Division by zero is not possible.",
                 include: [this.lhs, this.rhs],
                 highlight: [this.rhs],
@@ -164,7 +169,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
       .unwrap();
   }
 
-  resolveType(): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Number" });
   }
 
@@ -187,10 +192,10 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
-    const analysisResult = this.child.analyze();
-    if (!this.child.resolveType().isFundamental("Number")) {
-      analysisResult.errors.push(AnalysisError({
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    const analysisResult = this.child.analyze(environment);
+    if (!this.child.resolveType(environment).isFundamental("Number")) {
+      analysisResult.errors.push(AnalysisError(environment, {
         message:
           "You tried to use a numeric operation on something that is not a number.",
         beginHighlight: this,
@@ -201,12 +206,12 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
     return analysisResult;
   }
 
-  evaluate(): SymbolValue<number> {
+  evaluate(environment: ExecutionEnvironment): SymbolValue<number> {
     // Type safety has been assured by static analysis
-    return this.child.evaluate() as SymbolValue<number>;
+    return this.child.evaluate(environment) as SymbolValue<number>;
   }
 
-  resolveType(): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Number" });
   }
 

@@ -6,6 +6,7 @@ import {
   PlaceholderSymbolType,
   SymbolType,
 } from "./type.ts";
+import { zip } from "./util/array.ts";
 import { InternalError } from "./util/error.ts";
 import { None, Option, Some } from "./util/monad/index.ts";
 import { WithOptionalAttributes } from "./util/type.ts";
@@ -49,6 +50,11 @@ export interface SymbolValue<T = unknown> {
    * Replace the current value in the SymbolValue with a new value.
    */
   write(value: T): void;
+
+  /**
+   * Generate a human-readable representation of the value that can be shown to the user.
+   */
+  representation(): string;
 }
 
 export class BooleanSymbolValue implements SymbolValue<boolean> {
@@ -62,6 +68,10 @@ export class BooleanSymbolValue implements SymbolValue<boolean> {
 
   write(value: boolean): void {
     this.value = value;
+  }
+
+  representation(): string {
+    return `${this.value}`;
   }
 }
 
@@ -77,6 +87,10 @@ export class NumericSymbolValue implements SymbolValue<number> {
   write(value: number): void {
     this.value = value;
   }
+
+  representation(): string {
+    return `${this.value}`;
+  }
 }
 
 export class StringSymbolValue implements SymbolValue<string> {
@@ -90,6 +104,10 @@ export class StringSymbolValue implements SymbolValue<string> {
 
   write(value: string): void {
     this.value = value;
+  }
+
+  representation(): string {
+    return `"${this.value}"`;
   }
 }
 
@@ -123,6 +141,17 @@ export class FunctionSymbolValue implements SymbolValue<StatementsAstNode> {
   write(value: StatementsAstNode): void {
     this.value = value;
   }
+
+  representation(): string {
+    const parameterTypes =
+      (this.valueType as FunctionSymbolType).parameterTypes;
+    const parameters = zip(this.parameterNames, parameterTypes);
+    return `function(${
+      parameters
+        .map(([name, type]) => `${name}: ${type.displayName()}`)
+        .join(", ")
+    })`;
+  }
 }
 
 export class CompositeSymbolValue
@@ -154,6 +183,15 @@ export class CompositeSymbolValue
 
   write(value: Map<string, SymbolValue>): void {
     this.value = value;
+  }
+
+  representation(): string {
+    const id = (this.valueType as CompositeSymbolType).id;
+    return `${id}(${
+      Array.from(this.value.entries())
+        .map(([name, value]) => `${name}: ${value.representation()}`)
+        .join(", ")
+    })`;
   }
 }
 
@@ -340,6 +378,3 @@ export class SymbolTable<S extends Symbol> {
     };
   }
 }
-
-export const analysisTable: AnalysisSymbolTable = new SymbolTable();
-export const runtimeTable: InterpreterSymbolTable = new SymbolTable();

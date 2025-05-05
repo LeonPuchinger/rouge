@@ -12,14 +12,13 @@ import {
   Token,
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { createRuntimeBindingRuntimeSymbol } from "../runtime.ts";
 import {
-  analysisTable,
   CompositeSymbolValue,
   RuntimeSymbol,
-  runtimeTable,
   StaticSymbol,
   SymbolFlags,
   SymbolValue,
@@ -30,7 +29,6 @@ import {
   IgnoreSymbolType,
   PlaceholderSymbolType,
   SymbolType,
-  typeTable,
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
 import { InternalError } from "../util/error.ts";
@@ -66,12 +64,12 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     return this.defaultValue.hasValue();
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     return (this.typeAnnotation as Option<
       TypeLiteralAstNode | ExpressionAstNode
     >)
       .or(this.defaultValue)
-      .map((node) => node.resolveType())
+      .map((node) => node.resolveType(environment))
       .unwrapOrThrow(
         new InternalError(
           "A field has to have at least a type annotation or a default value.",
@@ -95,12 +93,12 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     return reference;
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const typeAnnotationFindings = this.typeAnnotation
-      .map((typeAnnotation) => typeAnnotation.analyze())
+      .map((typeAnnotation) => typeAnnotation.analyze(environment))
       .unwrapOr(AnalysisFindings.empty());
     const defaultValueFindings = this.defaultValue
-      .map((defaultValue) => defaultValue.analyze())
+      .map((defaultValue) => defaultValue.analyze(environment))
       .unwrapOr(AnalysisFindings.empty());
     const findings = AnalysisFindings.merge(
       typeAnnotationFindings,
@@ -112,10 +110,10 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     if (this.typeAnnotation.hasValue() && this.defaultValue.hasValue()) {
       const typeAnnotation = this.typeAnnotation.unwrap();
       const expression = this.defaultValue.unwrap();
-      const typeAnnotationType = typeAnnotation.resolveType();
-      const expressionType = expression.resolveType();
+      const typeAnnotationType = typeAnnotation.resolveType(environment);
+      const expressionType = expression.resolveType(environment);
       if (!expressionType.typeCompatibleWith(typeAnnotationType)) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             `The default value for field "${this.name.text}" is incompatible with its explicitly stated type.`,
           beginHighlight: typeAnnotation,
@@ -126,7 +124,7 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
       }
     }
     if (!this.typeAnnotation.hasValue() && !this.defaultValue.hasValue()) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           `For each field, you have to at least specify its type or provide a default value.`,
         beginHighlight: DummyAstNode.fromToken(this.name),
@@ -151,7 +149,9 @@ class FieldAstNode implements Partial<EvaluableAstNode> {
     ];
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    _environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
 }
@@ -197,6 +197,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * Adds the fields of the type definition to a barebones symbol type.
    */
   completeBarebonesSymbolType(
+    environment: ExecutionEnvironment,
     definitionType: CompositeSymbolType,
   ): SymbolType {
     for (const field of this.fields) {
@@ -207,7 +208,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
           `The field "${fieldName}" was not found in the type "${this.name.text}".`,
         );
       }
-      const fieldType = field.resolveType();
+      const fieldType = field.resolveType(environment);
       existingField.bind(fieldType);
     }
     return definitionType;
@@ -217,6 +218,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * Generates a composite symbol type of the type definition with all its fields.
    */
   generateSymbolType(
+    environment: ExecutionEnvironment,
     traitTypes: CompositeSymbolType[],
     placeholderTypes?: Map<string, PlaceholderSymbolType>,
   ): SymbolType {
@@ -224,15 +226,16 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       traitTypes,
       placeholderTypes,
     );
-    typeTable.pushScope();
-    typeTable.setType(
+    environment.typeTable.pushScope();
+    environment.typeTable.setType(
       this.name.text,
       definitionType,
     );
     const completeType = this.completeBarebonesSymbolType(
+      environment,
       definitionType,
     );
-    typeTable.popScope();
+    environment.typeTable.popScope();
     return completeType;
   }
 
@@ -243,13 +246,14 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * parameters are located at the end of the list of fields.
    */
   generateConstructorStaticSymbol(
+    environment: ExecutionEnvironment,
     definitionType: SymbolType,
     placeholders: Map<string, PlaceholderSymbolType>,
   ): StaticSymbol {
     const nonDefaultParameters: SymbolType[] = [];
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
-        nonDefaultParameters.push(field.resolveType());
+        nonDefaultParameters.push(field.resolveType(environment));
       }
     }
     return new StaticSymbol({
@@ -297,14 +301,17 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * Make sure none of the traits are placeholders.
    */
   ensureTraitsAreBound(
+    environment: ExecutionEnvironment,
     unproblematicTraits: CompositeTypeLiteralAstNode[],
   ): AnalysisFindings {
     const errors = unproblematicTraits
-      .map((node) => [node, node.resolveType()] as [AstNode, SymbolType])
+      .map((node) =>
+        [node, node.resolveType(environment)] as [AstNode, SymbolType]
+      )
       .filter(([_node, type]) => !type.bound())
       .map(([node, _type]) => node)
       .map((node) => {
-        return AnalysisError({
+        return AnalysisError(environment, {
           message: "Placeholders cannot be implemented.",
           beginHighlight: node,
           endHighlight: None(),
@@ -322,6 +329,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * to be implemented with incompatible types.
    */
   ensureNoOverlappingBehavior(
+    environment: ExecutionEnvironment,
     unproblematicTraits: CompositeTypeLiteralAstNode[],
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
@@ -330,14 +338,14 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       { fieldType: SymbolType; requiredBy: SymbolType }
     >();
     for (const trait of unproblematicTraits) {
-      const traitType = trait.resolveType();
+      const traitType = trait.resolveType(environment);
       for (const [fieldName, fieldType] of traitType.fields) {
         const existingField = existingFields.get(fieldName);
         if (
           existingField !== undefined &&
           !existingField.fieldType.typeCompatibleWith(fieldType)
         ) {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "It is not possible for two traits to require the same field, but with different types.",
             beginHighlight: this
@@ -365,6 +373,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * without errors before this method is called.
    */
   requiredBehavior(
+    environment: ExecutionEnvironment,
     unproblematicTraits: CompositeTypeLiteralAstNode[],
   ): Map<
     string,
@@ -375,7 +384,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       { fieldType: SymbolType; requiredBy: SymbolType }
     >();
     for (const trait of unproblematicTraits.toReversed()) {
-      const traitType = trait.resolveType();
+      const traitType = trait.resolveType(environment);
       for (const [fieldName, fieldType] of traitType.fields) {
         requiredBehavior.set(fieldName, {
           fieldType: fieldType,
@@ -392,6 +401,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    */
   ensureBehaviorisImplemented(
     behavior: Map<string, { fieldType: SymbolType; requiredBy: SymbolType }>,
+    environment: ExecutionEnvironment,
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     for (const [fieldName, { fieldType, requiredBy }] of behavior) {
@@ -399,7 +409,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         field.name.text === fieldName
       );
       if (implementedField === undefined) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             `The field '${fieldName}' is required by the trait '${requiredBy.displayName()}' but is not implemented on '${this.name.text}'.`,
           beginHighlight: DummyAstNode.fromToken(this.name),
@@ -407,9 +417,9 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
           messageHighlight: "",
         }));
       } else {
-        const implementedType = implementedField.resolveType();
+        const implementedType = implementedField.resolveType(environment);
         if (!implementedType.typeCompatibleWith(fieldType)) {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               `The type of the field '${fieldName}' is incompatible with the type required by the trait '${requiredBy.displayName()}'.`,
             beginHighlight: DummyAstNode.fromToken(implementedField.name),
@@ -423,15 +433,15 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     return findings;
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
-    typeTable.findType(this.name.text)
+    environment.typeTable.findType(this.name.text)
       .then(([_type, flags]) => {
         if (!flags.readonly) {
           return;
         }
         if (flags.stdlib) {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "This name cannot be used because it is part of the language.",
             beginHighlight: DummyAstNode.fromToken(this.name),
@@ -439,7 +449,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
             messageHighlight: "",
           }));
         } else {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message: "Names for types have to be unique.",
             beginHighlight: DummyAstNode.fromToken(this.name),
             endHighlight: None(),
@@ -452,7 +462,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     this.fields.reduce<FieldInitializerMode>(
       (mode, field) => {
         if (mode === "default" && !field.hasDefaultValue()) {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "Fields without default values have to come before fields with default values.",
             beginHighlight: DummyAstNode.fromToken(field.name),
@@ -468,9 +478,9 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
       let problematic = false;
-      typeTable.findType(placeholder.text)
+      environment.typeTable.findType(placeholder.text)
         .then(() => {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "Placeholders cannot have the same name as types that already exist in an outer scope.",
             beginHighlight: DummyAstNode.fromToken(placeholder),
@@ -481,7 +491,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
           problematic = true;
         });
       if (placeholder.text === this.name.text) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             "A placeholder cannot share the same name as its surrounding type.",
           beginHighlight: DummyAstNode.fromToken(placeholder),
@@ -499,7 +509,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     );
     for (const [placeholder, indices] of placeholderDuplicates) {
       const duplicateCount = indices.length;
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message: "The names of placeholders have to be unique.",
         beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
         endHighlight: None(),
@@ -518,15 +528,15 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
       ),
     );
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     for (
       const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
     ) {
-      typeTable.setType(placeholerName, placeholderType);
+      environment.typeTable.setType(placeholerName, placeholderType);
     }
     const analyzedTraits = this.traits
       .map((trait) =>
-        [trait, trait.analyze()] as [
+        [trait, trait.analyze(environment)] as [
           CompositeTypeLiteralAstNode,
           AnalysisFindings,
         ]
@@ -541,9 +551,11 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         AnalysisFindings.empty(),
       );
     const traitTypeFindings = this.ensureTraitsAreBound(
+      environment,
       unproblematicTraits,
     );
     const traitConflictFindings = this.ensureNoOverlappingBehavior(
+      environment,
       unproblematicTraits,
     );
     findings = AnalysisFindings.merge(
@@ -553,28 +565,29 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       traitConflictFindings,
     );
     const unproblematicTraitsTypes = unproblematicTraits
-      .map((trait) => trait.resolveType());
+      .map((trait) => trait.resolveType(environment));
     const incompletedefinitionType = this.generateBarebonesSymbolType(
       unproblematicTraitsTypes,
       unproblematicPlaceholderTypes,
     );
-    typeTable.setType(
+    environment.typeTable.setType(
       this.name.text,
       incompletedefinitionType,
     );
     const sharedBehavior = this.requiredBehavior(
+      environment,
       unproblematicTraits,
     );
     findings = AnalysisFindings.merge(
       findings,
-      this.ensureBehaviorisImplemented(sharedBehavior),
+      this.ensureBehaviorisImplemented(sharedBehavior, environment),
     );
     const mockConstructor = this.generateMockConstructorStaticSymbol(
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
-    analysisTable.pushScope();
-    analysisTable.setSymbol(
+    environment.analysisTable.pushScope();
+    environment.analysisTable.setSymbol(
       this.name.text,
       mockConstructor,
     );
@@ -584,11 +597,11 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     for (const field of this.fields) {
       preliminaryFindings = AnalysisFindings.merge(
         preliminaryFindings,
-        field.analyze(),
+        field.analyze(environment),
       );
       const fieldName = field.name.text;
       if (fieldNames.includes(fieldName)) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message: "Fields inside of a type have to have a unique name.",
           beginHighlight: DummyAstNode.fromToken(field.name),
           endHighlight: None(),
@@ -599,34 +612,36 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       fieldNames.push(fieldName);
     }
     if (findings.isErroneous() || preliminaryFindings.isErroneous()) {
-      typeTable.popScope();
+      environment.typeTable.popScope();
       return AnalysisFindings.merge(findings, preliminaryFindings);
     }
     const definitionType = this.completeBarebonesSymbolType(
+      environment,
       incompletedefinitionType,
     );
     // Second pass of the analysis with field types set
     const fieldFindings = this.fields
-      .map((field) => field.analyze())
+      .map((field) => field.analyze(environment))
       .reduce(
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
     findings = AnalysisFindings.merge(findings, fieldFindings);
     const constructor = this.generateConstructorStaticSymbol(
+      environment,
       incompletedefinitionType,
       unproblematicPlaceholderTypes,
     );
-    typeTable.popScope();
+    environment.typeTable.popScope();
     if (findings.isErroneous()) {
       return findings;
     }
-    typeTable.setType(
+    environment.typeTable.setType(
       this.name.text,
       definitionType,
     );
-    analysisTable.popScope();
-    analysisTable.setSymbol(this.name.text, constructor);
+    environment.analysisTable.popScope();
+    environment.analysisTable.setSymbol(this.name.text, constructor);
     return findings;
   }
 
@@ -637,6 +652,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
    * it makes use of functionality that is also used by the runtime.
    */
   generateConstructorRuntimeSymbol(
+    environment: ExecutionEnvironment,
     definitionType: SymbolType,
     placeholders: Map<string, PlaceholderSymbolType>,
   ): RuntimeSymbol {
@@ -645,27 +661,28 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
       symbolType: SymbolType;
     }[] = [];
     const fieldTypes = new Map<string, SymbolType>();
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     for (const [placeholderName, placeholderType] of placeholders) {
-      typeTable.setType(placeholderName, placeholderType);
+      environment.typeTable.setType(placeholderName, placeholderType);
     }
     for (const field of this.fields) {
       if (!field.hasDefaultValue()) {
         nonDefaultParameters.push({
           name: field.name.text,
-          symbolType: field.resolveType(),
+          symbolType: field.resolveType(environment),
         });
       }
-      fieldTypes.set(field.name.text, field.resolveType());
+      fieldTypes.set(field.name.text, field.resolveType(environment));
     }
-    typeTable.popScope();
+    environment.typeTable.popScope();
     return createRuntimeBindingRuntimeSymbol(
+      environment,
       nonDefaultParameters,
       definitionType,
       (params) => {
-        typeTable.pushScope();
+        environment.typeTable.pushScope();
         for (const [placeholderName, placeholderType] of placeholders) {
-          typeTable.setType(placeholderName, placeholderType);
+          environment.typeTable.setType(placeholderName, placeholderType);
         }
         const initializers = new Map<string, [SymbolValue, SymbolType]>();
         for (const field of this.fields) {
@@ -676,14 +693,16 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
             );
           }
           if (field.hasDefaultValue()) {
-            const defaultValue = field.defaultValue.unwrap().evaluate();
+            const defaultValue = field.defaultValue.unwrap().evaluate(
+              environment,
+            );
             initializers.set(
               field.name.text,
               [defaultValue, fieldTypes.get(field.name.text)!],
             );
           }
         }
-        typeTable.popScope();
+        environment.typeTable.popScope();
         const instance = new CompositeSymbolValue({
           fields: initializers,
           id: this.name.text,
@@ -694,7 +713,7 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
     );
   }
 
-  interpret(): void {
+  interpret(environment: ExecutionEnvironment): void {
     const placeholderTypes = new Map(
       this.placeholders.map(
         (
@@ -705,26 +724,33 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         ],
       ),
     );
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     for (const [placeholderName, placeholderType] of placeholderTypes) {
-      typeTable.setType(placeholderName, placeholderType);
+      environment.typeTable.setType(placeholderName, placeholderType);
     }
     const traitTypes = this.traits
-      .map((trait) => trait.resolveType());
+      .map((trait) => trait.resolveType(environment));
     const definitionType = this.generateSymbolType(
+      environment,
       traitTypes,
       placeholderTypes,
     );
-    typeTable.popScope();
-    typeTable.setType(
+    environment.typeTable.popScope();
+    environment.typeTable.setType(
       this.name.text,
       definitionType,
     );
     const constructor = this.generateConstructorRuntimeSymbol(
+      environment,
       definitionType,
       placeholderTypes,
     );
-    runtimeTable.setSymbol(this.name.text, constructor);
+    environment.runtimeTable.setSymbol(this.name.text, constructor);
+  }
+
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
+    return "Nothing";
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

@@ -12,6 +12,7 @@ import {
   Token,
 } from "typescript-parsec";
 import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import {
   AnalysisError,
   AnalysisFindings,
@@ -19,7 +20,6 @@ import {
 } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import {
-  analysisTable,
   FunctionSymbolValue,
   StaticSymbol,
   SymbolFlags,
@@ -29,7 +29,6 @@ import {
   FunctionSymbolType,
   PlaceholderSymbolType,
   SymbolType,
-  typeTable,
 } from "../type.ts";
 import { findDuplicates, removeAll } from "../util/array.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
@@ -70,11 +69,11 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
-    const findings = this.type.analyze();
-    const existingSymbol = analysisTable.findSymbol(this.name.text);
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    const findings = this.type.analyze(environment);
+    const existingSymbol = environment.analysisTable.findSymbol(this.name.text);
     if (existingSymbol.hasValue()) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "Function parameter names have to be unique. Parameters can not share names with other variables.",
         messageHighlight:
@@ -86,8 +85,8 @@ class ParameterAstNode implements Partial<EvaluableAstNode> {
     return findings;
   }
 
-  resolveType(): SymbolType {
-    return this.type.resolveType();
+  resolveType(environment: ExecutionEnvironment): SymbolType {
+    return this.type.resolveType(environment);
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
@@ -107,8 +106,8 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     Object.assign(this, params);
   }
 
-  evaluate(): SymbolValue<Function> {
-    typeTable.pushScope();
+  evaluate(environment: ExecutionEnvironment): SymbolValue<Function> {
+    environment.typeTable.pushScope();
     const placeholders = new Map(
       this.placeholders.map((placeholder) => [
         placeholder.text,
@@ -116,16 +115,19 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       ]),
     );
     for (const [placeholderName, placeholderType] of placeholders) {
-      typeTable.setType(placeholderName, placeholderType);
+      environment.typeTable.setType(placeholderName, placeholderType);
     }
     const parameterTypes: Map<string, SymbolType> = new Map();
     for (const parameter of this.parameters) {
-      parameterTypes.set(parameter.name.text, parameter.resolveType());
+      parameterTypes.set(
+        parameter.name.text,
+        parameter.resolveType(environment),
+      );
     }
     const returnType = this.returnType
-      .map((literal) => literal.resolveType())
-      .unwrapOr(nothingType());
-    typeTable.popScope();
+      .map((literal) => literal.resolveType(environment))
+      .unwrapOr(nothingType(environment));
+    environment.typeTable.popScope();
     return new FunctionSymbolValue({
       parameterTypes: parameterTypes,
       placeholderTypes: placeholders,
@@ -166,6 +168,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
    * When there are statements after a return statement, a warning is added to the findings.
    */
   analyzeBranch(
+    environment: ExecutionEnvironment,
     statements: AstNode[],
   ): { branchContainsReturn: boolean; branchFindings: AnalysisFindings } {
     const findings = AnalysisFindings.empty();
@@ -178,7 +181,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const remainingStatements = statements.slice(returnStatementIndex + 1);
     const unreachableCode = remainingStatements.length >= 1;
     if (unreachableCode) {
-      findings.warnings.push(AnalysisWarning({
+      findings.warnings.push(AnalysisWarning(environment, {
         message:
           "These statements are never going to be run because they are situated after a return statement.",
         beginHighlight: remainingStatements.at(0)!,
@@ -192,7 +195,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
    * Analyzes whether return statements in the function are placed in a legal way.
    * This method assumes that the function is required to return a non `Nothing` return value.
    */
-  analyzeReturnPlacements(): AnalysisFindings {
+  analyzeReturnPlacements(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     const functionEmpty = this.statements.children.length === 0;
     if (functionEmpty) {
@@ -203,12 +206,12 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       const {
         branchContainsReturn,
         branchFindings,
-      } = this.analyzeBranch(branch);
+      } = this.analyzeBranch(environment, branch);
       findings = AnalysisFindings.merge(findings, branchFindings);
       return !branchContainsReturn;
     });
     if (missingReturnStatement) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "This function is missing at least one return statement somewhere.",
         beginHighlight: DummyAstNode.fromToken(this.functionKeywordToken),
@@ -218,13 +221,13 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
-      typeTable.findType(placeholder.text)
+      environment.typeTable.findType(placeholder.text)
         .then(() => {
-          findings.errors.push(AnalysisError({
+          findings.errors.push(AnalysisError(environment, {
             message:
               "Placeholders cannot have the same name as types that already exist in an outer scope.",
             beginHighlight: DummyAstNode.fromToken(placeholder),
@@ -242,7 +245,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     );
     for (const [placeholder, indices] of placeholderDuplicates) {
       const duplicateCount = indices.length;
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message: "The names of placeholders have to be unique.",
         beginHighlight: DummyAstNode.fromToken(this.placeholders[indices[1]]),
         endHighlight: None(),
@@ -261,50 +264,53 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
         ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
       ),
     );
-    typeTable.pushScope();
+    environment.typeTable.pushScope();
     for (
       const [placeholerName, placeholderType] of unproblematicPlaceholderTypes
     ) {
-      typeTable.setType(placeholerName, placeholderType);
+      environment.typeTable.setType(placeholerName, placeholderType);
     }
-    analysisTable.pushScope();
+    environment.analysisTable.pushScope();
     for (const parameter of this.parameters) {
-      const parameterFindings = parameter.analyze();
+      const parameterFindings = parameter.analyze(environment);
       findings = AnalysisFindings.merge(findings, parameterFindings);
       if (parameterFindings.isErroneous()) {
         continue;
       }
-      const parameterType = parameter.resolveType();
-      analysisTable.setSymbol(
+      const parameterType = parameter.resolveType(environment);
+      environment.analysisTable.setSymbol(
         parameter.name.text,
         new StaticSymbol({ valueType: parameterType }),
       );
     }
     const returnTypeAnalysis = this.returnType
-      .map((literal) => literal.analyze());
+      .map((literal) => literal.analyze(environment));
     const returnTypeFindings = returnTypeAnalysis
       .unwrapOr(AnalysisFindings.empty());
     findings = AnalysisFindings.merge(findings, returnTypeFindings);
     returnTypeAnalysis.then((findings) => {
       const returnType = this.returnType
-        .map((literal) => literal.resolveType())
-        .unwrapOr(nothingType());
-      typeTable.setReturnType(returnType);
-      if (!returnType.typeCompatibleWith(nothingType())) {
+        .map((literal) => literal.resolveType(environment))
+        .unwrapOr(nothingType(environment));
+      environment.typeTable.setReturnType(returnType);
+      if (!returnType.typeCompatibleWith(nothingType(environment))) {
         findings = AnalysisFindings.merge(
           findings,
-          this.analyzeReturnPlacements(),
+          this.analyzeReturnPlacements(environment),
         );
       }
     });
-    findings = AnalysisFindings.merge(findings, this.statements.analyze());
-    analysisTable.popScope();
-    typeTable.popScope();
+    findings = AnalysisFindings.merge(
+      findings,
+      this.statements.analyze(environment),
+    );
+    environment.analysisTable.popScope();
+    environment.typeTable.popScope();
     return findings;
   }
 
-  resolveType(): SymbolType {
-    typeTable.pushScope();
+  resolveType(environment: ExecutionEnvironment): SymbolType {
+    environment.typeTable.pushScope();
     const placeholders = new Map(
       this.placeholders.map((placeholder) => [
         placeholder.text,
@@ -312,15 +318,15 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       ]),
     );
     for (const [placeholderName, placeholderType] of placeholders) {
-      typeTable.setType(placeholderName, placeholderType);
+      environment.typeTable.setType(placeholderName, placeholderType);
     }
     const parameterTypes = this.parameters.map((parameter) =>
-      parameter.resolveType()
+      parameter.resolveType(environment)
     );
     const returnType = this.returnType
-      .map((literal) => literal.resolveType())
-      .unwrapOr(nothingType());
-    typeTable.popScope();
+      .map((literal) => literal.resolveType(environment))
+      .unwrapOr(nothingType(environment));
+    environment.typeTable.popScope();
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
       placeholders: placeholders,
@@ -368,24 +374,29 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
     this.expression = Some(params.expression);
   }
 
-  interpret(): void {
+  interpret(environment: ExecutionEnvironment): void {
     throw new ReturnValueContainer(
       this.expression
-        .map((node) => node.evaluate())
+        .map((node) => node.evaluate(environment))
         .unwrapOr(nothingInstance),
     );
   }
 
-  analyze(): AnalysisFindings {
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
+    return "Nothing";
+  }
+
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = this.expression
-      .map((node) => node.analyze())
+      .map((node) => node.analyze(environment))
       .unwrapOr(AnalysisFindings.empty());
     if (findings.isErroneous()) {
       return findings;
     }
-    const savedReturnType = typeTable.findReturnType();
+    const savedReturnType = environment.typeTable.findReturnType();
     if (savedReturnType.kind === "none") {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "Return statements are only allowed inside of functions or methods",
         beginHighlight: DummyAstNode.fromToken(this.keyword),
@@ -394,17 +405,19 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
       return findings;
     }
     const supposedReturnType = savedReturnType.unwrap();
-    const actualReturnType = this.expression.map((node) => node.resolveType());
+    const actualReturnType = this.expression.map((node) =>
+      node.resolveType(environment)
+    );
     // curried version of AnalysisError with the highlighted range pre-applied
     const ReturnTypeError = (message: string, messageHighlight?: string) =>
-      AnalysisError({
+      AnalysisError(environment, {
         message: message,
         beginHighlight: DummyAstNode.fromToken(this.keyword),
         endHighlight: this.expression,
         messageHighlight: messageHighlight ?? "",
       });
     const returnValueRequired = !supposedReturnType.typeCompatibleWith(
-      nothingType(),
+      nothingType(environment),
     );
     const returnStatementEmpty = actualReturnType.kind === "none";
     if (returnValueRequired && returnStatementEmpty) {

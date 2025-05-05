@@ -14,13 +14,13 @@ import {
   Token,
 } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { Option } from "../main.ts";
 import {
   FunctionSymbolValue,
   RuntimeSymbol,
-  runtimeTable,
   SymbolFlags,
   SymbolValue,
 } from "../symbol.ts";
@@ -28,9 +28,9 @@ import {
   CompositeSymbolType,
   FunctionSymbolType,
   SymbolType,
-  typeTable,
 } from "../type.ts";
 import { zip } from "../util/array.ts";
+import { memoize } from "../util/memoize.ts";
 import { None, Some } from "../util/monad/option.ts";
 import {
   starts_with_breaking_whitespace,
@@ -51,7 +51,6 @@ import {
   referenceExpression,
   ReferenceExpressionAstNode,
 } from "./symbol_expression.ts";
-import { memoize } from "../util/memoize.ts";
 
 /* AST NODES */
 
@@ -77,26 +76,30 @@ export class InvocationAstNode implements EvaluableAstNode {
    * whether the invoked expression is a method or not.
    */
   @memoize
-  isMethod(): boolean {
+  isMethod(
+    environment: ExecutionEnvironment,
+  ): boolean {
     const isMember = this.parent.hasValue();
     if (!isMember) {
       return false;
     }
     const parent = this.parent.unwrap();
-    const parentType = parent.resolveType().peel();
-    const memberType = this.symbol.resolveType().peel() as FunctionSymbolType;
+    const parentType = parent.resolveType(environment).peel();
+    const memberType = this.symbol.resolveType(environment)
+      .peel() as FunctionSymbolType;
     const memberParameterTypes = memberType.parameterTypes;
     return memberParameterTypes.length >= 1 &&
       memberParameterTypes[0].typeCompatibleWith(parentType);
   }
 
   analyzePlaceholders(
+    environment: ExecutionEnvironment,
     invokedType: FunctionSymbolType | CompositeSymbolType,
   ): AnalysisFindings {
     const findings = AnalysisFindings.empty();
     const expectedPlaceholders = invokedType.placeholders;
     if (expectedPlaceholders.size != this.placeholders.length) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           `Expected ${expectedPlaceholders.size} placeholders but ${this.placeholders.length} were supplied.`,
         beginHighlight: Some(this.placeholders.at(0))
@@ -109,8 +112,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     for (const placeholder of this.placeholders) {
       const placeholderName = placeholder.text;
-      if (!typeTable.findType(placeholderName).hasValue()) {
-        findings.errors.push(AnalysisError({
+      if (!environment.typeTable.findType(placeholderName).hasValue()) {
+        findings.errors.push(AnalysisError(environment, {
           message: `The type called '${placeholderName}' could not be found.`,
           beginHighlight: DummyAstNode.fromToken(placeholder),
           endHighlight: None(),
@@ -122,15 +125,16 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   analyzeFunctionInvocation(
+    environment: ExecutionEnvironment,
     functionType: FunctionSymbolType,
   ): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     functionType = functionType.fork();
     const expectedParameterTypes = functionType.parameterTypes;
     const foundParameterTypes = this.parameters
-      .map((parameter) => parameter.resolveType());
+      .map((parameter) => parameter.resolveType(environment));
     if (expectedParameterTypes.length != foundParameterTypes.length) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           `Expected ${expectedParameterTypes.length} parameters but ${foundParameterTypes.length} were supplied.`,
         beginHighlight: this.parameters.at(0) ??
@@ -141,7 +145,10 @@ export class InvocationAstNode implements EvaluableAstNode {
         ),
       }));
     }
-    const placeholdersFindings = this.analyzePlaceholders(functionType);
+    const placeholdersFindings = this.analyzePlaceholders(
+      environment,
+      functionType,
+    );
     findings = AnalysisFindings.merge(
       findings,
       placeholdersFindings,
@@ -154,7 +161,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const [placeholder, suppliedType] of zip(
         Array.from(functionType.placeholders.values()),
         this.placeholders.map((placeholder) =>
-          typeTable.findType(placeholder.text)
+          environment.typeTable.findType(placeholder.text)
             .map(([type, _flags]) => type)
         ),
       )
@@ -170,7 +177,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const expectedParameterType = expectedParameterTypes[index];
       const foundParameterType = foundParameterTypes[index];
       if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
-        findings.errors.push(AnalysisError({
+        findings.errors.push(AnalysisError(environment, {
           message:
             `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
           beginHighlight: this.parameters[index],
@@ -184,32 +191,34 @@ export class InvocationAstNode implements EvaluableAstNode {
 
   analyzeMethod(
     functionType: FunctionSymbolType,
+    environment: ExecutionEnvironment,
   ): AnalysisFindings {
     functionType = functionType.fork();
     functionType.parameterTypes.shift();
-    return this.analyzeFunctionInvocation(functionType);
+    return this.analyzeFunctionInvocation(environment, functionType);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = this.parameters
-      .map((parameter) => parameter.analyze())
+      .map((parameter) => parameter.analyze(environment))
       .reduce(
         (previous, current) => AnalysisFindings.merge(previous, current),
         AnalysisFindings.empty(),
       );
     findings = AnalysisFindings.merge(
       findings,
-      this.symbol.analyze(),
+      this.symbol.analyze(environment),
     );
     if (findings.isErroneous()) {
       return findings;
     }
-    const calledType = this.symbol.resolveType().peel();
+    const calledType = this.symbol.resolveType(environment).peel();
     const isFunction = calledType.isFunction();
     const ignoreFunction = calledType.ignore();
-    const isMethod = isFunction && (!ignoreFunction) && this.isMethod();
+    const isMethod = isFunction && (!ignoreFunction) &&
+      this.isMethod(environment);
     if (!isFunction) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "The expression cannot be invoked because it is neither a function nor a type.",
         beginHighlight: this.symbol,
@@ -223,23 +232,27 @@ export class InvocationAstNode implements EvaluableAstNode {
     if (isFunction && !isMethod) {
       findings = AnalysisFindings.merge(
         findings,
-        this.analyzeFunctionInvocation(calledType as FunctionSymbolType),
+        this.analyzeFunctionInvocation(
+          environment,
+          calledType as FunctionSymbolType,
+        ),
       );
     }
     if (isMethod) {
       findings = AnalysisFindings.merge(
         findings,
-        this.analyzeMethod(calledType as FunctionSymbolType),
+        this.analyzeMethod(calledType as FunctionSymbolType, environment),
       );
     }
     return findings;
   }
 
   evaluateFunction(
+    environment: ExecutionEnvironment,
     functionSymbolValue: FunctionSymbolValue,
     defaultParameters: Map<string, SymbolValue> = new Map(),
   ): SymbolValue<unknown> {
-    runtimeTable.pushScope();
+    environment.runtimeTable.pushScope();
     const parameterNames = functionSymbolValue.parameterNames;
     let offset = 0;
     for (
@@ -250,7 +263,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const parameterName = parameterNames[index];
       if (defaultParameters.has(parameterName)) {
         offset += 1;
-        runtimeTable.setSymbol(
+        environment.runtimeTable.setSymbol(
           parameterName,
           new RuntimeSymbol({
             value: defaultParameters.get(parameterName)!,
@@ -258,8 +271,8 @@ export class InvocationAstNode implements EvaluableAstNode {
         );
         continue;
       }
-      const symbolValue = this.parameters[index - offset].evaluate();
-      runtimeTable.setSymbol(
+      const symbolValue = this.parameters[index - offset].evaluate(environment);
+      environment.runtimeTable.setSymbol(
         parameterName,
         new RuntimeSymbol({
           value: symbolValue,
@@ -268,7 +281,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     let returnValue: SymbolValue = nothingInstance;
     try {
-      functionSymbolValue.value.interpret();
+      functionSymbolValue.value.interpret(environment);
     } catch (exception) {
       if (exception instanceof ReturnValueContainer) {
         returnValue = exception.value;
@@ -276,44 +289,47 @@ export class InvocationAstNode implements EvaluableAstNode {
         throw exception;
       }
     }
-    runtimeTable.popScope();
+    environment.runtimeTable.popScope();
     return returnValue;
   }
 
-  evaluate(): SymbolValue<unknown> {
-    const calledSymbol = this.symbol.evaluate();
-    const partOfStdlib = this.symbol.resolveFlags().get("stdlib") ?? false;
+  evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
+    const calledSymbol = this.symbol.evaluate(environment);
+    const partOfStdlib = this.symbol.resolveFlags(environment).get("stdlib") ??
+      false;
     const defaultParameters = new Map<string, SymbolValue>();
-    if (this.isMethod()) {
+    if (this.isMethod(environment)) {
       const parentInstance = this.parent
-        .map((parent) => parent.evaluate())
+        .map((parent) => parent.evaluate(environment))
         .unwrapOr(nothingInstance);
       const thisParameterName =
         (calledSymbol as FunctionSymbolValue).parameterNames[0];
       defaultParameters.set(thisParameterName, parentInstance);
     }
-    const savedIgnoreRuntimeBindings = runtimeTable.ignoreRuntimeBindings;
+    const savedIgnoreRuntimeBindings =
+      environment.runtimeTable.ignoreRuntimeBindings;
     if (partOfStdlib) {
       // grant the invocation access to the runtime
-      runtimeTable.ignoreRuntimeBindings = false;
+      environment.runtimeTable.ignoreRuntimeBindings = false;
     }
     const result = this.evaluateFunction(
+      environment,
       calledSymbol as FunctionSymbolValue,
       defaultParameters,
     );
-    runtimeTable.ignoreRuntimeBindings = savedIgnoreRuntimeBindings;
+    environment.runtimeTable.ignoreRuntimeBindings = savedIgnoreRuntimeBindings;
     return result;
   }
 
-  resolveType(): SymbolType {
-    const calledType = this.symbol.resolveType().peel();
+  resolveType(environment: ExecutionEnvironment): SymbolType {
+    const calledType = this.symbol.resolveType(environment).peel();
     const functionType = (calledType as FunctionSymbolType).fork();
     // bind placeholdes to the supplied types
     for (
       const [placeholder, suppliedType] of zip(
         Array.from(functionType.placeholders.values()),
         this.placeholders.map((placeholder) =>
-          typeTable.findType(placeholder.text)
+          environment.typeTable.findType(placeholder.text)
             .map(([type, _flags]) => type)
         ),
       )
@@ -323,7 +339,9 @@ export class InvocationAstNode implements EvaluableAstNode {
     return functionType.returnType;
   }
 
-  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+  resolveFlags(
+    _environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
     return new Map();
   }
 

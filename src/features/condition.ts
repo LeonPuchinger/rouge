@@ -8,9 +8,9 @@ import {
   Token,
 } from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { analysisTable, runtimeTable } from "../symbol.ts";
 import { None, Option } from "../util/monad/index.ts";
 import { Some } from "../util/monad/option.ts";
 import {
@@ -40,26 +40,26 @@ export class ConditionAstNode implements InterpretableAstNode {
     this.elseClosingBrace = Some(params.elseClosingBrace);
   }
 
-  analyze(): AnalysisFindings {
-    analysisTable.pushScope();
-    const conditionFindings = this.condition.analyze();
-    const trueFindings = this.trueStatements.analyze();
-    analysisTable.popScope();
-    analysisTable.pushScope();
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    environment.analysisTable.pushScope();
+    const conditionFindings = this.condition.analyze(environment);
+    const trueFindings = this.trueStatements.analyze(environment);
+    environment.analysisTable.popScope();
+    environment.analysisTable.pushScope();
     const findings = AnalysisFindings.merge(
       conditionFindings,
       trueFindings,
       this.falseStatements
-        .map((statements) => statements.analyze())
+        .map((statements) => statements.analyze(environment))
         .unwrapOr(AnalysisFindings.empty()),
     );
-    analysisTable.popScope();
+    environment.analysisTable.popScope();
     if (conditionFindings.isErroneous()) {
       return findings;
     }
-    const conditionType = this.condition.resolveType();
+    const conditionType = this.condition.resolveType(environment);
     if (!conditionType.isFundamental("Boolean")) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "The expression inside of the if statement needs to evaluate to a boolean value.",
         beginHighlight: this.condition,
@@ -69,19 +69,26 @@ export class ConditionAstNode implements InterpretableAstNode {
     return findings;
   }
 
-  interpret(): void {
-    runtimeTable.pushScope();
+  interpret(environment: ExecutionEnvironment): void {
+    environment.runtimeTable.pushScope();
     const conditionResult = (this.condition as BooleanExpressionAstNode)
-      .evaluate();
+      .evaluate(environment);
     if (conditionResult.value) {
-      this.trueStatements.interpret();
-      runtimeTable.popScope();
+      this.trueStatements.interpret(environment);
+      environment.runtimeTable.popScope();
     } else {
-      runtimeTable.popScope();
-      runtimeTable.pushScope();
-      this.falseStatements.then((statements) => statements.interpret());
-      runtimeTable.popScope();
+      environment.runtimeTable.popScope();
+      environment.runtimeTable.pushScope();
+      this.falseStatements.then((statements) =>
+        statements.interpret(environment)
+      );
+      environment.runtimeTable.popScope();
     }
+  }
+
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
+    return "Nothing";
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {

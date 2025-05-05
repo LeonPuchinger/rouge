@@ -1,8 +1,8 @@
 import { Token, TokenPosition } from "typescript-parsec";
 import { AstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { accessEnvironment } from "./environment.ts";
 import { InternalError } from "./error.ts";
 import { Option } from "./monad/index.ts";
 import { indentLines, prefixIndentLines, toMultiline } from "./string.ts";
@@ -186,11 +186,12 @@ export class DummyAstNode implements AstNode {
    * The dummy `Token` is used as both the start as well as the end of the token range.
    */
   static fromTokenPosition(
+    environment: ExecutionEnvironment,
     position: TokenPosition,
   ): AstNode {
     const dummyToken = {
       kind: TokenKind.unspecified,
-      text: accessEnvironment("source"),
+      text: environment.source,
       pos: position,
       next: undefined,
     };

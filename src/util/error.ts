@@ -1,5 +1,5 @@
 import { AstNode } from "../ast.ts";
-import { accessEnvironment } from "./environment.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { Option, Some } from "./monad/index.ts";
 import { createSnippet } from "./snippet.ts";
 import { concatLines, toMultiline } from "./string.ts";
@@ -76,6 +76,7 @@ export function UnresolvableSymbolTypeError(): InternalError {
  * The snippet contains three lines of padding around the affected area of source code.
  */
 export class RuntimeError extends Error implements AppError {
+  private environment: ExecutionEnvironment;
   include!: [AstNode, AstNode] | [AstNode];
   override message!: string;
   highlight: Option<[AstNode, AstNode] | [AstNode]>;
@@ -88,12 +89,14 @@ export class RuntimeError extends Error implements AppError {
    * @param highlightMessage A message attached to the highlighted section of code.
    */
   constructor(
+    environment: ExecutionEnvironment,
     params: Omit<
       WithOptionalAttributes<RuntimeError>,
       "cause" | "name" | "stack"
     >,
   ) {
     super(params.message);
+    this.environment = environment;
     Object.assign(this, params);
     this.highlight = Some(params.highlight);
     this.highlightMessage = Some(params.highlightMessage);
@@ -103,7 +106,7 @@ export class RuntimeError extends Error implements AppError {
     return toMultiline(
       this.message,
       createSnippet(
-        accessEnvironment("source"),
+        this.environment.source,
         this.include[0].tokenRange()[0].pos,
         Some(this.include.at(1))
           .map((node) => node.tokenRange()[1].pos),

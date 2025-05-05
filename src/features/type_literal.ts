@@ -11,6 +11,7 @@ import {
   Token,
 } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { SymbolFlags } from "../symbol.ts";
@@ -18,7 +19,6 @@ import {
   CompositeSymbolType,
   FunctionSymbolType,
   SymbolType,
-  typeTable,
 } from "../type.ts";
 import { Option, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
@@ -48,25 +48,30 @@ export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     this.closingParenthesis = Some(params.closingParenthesis);
   }
 
-  resolveType(): SymbolType {
+  resolveType(environment: ExecutionEnvironment): SymbolType {
     const parameterTypes = this.parameters.map((parameter) =>
-      parameter.resolveType()
+      parameter.resolveType(environment)
     );
-    const returnType = this.returnType.map((node) => node.resolveType())
-      .unwrapOr(nothingType());
+    const returnType = this.returnType.map((node) =>
+      node.resolveType(environment)
+    )
+      .unwrapOr(nothingType(environment));
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
       returnType: returnType,
     });
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     this.returnType.then((type) => {
-      findings = AnalysisFindings.merge(findings, type.analyze());
+      findings = AnalysisFindings.merge(findings, type.analyze(environment));
     });
     for (const parameter of this.parameters) {
-      findings = AnalysisFindings.merge(findings, parameter.analyze());
+      findings = AnalysisFindings.merge(
+        findings,
+        parameter.analyze(environment),
+      );
     }
     return findings;
   }
@@ -97,12 +102,12 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     this.closingBracket = Some(params.closingBracket);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
-    const type = typeTable.findType(this.name.text)
+    const type = environment.typeTable.findType(this.name.text)
       .map(([type, _flags]) => type as CompositeSymbolType);
     if (!type.hasValue()) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         beginHighlight: DummyAstNode.fromToken(this.name),
         endHighlight: None(),
         message: `The type called '${this.name.text}' could not be found.`,
@@ -111,7 +116,10 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       return findings;
     }
     for (const placeholder of this.placeholders) {
-      findings = AnalysisFindings.merge(findings, placeholder.analyze());
+      findings = AnalysisFindings.merge(
+        findings,
+        placeholder.analyze(environment),
+      );
     }
     if (findings.isErroneous()) {
       return findings;
@@ -121,7 +129,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       .unwrapOr(0);
     const suppliedPlaceholders = this.placeholders.length;
     if (requiredPlaceholders !== suppliedPlaceholders) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         beginHighlight: DummyAstNode.fromToken(this.name),
         endHighlight: None(),
         message:
@@ -132,10 +140,10 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
     return findings;
   }
 
-  resolveType(): CompositeSymbolType {
+  resolveType(environment: ExecutionEnvironment): CompositeSymbolType {
     const placeholderTypes = this.placeholders
-      .map((placeholder) => placeholder.resolveType());
-    let resolvedType = typeTable
+      .map((placeholder) => placeholder.resolveType(environment));
+    let resolvedType = environment.typeTable
       .findType(this.name.text)
       .map(([type, _flags]) => type)
       .unwrap() as CompositeSymbolType;

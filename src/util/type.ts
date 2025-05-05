@@ -1,5 +1,6 @@
+import { ExecutionEnvironment } from "../execution.ts";
 import { CompositeSymbolValue } from "../symbol.ts";
-import { SymbolType, typeTable } from "../type.ts";
+import { SymbolType } from "../type.ts";
 import { InternalError } from "./error.ts";
 import { Option } from "./monad/index.ts";
 
@@ -45,8 +46,10 @@ export type WithOptionalAttributes<T> = ConvertOptionals<Attributes<T>>;
 /**
  * The `Nothing` type from the standard library.
  */
-export function nothingType(): SymbolType {
-  return typeTable
+export function nothingType(
+  environment: ExecutionEnvironment,
+): SymbolType {
+  return environment.typeTable
     .findType("Nothing")
     .map(([type, _flags]) => type)
     .unwrapOrThrow(

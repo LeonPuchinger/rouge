@@ -10,9 +10,10 @@ import {
   Token,
 } from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
+import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { BooleanSymbolValue, SymbolValue } from "../symbol.ts";
+import { BooleanSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
 import { CompositeSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { memoize } from "../util/memoize.ts";
@@ -34,21 +35,25 @@ class BooleanLiteralAstNode implements BooleanExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
   @memoize
-  evaluate(): SymbolValue<boolean> {
+  evaluate(_environment: ExecutionEnvironment): SymbolValue<boolean> {
     return new BooleanSymbolValue(this.token.text === "true");
   }
 
-  resolveType(): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Boolean" });
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.token, this.token];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
@@ -62,20 +67,24 @@ class BooleanNegationAstNode implements BooleanExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
     return AnalysisFindings.empty();
   }
 
-  evaluate(): SymbolValue<boolean> {
-    return this.child.evaluate().map((value) => !value);
+  evaluate(environment: ExecutionEnvironment): SymbolValue<boolean> {
+    return this.child.evaluate(environment).map((value) => !value);
   }
 
-  resolveType(): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Boolean" });
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.negationToken, this.child.tokenRange()[1]];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
@@ -90,22 +99,22 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
     Object.assign(this, params);
   }
 
-  analyze(): AnalysisFindings {
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = AnalysisFindings.merge(
-      this.lhs.analyze(),
-      this.rhs.analyze(),
+      this.lhs.analyze(environment),
+      this.rhs.analyze(environment),
     );
     if (findings.isErroneous()) {
       return findings;
     }
     const operator = this.operatorToken.text;
-    const leftType = this.lhs.resolveType();
-    const rightType = this.rhs.resolveType();
+    const leftType = this.lhs.resolveType(environment);
+    const rightType = this.rhs.resolveType(environment);
     if (
       ["==", "!="].includes(operator) &&
       !leftType.typeCompatibleWith(rightType)
     ) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "You tried to compare two values that don't have the same type. That is not possible.",
         beginHighlight: this,
@@ -116,7 +125,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
       [">", ">=", "<", "<="].includes(operator) &&
       (!leftType.isFundamental("Number") || !rightType.isFundamental("Number"))
     ) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           'The "greater/smaller than" operator can only be used on numbers.',
         beginHighlight: this,
@@ -125,9 +134,10 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
     }
     if (
       ["&&", "||", "^"].includes(operator) &&
-      (!leftType.isFundamental("Boolean") || !rightType.isFundamental("Boolean"))
+      (!leftType.isFundamental("Boolean") ||
+        !rightType.isFundamental("Boolean"))
     ) {
-      findings.errors.push(AnalysisError({
+      findings.errors.push(AnalysisError(environment, {
         message:
           "You tried to use a boolean combination operators on something that is not a boolean.",
         beginHighlight: this,
@@ -137,7 +147,7 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
     return findings;
   }
 
-  evaluate(): SymbolValue<boolean> {
+  evaluate(environment: ExecutionEnvironment): SymbolValue<boolean> {
     if (
       !["==", "!=", ">=", ">", "<=", "<", "&&", "||", "^"]
         .includes(this.operatorToken.text)
@@ -147,7 +157,10 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
         "This should have either been caught during static analysis or be prevented by the parser.",
       );
     }
-    return new Wrapper([this.lhs.evaluate(), this.rhs.evaluate()])
+    return new Wrapper([
+      this.lhs.evaluate(environment),
+      this.rhs.evaluate(environment),
+    ])
       .map(([left, right]) => {
         // values can safely be type-casted because their type has been checked during analysis
         switch (this.operatorToken.text) {
@@ -179,12 +192,16 @@ class BinaryBooleanExpressionAstNode implements BooleanExpressionAstNode {
       .unwrap();
   }
 
-  resolveType(): SymbolType {
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
     return new CompositeSymbolType({ id: "Boolean" });
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
     return [this.lhs.tokenRange()[0], this.rhs.tokenRange()[1]];
+  }
+
+  resolveFlags(): Map<keyof SymbolFlags, boolean> {
+    return new Map();
   }
 }
 
