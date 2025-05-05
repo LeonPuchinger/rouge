@@ -11,16 +11,21 @@ import { Err } from "./util/monad/result.ts";
 export type {
   AnalysisFinding,
   AnalysisFindingKind,
-  AnalysisFindings
+  AnalysisFindings,
 } from "./finding.ts";
 export { VirtualTextFile } from "./streams.ts";
 export type {
   ReadableStream,
   StreamSubscription,
-  WritableSink
+  WritableSink,
 } from "./streams.ts";
 export type { Option, Result } from "./util/monad/index.ts";
 
+/**
+ * Performs the entire interpreter lifecycle (static analysis
+ * and interpretation) on a given program. Standard streams can
+ * be provided to capture output and provide input to the program.
+ */
 export function run(
   source: string,
   stdout: FileLike<string> = new VirtualTextFile(),
@@ -81,7 +86,7 @@ export function openRepl(
 }
 
 /**
- * Run a single statement in the REPL.
+ * Perform static analysis and interpret a single statement in the REPL.
  */
 export function invokeRepl(
   environment: ExecutionEnvironment,
@@ -111,6 +116,9 @@ export function closeRepl(environment: ExecutionEnvironment) {
   environment.source = "";
 }
 
+/**
+ * Only perform static analysis on a given program without invoking the interpreter.
+ */
 export function analyze(source: string): AnalysisFindings {
   const environment = new ExecutionEnvironment({ source });
   environment.typeTable.reset();
