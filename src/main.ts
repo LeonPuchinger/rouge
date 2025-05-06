@@ -20,6 +20,7 @@ export type {
   StreamSubscription,
   WritableSink,
 } from "./streams.ts";
+export { Err, None, Ok, Some } from "./util/monad/index.ts";
 export type { Option, Result } from "./util/monad/index.ts";
 
 /**

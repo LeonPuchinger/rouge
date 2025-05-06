@@ -4,7 +4,9 @@ import { None, Option, Some } from "./index.ts";
 export interface Result<T, E> {
   kind: "ok" | "err";
   map<U>(fn: (value: T) => U): Result<U, E>;
+  flatMap<U>(fn: (value: T) => Result<U, E>): Result<U, E>;
   mapError<U>(fn: (value: E) => U): Result<T, U>;
+  flatMapError<U>(fn: (value: E) => Result<T, U>): Result<T, U>;
   ok(): Option<T>;
   err(): Option<E>;
   unwrap(): T;
@@ -26,7 +28,15 @@ export function Ok<T, E>(value: T): Result<T, E> {
       return Ok(fn(value));
     },
 
+    flatMap<U>(fn: (value: T) => Result<U, E>): Result<U, E> {
+      return fn(value);
+    },
+
     mapError<U>(_fn: (value: E) => U): Result<T, U> {
+      return Ok(value);
+    },
+
+    flatMapError<U>(_fn: (value: E) => Result<T, U>): Result<T, U> {
       return Ok(value);
     },
 
@@ -90,8 +100,16 @@ export function Err<T, E>(value: E): Result<T, E> {
       return Err(value);
     },
 
+    flatMap<U>(_fn: (value: T) => Result<U, E>): Result<U, E> {
+      return Err(value);
+    },
+
     mapError<U>(fn: (value: E) => U): Result<T, U> {
       return Err(fn(value));
+    },
+
+    flatMapError<U>(fn: (value: E) => Result<T, U>): Result<T, U> {
+      return fn(value);
     },
 
     ok(): Option<T> {
