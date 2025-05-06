@@ -8,6 +8,7 @@ import { FileLike, VirtualTextFile } from "./streams.ts";
 import { Ok, Result } from "./util/monad/index.ts";
 import { Err } from "./util/monad/result.ts";
 
+export { ExecutionEnvironment } from "./execution.ts";
 export type {
   AnalysisFinding,
   AnalysisFindingKind,
