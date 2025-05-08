@@ -52,19 +52,15 @@ export class LoopAstNode implements InterpretableAstNode {
 
   interpret(environment: ExecutionEnvironment): void {
     environment.runtimeTable.pushScope();
-    const conditionResult = (this.condition as BooleanExpressionAstNode)
-      .evaluate(environment);
-    if (conditionResult.value) {
+    const conditionTrue = () =>
+      (this.condition as BooleanExpressionAstNode)
+        .evaluate(environment).value;
+    while (conditionTrue()) {
+      environment.runtimeTable.pushScope();
       this.statements.interpret(environment);
       environment.runtimeTable.popScope();
-    } else {
-      environment.runtimeTable.popScope();
-      environment.runtimeTable.pushScope();
-      this.falseStatements.then((statements) =>
-        statements.interpret(environment)
-      );
-      environment.runtimeTable.popScope();
     }
+    environment.runtimeTable.popScope();
   }
 
   get_representation(environment: ExecutionEnvironment): string {
