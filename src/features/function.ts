@@ -47,6 +47,7 @@ import {
 } from "../util/type.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
+import { LoopAstNode } from "./loop.ts";
 import {
   functionDefinition,
   returnStatement,
@@ -155,6 +156,13 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       return [
         ...this.uniqueBranches(trueStatements),
         ...this.uniqueBranches(falseStatements),
+      ];
+    }
+    if (current instanceof LoopAstNode) {
+      const loopStatements = [...current.statements.children, ...remaining];
+      return [
+        ...this.uniqueBranches(loopStatements),
+        ...this.uniqueBranches(remaining),
       ];
     }
     return this.uniqueBranches(remaining)
