@@ -356,7 +356,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
  * Statements inside of a function can be nested to various degrees
  * (e.g. conditions, loops). Therefore it can be difficult to get the
  * return value of a function from a return statement back to the caller.
- * This error is used to propagate ´the return value back through the
+ * This error is used to propagate the return value back through the
  * call stack to the nearest function, where it is caught.
  * The benefit of throwing an error is that execution of all nested
  * statements stops immediately without having to implement any further logic.
