@@ -62,14 +62,28 @@ export class LoopAstNode implements InterpretableAstNode {
 
   interpret(environment: ExecutionEnvironment): void {
     environment.runtimeTable.pushScope();
+    environment.typeTable.pushScope({ loop: true });
     const conditionTrue = () =>
       (this.condition as BooleanExpressionAstNode)
         .evaluate(environment).value;
     while (conditionTrue()) {
       environment.runtimeTable.pushScope();
-      this.statements.interpret(environment);
+      try {
+        this.statements.interpret(environment);
+      } catch (error) {
+        if (error instanceof ControlFlowModifier) {
+          if (error.modifier === "continue") {
+            continue;
+          }
+          if (error.modifier === "break") {
+            break;
+          }
+        }
+        throw error;
+      }
       environment.runtimeTable.popScope();
     }
+    environment.typeTable.popScope();
     environment.runtimeTable.popScope();
   }
 
