@@ -14,7 +14,13 @@ import {} from "../util/array.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { ReturnStatementAstNode } from "./function.ts";
 import {
+  controlFlowModifier,
+  ControlFlowModifierAstNode,
+  LoopAstNode,
+} from "./loop.ts";
+import {
   condition,
+  loop,
   returnStatement,
   statements,
 } from "./parser_declarations.ts";
@@ -28,7 +34,9 @@ export type StatementAstNode =
   | ReturnStatementAstNode
   | TypeDefinitionAstNode
   | AssignmentAstNode
-  | RuntimeStatementAstNode;
+  | RuntimeStatementAstNode
+  | LoopAstNode
+  | ControlFlowModifierAstNode;
 
 export class StatementsAstNode implements InterpretableAstNode {
   children!: StatementAstNode[];
@@ -76,7 +84,9 @@ export class StatementsAstNode implements InterpretableAstNode {
 const statement = alt_sc(
   assignment,
   condition,
+  loop,
   returnStatement,
+  controlFlowModifier,
   typeDefinition,
   expression,
 );
