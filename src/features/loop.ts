@@ -1,14 +1,24 @@
-import { apply, kmid, kright, seq, str, Token } from "typescript-parsec";
+import {
+  alt_sc,
+  apply,
+  kmid,
+  kright,
+  seq,
+  str,
+  Token,
+} from "typescript-parsec";
 import { InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
+import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
-import { WithOptionalAttributes } from "../util/type.ts";
+import { DummyAstNode } from "../util/snippet.ts";
+import { Attributes, WithOptionalAttributes } from "../util/type.ts";
 import { BooleanExpressionAstNode } from "./boolean_expression.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
 import { loop, statements } from "./parser_declarations.ts";
@@ -73,6 +83,68 @@ export class LoopAstNode implements InterpretableAstNode {
   }
 }
 
+/**
+ * A custom error type that is NOT used for any actual error handling.
+ * Statements inside of a loop can be nested to various degrees
+ * (e.g. conditions, further loops). Therefore it can be difficult to receive
+ * control flow modifiers (e.g. `continue`, `break`) as a caller.
+ * This error is used to propagate the modifier commands back through the
+ * call stack to the nearest loop, where it is caught.
+ * The benefit of throwing an error is that execution of all nested
+ * statements stops immediately without having to implement any further logic.
+ */
+export class ControlFlowModifier extends Error {
+  constructor(public modifier: "continue" | "break") {
+    super();
+  }
+}
+
+export class ControlFlowModifierAstNode implements InterpretableAstNode {
+  keyword!: Token<TokenKind>;
+
+  constructor(params: Attributes<ControlFlowModifierAstNode>) {
+    Object.assign(this, params);
+  }
+
+  kind(): "continue" | "break" {
+    const allowedKeywords = ["continue", "break"];
+    if (!allowedKeywords.includes(this.keyword.text)) {
+      throw new InternalError(
+        `Unrecognized control flow modifier "${this.keyword.text}".`,
+        "This should have been caught by the parser.",
+      );
+    }
+    return this.keyword.text as "continue" | "break";
+  }
+
+  interpret(_environment: ExecutionEnvironment): void {
+    throw new ControlFlowModifier(this.kind());
+  }
+
+  get_representation(environment: ExecutionEnvironment): string {
+    this.interpret(environment);
+    return "Nothing";
+  }
+
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    const findings = AnalysisFindings.empty();
+    const currentlyInLoop = environment.typeTable.insideLoop();
+    if (!currentlyInLoop) {
+      findings.errors.push(AnalysisError(environment, {
+        message:
+          `Control flow modifiers such as "${this.kind}" are only allowed inside of loops.`,
+        beginHighlight: DummyAstNode.fromToken(this.keyword),
+        endHighlight: None(),
+      }));
+    }
+    return findings;
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.keyword, this.keyword];
+  }
+}
+
 /* PARSER */
 
 loop.setPattern(
@@ -99,4 +171,12 @@ loop.setPattern(
       });
     },
   ),
+);
+
+export const controlFlowModifier = apply(
+  alt_sc(
+    str<TokenKind>("continue"),
+    str<TokenKind>("break"),
+  ),
+  (keyword) => new ControlFlowModifierAstNode({ keyword }),
 );
