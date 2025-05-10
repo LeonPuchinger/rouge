@@ -889,6 +889,10 @@ type TypeEntry = TypeFlags & {
 type Scope = {
   types: Map<string, TypeEntry>;
   returnType: Option<SymbolType>;
+  /**
+   * Whether the scope represents a loop.
+   */
+  loop: boolean;
 };
 
 export class TypeTable {
@@ -934,9 +938,10 @@ export class TypeTable {
    */
   createSnapshot(): TypeTable {
     const snapshot = new TypeTable();
-    snapshot.scopes = this.scopes.map(({ types, returnType }) => ({
+    snapshot.scopes = this.scopes.map(({ types, returnType, loop }) => ({
       types: new Map(types),
       returnType,
+      loop,
     }));
     snapshot.runtimeTypes = new Map(this.runtimeTypes);
     snapshot.globalFlagOverrides = { ...this.globalFlagOverrides };
@@ -944,8 +949,21 @@ export class TypeTable {
     return snapshot;
   }
 
-  pushScope() {
-    this.scopes.push({ types: new Map(), returnType: None() });
+  pushScope({
+    returnType = undefined,
+    loop = false,
+  }: {
+    returnType?: SymbolType;
+    loop?: boolean;
+  } = {
+    returnType: undefined,
+    loop: false,
+  }) {
+    this.scopes.push({
+      types: new Map(),
+      returnType: Some(returnType),
+      loop,
+    });
   }
 
   popScope() {
@@ -1008,6 +1026,11 @@ export class TypeTable {
     this.runtimeTypes.set(name, symbolType);
   }
 
+  setLoop(loop: boolean) {
+    const currentScope = this.scopes[this.scopes.length - 1];
+    currentScope.loop = loop;
+  }
+
   typeResolvable(name: string): boolean {
     return this.findType(name).hasValue();
   }
@@ -1054,6 +1077,27 @@ export class TypeTable {
       return returnType;
     }
     return None();
+  }
+
+  /**
+   * Returns `true` in case the current scope is a loop.
+   */
+  currentScopeIsLoop(): boolean {
+    const currentScope = this.scopes.at(-1);
+    return currentScope?.loop ?? false;
+  }
+
+  /**
+   * Returns `true` in case the current or any of
+   * the parent scopes represent a loop.
+   */
+  insideLoop(): boolean {
+    for (const currentScope of this.scopes.toReversed()) {
+      if (currentScope.loop) {
+        return true;
+      }
+    }
+    return false;
   }
 
   initializeStandardLibraryTypes() {

@@ -6,6 +6,7 @@ import {
   ReturnStatementAstNode,
 } from "./function.ts";
 import { InvocationAstNode } from "./invocation.ts";
+import { LoopAstNode } from "./loop.ts";
 import { StatementsAstNode } from "./statement.ts";
 import { ComplexStringAstNode } from "./string.ts";
 
@@ -46,6 +47,8 @@ parser -> condition
 */
 
 export const condition = rule<TokenKind, ConditionAstNode>();
+
+export const loop = rule<TokenKind, LoopAstNode>();
 
 export const functionDefinition = rule<TokenKind, FunctionDefinitionAstNode>();
 
