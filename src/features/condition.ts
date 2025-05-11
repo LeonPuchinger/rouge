@@ -125,8 +125,8 @@ condition.setPattern(
         ends_with_breaking_whitespace(str("{")),
         statements,
       ),
-      surround_with_breaking_whitespace(str("}")),
-      opt_sc(elseBranch),
+      starts_with_breaking_whitespace(str("}")),
+      opt_sc(starts_with_breaking_whitespace(elseBranch)),
     ),
     ([ifKeyword, condition, ifStatements, firstClosingBrace, elseBranch]) => {
       const [falseStatements, elseClosingBrace] = elseBranch ?? [];
