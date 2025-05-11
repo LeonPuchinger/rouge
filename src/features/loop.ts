@@ -146,7 +146,7 @@ export class ControlFlowModifierAstNode implements InterpretableAstNode {
     if (!currentlyInLoop) {
       findings.errors.push(AnalysisError(environment, {
         message:
-          `Control flow modifiers such as "${this.kind}" are only allowed inside of loops.`,
+          `Control flow modifiers such as "${this.kind()}" are only allowed inside of loops.`,
         beginHighlight: DummyAstNode.fromToken(this.keyword),
         endHighlight: None(),
       }));
