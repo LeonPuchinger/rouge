@@ -38,8 +38,10 @@ export class LoopAstNode implements InterpretableAstNode {
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     environment.analysisTable.pushScope();
+    environment.typeTable.pushScope({ loop: true });
     const conditionFindings = this.condition.analyze(environment);
     const statementsFindings = this.statements.analyze(environment);
+    environment.typeTable.popScope();
     environment.analysisTable.popScope();
     const findings = AnalysisFindings.merge(
       conditionFindings,
