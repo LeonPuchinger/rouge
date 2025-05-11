@@ -83,10 +83,10 @@ export class StatementsAstNode implements InterpretableAstNode {
 
 const statement = alt_sc(
   assignment,
-  condition,
-  loop,
   returnStatement,
   controlFlowModifier,
+  condition,
+  loop,
   typeDefinition,
   expression,
 );
