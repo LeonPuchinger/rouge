@@ -82,6 +82,23 @@ jobs:
       - name: Build module
         run: npm run build
 
+      - name: Select license files for Git dependencies
+        run: |
+          mkdir -p license
+          for dep in $(jq -r '.dependencies | to_entries[] | select(.value | startswith("git+")) | .key' package.json); do
+            license_file="node_modules/$dep/LICENSE"
+            if [[ -f "$license_file" ]]; then
+              cp "$license_file" "license/${dep}-license"
+            fi
+          done
+        shell: bash
+
+      - name: Upload licenses
+        uses: actions/upload-artifact@v4
+        with:
+          name: licenses
+          path: ./license
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
