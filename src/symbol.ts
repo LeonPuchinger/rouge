@@ -314,8 +314,13 @@ export class SymbolTable<S extends Symbol> {
     readonly?: boolean,
     stdlib?: boolean,
   ) {
+    // Find nearest scope where an existing symbol with the same
+    // name is defined. If it cannot be found, use the current scope.
     const currentScope = this.scopes[this.scopes.length - 1];
-    const existingEntry = Some(currentScope.get(name));
+    const scope = this.scopes
+      .toReversed()
+      .find((scope) => scope.has(name)) ?? currentScope;
+    const existingEntry = Some(scope.get(name));
     existingEntry.then((entry) => {
       if (entry.readonly) {
         throw new InternalError(
@@ -324,7 +329,7 @@ export class SymbolTable<S extends Symbol> {
         );
       }
     });
-    currentScope.set(name, {
+    scope.set(name, {
       symbol,
       readonly: readonly ?? this.getGlobalFlagOverride("readonly"),
       stdlib: stdlib ?? this.getGlobalFlagOverride("stdlib"),

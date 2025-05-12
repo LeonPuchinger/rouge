@@ -47,6 +47,7 @@ import {
 } from "../util/type.ts";
 import { ConditionAstNode } from "./condition.ts";
 import { expression, ExpressionAstNode } from "./expression.ts";
+import { LoopAstNode } from "./loop.ts";
 import {
   functionDefinition,
   returnStatement,
@@ -155,6 +156,13 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
       return [
         ...this.uniqueBranches(trueStatements),
         ...this.uniqueBranches(falseStatements),
+      ];
+    }
+    if (current instanceof LoopAstNode) {
+      const loopStatements = [...current.statements.children, ...remaining];
+      return [
+        ...this.uniqueBranches(loopStatements),
+        ...this.uniqueBranches(remaining),
       ];
     }
     return this.uniqueBranches(remaining)
@@ -348,7 +356,7 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
  * Statements inside of a function can be nested to various degrees
  * (e.g. conditions, loops). Therefore it can be difficult to get the
  * return value of a function from a return statement back to the caller.
- * This error is used to propagate ´the return value back through the
+ * This error is used to propagate the return value back through the
  * call stack to the nearest function, where it is caught.
  * The benefit of throwing an error is that execution of all nested
  * statements stops immediately without having to implement any further logic.
