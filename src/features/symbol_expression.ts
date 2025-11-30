@@ -4,7 +4,7 @@ import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { CompositeSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
-import { CompositeSymbolType, SymbolType } from "../type.ts";
+import { CompositeSymbolType, IgnoreSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 import {
@@ -112,6 +112,9 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
       return findings;
     }
     const parentType = this.parent.resolveType(environment).peel();
+    if (parentType instanceof IgnoreSymbolType) {
+      return findings;
+    }
     if (parentType instanceof CompositeSymbolType) {
       const fieldExists = parentType.fields.has(this.identifierToken.text);
       if (fieldExists) {
