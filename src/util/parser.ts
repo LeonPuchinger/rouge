@@ -192,7 +192,8 @@ export function alt_sc_var<T>(
  * that matched the longest sequence of tokens.
  * Important:
  *  1: This parser is only supposed to work with non-ambiguous grammars
- *  2: This parser only works with tokens that are properly indexed (e.g. emitted by the Lexer from `buildLexer`)
+ *  2: This parser only works with tokens that are properly indexed (e.g. emitted by the Lexer from `buildLexer`).
+ *     The index is an attribute of the token's position and indicates the number of characters that precede it in the input text.
  */
 export function alt_longest_var<T>(
   ...parsers: Parser<TokenKind, T>[]
@@ -213,7 +214,7 @@ export function alt_longest_var<T>(
     const firstUnmatchedToken = onlyCandidate.nextToken;
     if (firstMatchedToken === undefined || firstUnmatchedToken === undefined) {
       // This parser only works with properly indexed tokens.
-      // Returning a consumed number of 0 tokens will make sure that this parser
+      // Returning a consumed number of 0 characters will make sure that this parser
       // is never selected as the "longest matching" parser.
       return 0;
     }
