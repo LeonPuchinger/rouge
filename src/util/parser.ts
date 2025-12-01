@@ -229,7 +229,7 @@ export function alt_longest_var<T>(
       const failedResults = parseResults.filter((result) => !result.successful);
       return successfulResults
         .sort((a, b) => consumedTokens(b) - consumedTokens(a))
-        .at(0) ?? failedResults[-1];
+        .at(0) ?? failedResults.at(-1)!;
     },
   };
 }
