@@ -5,7 +5,7 @@ import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { SymbolFlags, SymbolValue } from "../symbol.ts";
 import { SymbolType } from "../type.ts";
-import { alt_sc_var } from "../util/parser.ts";
+import { alt_longest_var } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { booleanExpression } from "./boolean_expression.ts";
 import { numericExpression } from "./numeric_expression.ts";
@@ -92,7 +92,7 @@ export function configureExpression({
     .map(([parser, _]) => parser);
 
   return apply(
-    alt_sc_var(...enabledParsers),
+    alt_longest_var(...enabledParsers),
     (expression: EvaluableAstNode) =>
       new ExpressionAstNode({ child: expression }),
   );

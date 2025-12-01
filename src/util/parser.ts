@@ -8,7 +8,9 @@ import {
   Parser,
   rep_sc,
   seq,
+  SucceededParserOutput,
   tok,
+  Token,
 } from "typescript-parsec";
 import { TokenKind } from "../lexer.ts";
 import { InternalError } from "./error.ts";
@@ -183,4 +185,52 @@ export function alt_sc_var<T>(
       (acc, parser) => alt_sc(parser, acc),
       alt_sc(parsers.at(-2)!, parsers.at(-1)!),
     );
+}
+
+/**
+ * Works like `alt_sc_var`, but only returns the result of the parser
+ * that matched the longest sequence of tokens.
+ * Important:
+ *  1: This parser is only supposed to work with non-ambiguous grammars
+ *  2: This parser only works with tokens that are properly indexed (e.g. emitted by the Lexer from `buildLexer`).
+ *     The index is an attribute of the token's position and indicates the number of characters that precede it in the input text.
+ */
+export function alt_longest_var<T>(
+  ...parsers: Parser<TokenKind, T>[]
+): Parser<TokenKind, T> {
+  if (parsers.length < 2) {
+    throw new InternalError("alt_longest_var requires at least two parsers.");
+  }
+
+  /**
+   * Given multiple successful parser outputs,
+   * determines how many tokens were consumed by each.
+   */
+  function consumedTokens(output: SucceededParserOutput<TokenKind, T>): number {
+    // Assume that only one candidate exists, because this `alt_longest_var` only
+    // works with non-ambiguous grammars.
+    const onlyCandidate = output.candidates[0];
+    const firstMatchedToken = onlyCandidate.firstToken;
+    const firstUnmatchedToken = onlyCandidate.nextToken;
+    if (firstMatchedToken === undefined || firstUnmatchedToken === undefined) {
+      // This parser only works with properly indexed tokens.
+      // Returning a consumed number of 0 characters will make sure that this parser
+      // is never selected as the "longest matching" parser.
+      return 0;
+    }
+    return firstUnmatchedToken.pos.index - firstMatchedToken.pos.index;
+  }
+
+  return {
+    parse(token: Token<TokenKind>) {
+      const parseResults = parsers.map((parser) => parser.parse(token));
+      const successfulResults = parseResults.filter((result) =>
+        result.successful
+      );
+      const failedResults = parseResults.filter((result) => !result.successful);
+      return successfulResults
+        .sort((a, b) => consumedTokens(b) - consumedTokens(a))
+        .at(0) ?? failedResults.at(-1)!;
+    },
+  };
 }
