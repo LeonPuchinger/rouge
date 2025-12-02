@@ -15,7 +15,6 @@
     "noImplicitReturns": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
-    "emitDecoratorMetadata": true,
   },
   "include": ["src"]
 }
