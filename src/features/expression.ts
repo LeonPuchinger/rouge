@@ -91,6 +91,15 @@ export function configureExpression({
   ]).filter(([_, enabled]) => enabled)
     .map(([parser, _]) => parser);
 
+  if (enabledParsers.length === 0) {
+    throw new Error(
+      "At least one expression type must be enabled when configuring an expression parser.",
+    );
+  }
+  if (enabledParsers.length === 1) {
+    return enabledParsers.at(0)! as Parser<TokenKind, ExpressionAstNode>;
+  }
+
   return apply(
     alt_longest_var(...enabledParsers),
     (expression: EvaluableAstNode) =>
