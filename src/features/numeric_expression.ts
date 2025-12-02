@@ -258,9 +258,9 @@ const ambiguouslyTypedExpression = apply(
     includeNumericExpression: false,
     includeInvocation: false,
     includeBooleanExpression: false,
-    includeComplexStringLiteral: false,
+    includeComplexStringLiteral: true,
     includeSymbolExpression: true,
-    includeFunctionDefinition: false,
+    includeFunctionDefinition: true,
   }),
   (node) =>
     new AmbiguouslyTypedExpressionAstNode({
