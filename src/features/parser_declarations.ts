@@ -9,6 +9,7 @@ import { InvocationAstNode } from "./invocation.ts";
 import { LoopAstNode } from "./loop.ts";
 import { StatementsAstNode } from "./statement.ts";
 import { ComplexStringAstNode } from "./string.ts";
+import { NumericExpressionAstNode } from "./numeric_expression.ts";
 
 /*
 This file contains uninitialized parser declarations.
@@ -55,6 +56,8 @@ export const functionDefinition = rule<TokenKind, FunctionDefinitionAstNode>();
 export const returnStatement = rule<TokenKind, ReturnStatementAstNode>();
 
 export const invocation = rule<TokenKind, InvocationAstNode>();
+
+export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 
 export const complexStringLiteral = rule<TokenKind, ComplexStringAstNode>();
 

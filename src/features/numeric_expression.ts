@@ -3,7 +3,6 @@ import {
   apply,
   kmid,
   Parser,
-  rule,
   seq,
   str,
   tok,
@@ -20,7 +19,8 @@ import { memoize } from "../util/memoize.ts";
 import { None, Some, Wrapper } from "../util/monad/index.ts";
 import { operation_chain_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
-import { symbolExpression } from "./symbol_expression.ts";
+import { configureExpression } from "./expression.ts";
+import { numericExpression } from "./parser_declarations.ts";
 
 /* AST NODES */
 
@@ -186,7 +186,6 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
 
 class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
   child!: EvaluableAstNode<SymbolValue<unknown>>;
-  token!: Token<TokenKind>;
 
   constructor(params: Attributes<AmbiguouslyTypedExpressionAstNode>) {
     Object.assign(this, params);
@@ -200,7 +199,7 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
           "You tried to use a numeric operation on something that is not a number.",
         beginHighlight: this,
         endHighlight: None(),
-        messageHighlight: `"${this.token.text}" can not be used as a number.`,
+        messageHighlight: `This expression does not evaluate to a number.`,
       }));
     }
     return analysisResult;
@@ -226,12 +225,9 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
 
 /* Numeric expression */
 
-type NumericExpressionAstNode = EvaluableAstNode<SymbolValue<number>>;
+export type NumericExpressionAstNode = EvaluableAstNode<SymbolValue<number>>;
 
 /* PARSER */
-
-// Forward declaration of exported top-level rule
-export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 
 const literal = apply(
   tok(TokenKind.numericLiteral),
@@ -258,12 +254,17 @@ const parenthesized: Parser<TokenKind, NumericExpressionAstNode> = kmid(
 );
 
 const ambiguouslyTypedExpression = apply(
-  // TODO: add `invocation` as an alternative
-  symbolExpression,
+  configureExpression({
+    includeNumericExpression: false,
+    includeInvocation: false,
+    includeBooleanExpression: false,
+    includeComplexStringLiteral: false,
+    includeSymbolExpression: true,
+    includeFunctionDefinition: false,
+  }),
   (node) =>
     new AmbiguouslyTypedExpressionAstNode({
       child: node,
-      token: node.identifierToken,
     }),
 );
 

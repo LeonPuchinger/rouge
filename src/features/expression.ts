@@ -8,11 +8,11 @@ import { SymbolType } from "../type.ts";
 import { alt_longest_var } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { booleanExpression } from "./boolean_expression.ts";
-import { numericExpression } from "./numeric_expression.ts";
 import {
   complexStringLiteral,
   functionDefinition,
   invocation,
+  numericExpression,
 } from "./parser_declarations.ts";
 import { symbolExpression } from "./symbol_expression.ts";
 

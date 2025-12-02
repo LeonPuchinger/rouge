@@ -21,7 +21,7 @@ import { None, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { ExpressionAstNode } from "./expression.ts";
-import { numericExpression } from "./numeric_expression.ts";
+import { numericExpression } from "./parser_declarations.ts";
 import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
