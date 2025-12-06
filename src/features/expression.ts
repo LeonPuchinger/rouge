@@ -1,4 +1,4 @@
-import { apply, Parser, Token } from "typescript-parsec";
+import { apply, fail, Parser, Token } from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisFindings } from "../finding.ts";
@@ -100,11 +100,35 @@ export function configureExpression({
     return enabledParsers.at(0)! as Parser<TokenKind, ExpressionAstNode>;
   }
 
-  return apply(
-    alt_longest_var(...enabledParsers),
-    (expression: EvaluableAstNode) =>
-      new ExpressionAstNode({ child: expression }),
-  );
+  const activeTokens = new Set<Token<TokenKind>>();
+
+  return {
+    parse(token: Token<TokenKind>) {
+      if (!token) {
+        return fail("EOF").parse(token);
+      }
+
+      // Prevent infinite recursion due to left-recursive grammars by
+      // detecting re-entry at the same token without consumption.
+      if (activeTokens.has(token)) {
+        return fail(
+          `Expression parser reached recursion limit when called with token "${token.text}".`,
+        ).parse(token);
+      }
+      activeTokens.add(token);
+
+      try {
+        return apply(
+          alt_longest_var(...enabledParsers),
+          (expression: EvaluableAstNode) =>
+            new ExpressionAstNode({ child: expression }),
+        ).parse(token);
+      } finally {
+        // Ensure backtracking/other alternatives can proceed
+        activeTokens.delete(token);
+      }
+    },
+  };
 }
 
 export const expression = configureExpression({});
