@@ -7,8 +7,8 @@ import { SymbolFlags, SymbolValue } from "../symbol.ts";
 import { SymbolType } from "../type.ts";
 import { alt_longest_var } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
-import { booleanExpression } from "./boolean_expression.ts";
 import {
+  booleanExpression,
   complexStringLiteral,
   functionDefinition,
   invocation,

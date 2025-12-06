@@ -256,11 +256,6 @@ const parenthesized: Parser<TokenKind, NumericExpressionAstNode> = kmid(
 const ambiguouslyTypedExpression = apply(
   configureExpression({
     includeNumericExpression: false,
-    includeInvocation: false,
-    includeBooleanExpression: false,
-    includeComplexStringLiteral: true,
-    includeSymbolExpression: true,
-    includeFunctionDefinition: true,
   }),
   (node) =>
     new AmbiguouslyTypedExpressionAstNode({
