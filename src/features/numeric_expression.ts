@@ -110,7 +110,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
   }
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    let findings = AnalysisFindings.empty();
     if (this.rhs instanceof NumericLiteralAstNode) {
       const divisorValue = (this.rhs as NumericLiteralAstNode).evaluate(
         environment,
@@ -125,6 +125,14 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
         }));
       }
     }
+    findings = AnalysisFindings.merge(
+      findings,
+      this.lhs.analyze(environment),
+    );
+    findings = AnalysisFindings.merge(
+      findings,
+      this.rhs.analyze(environment),
+    );
     return findings;
   }
 
@@ -192,9 +200,12 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
   }
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
-    const analysisResult = this.child.analyze(environment);
+    const analysisFindings = this.child.analyze(environment);
+    if (analysisFindings.isErroneous()) {
+      return analysisFindings;
+    }
     if (!this.child.resolveType(environment).isFundamental("Number")) {
-      analysisResult.errors.push(AnalysisError(environment, {
+      analysisFindings.errors.push(AnalysisError(environment, {
         message:
           "You tried to use a numeric operation on something that is not a number.",
         beginHighlight: this,
@@ -202,7 +213,7 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
         messageHighlight: `This expression does not evaluate to a number.`,
       }));
     }
-    return analysisResult;
+    return analysisFindings;
   }
 
   evaluate(environment: ExecutionEnvironment): SymbolValue<number> {
