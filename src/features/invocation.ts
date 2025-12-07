@@ -214,8 +214,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     const calledType = this.symbol.resolveType(environment).peel();
     const isFunction = calledType.isFunction();
-    const ignoreFunction = calledType.ignore();
-    const isMethod = isFunction && (!ignoreFunction) &&
+    const ignoreCallee = calledType.ignore();
+    const isMethod = isFunction && (!ignoreCallee) &&
       this.isMethod(environment);
     if (!isFunction) {
       findings.errors.push(AnalysisError(environment, {
@@ -226,7 +226,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         messageHighlight: "",
       }));
     }
-    if (ignoreFunction || findings.isErroneous()) {
+    if (ignoreCallee || findings.isErroneous()) {
       return findings;
     }
     if (isFunction && !isMethod) {
@@ -323,6 +323,9 @@ export class InvocationAstNode implements EvaluableAstNode {
 
   resolveType(environment: ExecutionEnvironment): SymbolType {
     const calledType = this.symbol.resolveType(environment).peel();
+    if (calledType.ignore()) {
+      return calledType;
+    }
     const functionType = (calledType as FunctionSymbolType).fork();
     // bind placeholdes to the supplied types
     for (
