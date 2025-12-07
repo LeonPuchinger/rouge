@@ -3,7 +3,6 @@ import {
   apply,
   kmid,
   Parser,
-  rule,
   seq,
   str,
   tok,
@@ -20,9 +19,8 @@ import { memoize } from "../util/memoize.ts";
 import { None, Wrapper } from "../util/monad/index.ts";
 import { rep_at_least_once_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
-import { ExpressionAstNode } from "./expression.ts";
-import { numericExpression } from "./numeric_expression.ts";
-import { symbolExpression } from "./symbol_expression.ts";
+import { configureExpression, ExpressionAstNode } from "./expression.ts";
+import { booleanExpression } from "./parser_declarations.ts";
 
 /* AST NODES */
 
@@ -211,9 +209,6 @@ export type BooleanExpressionAstNode = EvaluableAstNode<SymbolValue<boolean>>;
 
 /* PARSER */
 
-// Forward declaration of exported top-level rule
-export const booleanExpression = rule<TokenKind, BooleanExpressionAstNode>();
-
 const literal = apply(
   tok(TokenKind.booleanLiteral),
   (token) => new BooleanLiteralAstNode({ token: token }),
@@ -238,10 +233,9 @@ const parenthesized: Parser<TokenKind, BooleanExpressionAstNode> = kmid(
 );
 
 const booleanlessExpression = apply(
-  alt_sc(
-    numericExpression,
-    symbolExpression,
-  ),
+  configureExpression({
+    includeBooleanExpression: false,
+  }),
   (expression: EvaluableAstNode) =>
     new ExpressionAstNode({
       child: expression,

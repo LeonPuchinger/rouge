@@ -12,6 +12,8 @@ import { ExecutionEnvironment } from "./execution.ts";
 import "./features/condition.ts";
 import "./features/function.ts";
 import "./features/invocation.ts";
+import "./features/numeric_expression.ts";
+import "./features/boolean_expression.ts";
 import "./features/string.ts";
 
 /**

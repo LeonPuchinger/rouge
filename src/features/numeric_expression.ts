@@ -3,7 +3,6 @@ import {
   apply,
   kmid,
   Parser,
-  rule,
   seq,
   str,
   tok,
@@ -20,7 +19,8 @@ import { memoize } from "../util/memoize.ts";
 import { None, Some, Wrapper } from "../util/monad/index.ts";
 import { operation_chain_sc } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
-import { symbolExpression } from "./symbol_expression.ts";
+import { configureExpression } from "./expression.ts";
+import { numericExpression } from "./parser_declarations.ts";
 
 /* AST NODES */
 
@@ -110,7 +110,7 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
   }
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
-    const findings = AnalysisFindings.empty();
+    let findings = AnalysisFindings.empty();
     if (this.rhs instanceof NumericLiteralAstNode) {
       const divisorValue = (this.rhs as NumericLiteralAstNode).evaluate(
         environment,
@@ -125,6 +125,14 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
         }));
       }
     }
+    findings = AnalysisFindings.merge(
+      findings,
+      this.lhs.analyze(environment),
+    );
+    findings = AnalysisFindings.merge(
+      findings,
+      this.rhs.analyze(environment),
+    );
     return findings;
   }
 
@@ -186,24 +194,26 @@ class BinaryNumericExpressionAstNode implements NumericExpressionAstNode {
 
 class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
   child!: EvaluableAstNode<SymbolValue<unknown>>;
-  token!: Token<TokenKind>;
 
   constructor(params: Attributes<AmbiguouslyTypedExpressionAstNode>) {
     Object.assign(this, params);
   }
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
-    const analysisResult = this.child.analyze(environment);
+    const analysisFindings = this.child.analyze(environment);
+    if (analysisFindings.isErroneous()) {
+      return analysisFindings;
+    }
     if (!this.child.resolveType(environment).isFundamental("Number")) {
-      analysisResult.errors.push(AnalysisError(environment, {
+      analysisFindings.errors.push(AnalysisError(environment, {
         message:
           "You tried to use a numeric operation on something that is not a number.",
         beginHighlight: this,
         endHighlight: None(),
-        messageHighlight: `"${this.token.text}" can not be used as a number.`,
+        messageHighlight: `This expression does not evaluate to a number.`,
       }));
     }
-    return analysisResult;
+    return analysisFindings;
   }
 
   evaluate(environment: ExecutionEnvironment): SymbolValue<number> {
@@ -226,12 +236,9 @@ class AmbiguouslyTypedExpressionAstNode implements NumericExpressionAstNode {
 
 /* Numeric expression */
 
-type NumericExpressionAstNode = EvaluableAstNode<SymbolValue<number>>;
+export type NumericExpressionAstNode = EvaluableAstNode<SymbolValue<number>>;
 
 /* PARSER */
-
-// Forward declaration of exported top-level rule
-export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 
 const literal = apply(
   tok(TokenKind.numericLiteral),
@@ -258,12 +265,12 @@ const parenthesized: Parser<TokenKind, NumericExpressionAstNode> = kmid(
 );
 
 const ambiguouslyTypedExpression = apply(
-  // TODO: add `invocation` as an alternative
-  symbolExpression,
+  configureExpression({
+    includeNumericExpression: false,
+  }),
   (node) =>
     new AmbiguouslyTypedExpressionAstNode({
       child: node,
-      token: node.identifierToken,
     }),
 );
 

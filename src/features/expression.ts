@@ -1,4 +1,4 @@
-import { apply, Parser, Token } from "typescript-parsec";
+import { apply, fail, Parser, Token } from "typescript-parsec";
 import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisFindings } from "../finding.ts";
@@ -7,12 +7,12 @@ import { SymbolFlags, SymbolValue } from "../symbol.ts";
 import { SymbolType } from "../type.ts";
 import { alt_longest_var } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
-import { booleanExpression } from "./boolean_expression.ts";
-import { numericExpression } from "./numeric_expression.ts";
 import {
+  booleanExpression,
   complexStringLiteral,
   functionDefinition,
   invocation,
+  numericExpression,
 } from "./parser_declarations.ts";
 import { symbolExpression } from "./symbol_expression.ts";
 
@@ -91,11 +91,44 @@ export function configureExpression({
   ]).filter(([_, enabled]) => enabled)
     .map(([parser, _]) => parser);
 
-  return apply(
-    alt_longest_var(...enabledParsers),
-    (expression: EvaluableAstNode) =>
-      new ExpressionAstNode({ child: expression }),
-  );
+  if (enabledParsers.length === 0) {
+    throw new Error(
+      "At least one expression type must be enabled when configuring an expression parser.",
+    );
+  }
+  if (enabledParsers.length === 1) {
+    return enabledParsers.at(0)! as Parser<TokenKind, ExpressionAstNode>;
+  }
+
+  const activeTokens = new Set<Token<TokenKind>>();
+
+  return {
+    parse(token: Token<TokenKind>) {
+      if (!token) {
+        return fail("EOF").parse(token);
+      }
+
+      // Prevent infinite recursion due to left-recursive grammars by
+      // detecting re-entry at the same token without consumption.
+      if (activeTokens.has(token)) {
+        return fail(
+          `Expression parser reached recursion limit when called with token "${token.text}".`,
+        ).parse(token);
+      }
+      activeTokens.add(token);
+
+      try {
+        return apply(
+          alt_longest_var(...enabledParsers),
+          (expression: EvaluableAstNode) =>
+            new ExpressionAstNode({ child: expression }),
+        ).parse(token);
+      } finally {
+        // Ensure backtracking/other alternatives can proceed
+        activeTokens.delete(token);
+      }
+    },
+  };
 }
 
 export const expression = configureExpression({});

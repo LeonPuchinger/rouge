@@ -212,11 +212,17 @@ export function alt_longest_var<T>(
     const onlyCandidate = output.candidates[0];
     const firstMatchedToken = onlyCandidate.firstToken;
     const firstUnmatchedToken = onlyCandidate.nextToken;
-    if (firstMatchedToken === undefined || firstUnmatchedToken === undefined) {
+    if (firstMatchedToken === undefined) {
       // This parser only works with properly indexed tokens.
       // Returning a consumed number of 0 characters will make sure that this parser
       // is never selected as the "longest matching" parser.
       return 0;
+    }
+    if (firstUnmatchedToken === undefined) {
+      // EOF has been reached, most likely.
+      // Since `firstUnmatchedToken` is undefined, it is impossible to determine
+      // how many characters were consumed. Therefore, `MAX_SAFE_INTEGER` is returned.
+      return Number.MAX_SAFE_INTEGER;
     }
     return firstUnmatchedToken.pos.index - firstMatchedToken.pos.index;
   }
