@@ -263,7 +263,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const parameterName = parameterNames[index];
       if (defaultParameters.has(parameterName)) {
         offset += 1;
-        environment.runtimeTable.setSymbol(
+        environment.runtimeTable.setSymbolInCurrentScope(
           parameterName,
           new RuntimeSymbol({
             value: defaultParameters.get(parameterName)!,
@@ -272,7 +272,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         continue;
       }
       const symbolValue = this.parameters[index - offset].evaluate(environment);
-      environment.runtimeTable.setSymbol(
+      environment.runtimeTable.setSymbolInCurrentScope(
         parameterName,
         new RuntimeSymbol({
           value: symbolValue,

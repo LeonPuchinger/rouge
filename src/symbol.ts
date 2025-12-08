@@ -336,6 +336,29 @@ export class SymbolTable<S extends Symbol> {
     });
   }
 
+  setSymbolInCurrentScope(
+    name: string,
+    symbol: S,
+    readonly?: boolean,
+    stdlib?: boolean,
+  ) {
+    const currentScope = this.scopes[this.scopes.length - 1];
+    const existingEntry = Some(currentScope.get(name));
+    existingEntry.then((entry) => {
+      if (entry.readonly) {
+        throw new InternalError(
+          `Attempted to reassign the existing symbol with the name "${name}".`,
+          `However, the symbol is flagged as readonly.`,
+        );
+      }
+    });
+    currentScope.set(name, {
+      symbol,
+      readonly: readonly ?? this.getGlobalFlagOverride("readonly"),
+      stdlib: stdlib ?? this.getGlobalFlagOverride("stdlib"),
+    });
+  }
+
   setRuntimeBinding(name: string, symbol: S) {
     this.runtimeBindings.set(name, symbol);
   }
