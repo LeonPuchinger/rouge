@@ -285,7 +285,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     environment.runtimeTable.pushScope();
     for (const [name, symbol] of parameterSymbols.entries()) {
-      environment.runtimeTable.setSymbol(name, symbol);
+      environment.runtimeTable.setSymbolInCurrentScope(name, symbol);
     }
     let returnValue: SymbolValue = nothingInstance;
     try {
