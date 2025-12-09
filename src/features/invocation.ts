@@ -302,6 +302,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
+    environment.typeTable.pushScope();
     const calledSymbol = this.symbol.evaluate(environment);
     const partOfStdlib = this.symbol.resolveFlags(environment).get("stdlib") ??
       false;
@@ -313,6 +314,17 @@ export class InvocationAstNode implements EvaluableAstNode {
       const thisParameterName =
         (calledSymbol as FunctionSymbolValue).parameterNames[0];
       defaultParameters.set(thisParameterName, parentInstance);
+      const parentType = parentInstance.valueType.peel();
+      if (parentType instanceof CompositeSymbolType) {
+        for (
+          const [placeholderName, boundTo] of parentType.placeholders.entries()
+        ) {
+          environment.typeTable.setType(
+            placeholderName,
+            boundTo,
+          );
+        }
+      }
     }
     const savedIgnoreRuntimeBindings =
       environment.runtimeTable.ignoreRuntimeBindings;
@@ -326,6 +338,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       defaultParameters,
     );
     environment.runtimeTable.ignoreRuntimeBindings = savedIgnoreRuntimeBindings;
+    environment.typeTable.popScope();
     return result;
   }
 
