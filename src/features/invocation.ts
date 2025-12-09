@@ -252,8 +252,12 @@ export class InvocationAstNode implements EvaluableAstNode {
     functionSymbolValue: FunctionSymbolValue,
     defaultParameters: Map<string, SymbolValue> = new Map(),
   ): SymbolValue<unknown> {
-    environment.runtimeTable.pushScope();
     const parameterNames = functionSymbolValue.parameterNames;
+    // don't set parameters symbols in the symbol table directly,
+    // instead save them in a map and push them to the symbol table
+    // all at once. This prevents issues where parameters with the same
+    // name as existing symbols in the table would overwrite them.
+    const parameterSymbols = new Map<string, RuntimeSymbol>();
     let offset = 0;
     for (
       let index = 0;
@@ -263,7 +267,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const parameterName = parameterNames[index];
       if (defaultParameters.has(parameterName)) {
         offset += 1;
-        environment.runtimeTable.setSymbolInCurrentScope(
+        parameterSymbols.set(
           parameterName,
           new RuntimeSymbol({
             value: defaultParameters.get(parameterName)!,
@@ -272,12 +276,16 @@ export class InvocationAstNode implements EvaluableAstNode {
         continue;
       }
       const symbolValue = this.parameters[index - offset].evaluate(environment);
-      environment.runtimeTable.setSymbolInCurrentScope(
+      parameterSymbols.set(
         parameterName,
         new RuntimeSymbol({
           value: symbolValue,
         }),
       );
+    }
+    environment.runtimeTable.pushScope();
+    for (const [name, symbol] of parameterSymbols.entries()) {
+      environment.runtimeTable.setSymbol(name, symbol);
     }
     let returnValue: SymbolValue = nothingInstance;
     try {
