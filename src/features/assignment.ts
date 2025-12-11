@@ -218,31 +218,6 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
   }
 }
 
-export class NewPropertyWriteAstNode implements InterpretableAstNode {
-  parent!: EvaluableAstNode;
-  child!: Token<TokenKind>;
-
-  constructor(params: Attributes<NewPropertyWriteAstNode>) {
-    Object.assign(this, params);
-  }
-
-  interpret(environment: ExecutionEnvironment): void {
-    throw new Error("Method not implemented.");
-  }
-
-  get_representation(environment: ExecutionEnvironment): string {
-    throw new Error("Method not implemented.");
-  }
-
-  analyze(environment: ExecutionEnvironment): AnalysisFindings {
-    throw new Error("Method not implemented.");
-  }
-
-  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    throw new Error("Method not implemented.");
-  }
-}
-
 export type AssignmentAstNode =
   | VariableAssignmentAstNode
   | PropertyWriteAstNode;
