@@ -15,17 +15,18 @@ import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
 import { RuntimeSymbol, StaticSymbol } from "../symbol.ts";
+import { InternalError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
-  starts_with_breaking_whitespace
+  starts_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { concatLines } from "../util/string.ts";
-import { Attributes, WithOptionalAttributes } from "../util/type.ts";
+import { WithOptionalAttributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
 import {
   PropertyAccessAstNode,
-  referenceExpression
+  referenceExpression,
 } from "./symbol_expression.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
@@ -255,31 +256,42 @@ const propertyAccess = kright(
   tok(TokenKind.ident),
 );
 
-const propertyWriteTarget = lrec_sc<
-  TokenKind,
-  [EvaluableAstNode, Token<TokenKind> | undefined],
-  [EvaluableAstNode, Token<TokenKind> | undefined],
-  Token<TokenKind>
->(
-  apply(
-    referenceExpression,
-    (result) => [result, undefined],
+const propertyWriteTarget = apply(
+  lrec_sc<
+    TokenKind,
+    [EvaluableAstNode, Token<TokenKind> | undefined],
+    [EvaluableAstNode, Token<TokenKind> | undefined],
+    Token<TokenKind>
+  >(
+    apply(
+      referenceExpression,
+      (result) => [result, undefined],
+    ),
+    starts_with_breaking_whitespace(
+      propertyAccess,
+    ),
+    ([previousParent, previousChild], child) => {
+      if (previousChild === undefined) {
+        return [previousParent, child];
+      }
+      return [
+        new PropertyAccessAstNode({
+          parent: previousParent,
+          identifierToken: previousChild,
+        }),
+        child,
+      ];
+    },
   ),
-  starts_with_breaking_whitespace(
-    propertyAccess,
-  ),
-  ([previousParent, previousChild], child) => {
-    if (previousChild === undefined) {
-      return [previousParent, child];
+  ([parent, child]) => {
+    if (child === undefined) {
+      throw new InternalError(
+        "A property write target must at least have one property access.",
+        "_Technically_, this parser allows parsing a single identifier as a property write target. However, in reality, this should be prevented by `variableAssignment` having a higher precedence in the `assignment` parser than `propertyWrite`.",
+      );
     }
-    return [
-      new PropertyAccessAstNode({
-        parent: previousParent,
-        identifierToken: previousChild,
-      }),
-      child,
-    ];
-  }
+    return [parent, child] as [EvaluableAstNode, Token<TokenKind>];
+  },
 );
 
 const propertyWrite = apply(
