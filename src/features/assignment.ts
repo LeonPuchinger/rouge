@@ -14,13 +14,19 @@ import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { RuntimeSymbol, StaticSymbol } from "../symbol.ts";
+import {
+  CompositeSymbolValue,
+  RuntimeSymbol,
+  StaticSymbol,
+} from "../symbol.ts";
+import { CompositeSymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
   starts_with_breaking_whitespace,
 } from "../util/parser.ts";
+import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
 import { WithOptionalAttributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
@@ -188,25 +194,47 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     if (findings.isErroneous()) {
       return findings;
     }
+    const parentType = this.parent.resolveType(environment);
+    const fieldExists = parentType instanceof CompositeSymbolType &&
+      parentType.fields.has(this.child.text);
+    if (!fieldExists) {
+      findings.errors.push(AnalysisError(environment, {
+        message:
+          "The property you are trying to write to does not exist on the object.",
+        beginHighlight: DummyAstNode.fromToken(this.child),
+        endHighlight: None(),
+        messageHighlight:
+          `Type "${parentType.displayName()}" does not include an attibute called "${this.child.text}".`,
+      }));
+      return findings;
+    }
+    const targetType = (parentType as CompositeSymbolType).fields.get(
+      this.child.text,
+    )!;
     const valueType = this.value.resolveType(environment);
-    const assigneeType = this.parent.resolveType(environment);
-    if (!valueType.typeCompatibleWith(assigneeType)) {
+    if (!valueType.typeCompatibleWith(targetType)) {
       findings.errors.push(AnalysisError(environment, {
         message:
           "The type of the value you are trying to assign is incompatible with the type of the field.",
-        beginHighlight: this.parent,
+        beginHighlight: DummyAstNode.fromToken(this.child),
         endHighlight: Some(this.value),
         messageHighlight:
-          `Type '${valueType.displayName()}' is incompatible with the type '${assigneeType.displayName()}'.`,
+          `Type '${valueType.displayName()}' is incompatible with the type '${targetType.displayName()}'.`,
       }));
     }
     return findings;
   }
 
   interpret(environment: ExecutionEnvironment): void {
-    const currentValue = this.parent.evaluate(environment);
+    const parentValue = this.parent.evaluate(environment);
     const newValue = this.value.evaluate(environment);
-    currentValue.write(newValue.value);
+    if (!(parentValue instanceof CompositeSymbolValue)) {
+      throw new InternalError(
+        "The parent value of a property write must be a `CompositeSymbolValue`.",
+        "This should have been caught during static analysis.",
+      );
+    }
+    parentValue.value.set(this.child.text, newValue);
   }
 
   get_representation(environment: ExecutionEnvironment): string {
