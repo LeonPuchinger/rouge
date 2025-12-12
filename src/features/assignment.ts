@@ -2,7 +2,6 @@ import {
   alt_sc,
   apply,
   kright,
-  lrec_sc,
   opt_sc,
   Parser,
   seq,
@@ -24,6 +23,7 @@ import { InternalError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
+  lrec_at_least_once_sc,
   starts_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
@@ -285,7 +285,7 @@ const propertyAccess = kright(
 );
 
 const propertyWriteTarget = apply(
-  lrec_sc<
+  lrec_at_least_once_sc<
     TokenKind,
     [EvaluableAstNode, Token<TokenKind> | undefined],
     [EvaluableAstNode, Token<TokenKind> | undefined],
@@ -312,13 +312,11 @@ const propertyWriteTarget = apply(
     },
   ),
   ([parent, child]) => {
-    if (child === undefined) {
-      throw new InternalError(
-        "A property write target must at least have one property access.",
-        "_Technically_, this parser allows parsing a single identifier as a property write target. However, in reality, this should be prevented by `variableAssignment` having a higher precedence in the `assignment` parser than `propertyWrite`.",
-      );
-    }
-    return [parent, child] as [EvaluableAstNode, Token<TokenKind>];
+    // `child` will never be `undefined` here because
+    // the parser (`lrec_at_least_once`) requires at least one property access.
+    // When there is at least one property access, the callback passed to `apply`
+    // will absorb the `undefined` value of the first iteration.
+    return [parent, child!] as [EvaluableAstNode, Token<TokenKind>];
   },
 );
 
