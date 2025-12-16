@@ -60,6 +60,8 @@ interface SymbolTypeMismatchHandler {
 export interface SymbolType {
   /**
    * Compares this type to another type.
+   * The method is supposed to be called in the following direction:
+   * `suppliedType.typeCompatibleWith(expectedType)`.
    * By passing an instance of `SymbolTypeMismatchHandler`,
    * the caller can gain insight into why the type comparison failed.
    */

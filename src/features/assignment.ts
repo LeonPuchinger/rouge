@@ -69,7 +69,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       this.typeAnnotation
         .map((annotation) => annotation.resolveType(environment))
         .then((annotation) => {
-          if (!annotation.typeCompatibleWith(expressionType)) {
+          if (!expressionType.typeCompatibleWith(annotation)) {
             findings.errors.push(AnalysisError(environment, {
               message:
                 "The type of the assigned value is not compatible with the type that was explicitly annotated in the assignment.",
@@ -110,7 +110,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       const expressionType = this.value.resolveType(environment);
       environment.analysisTable.findSymbol(ident)
         .then(([existing, _flags]) => {
-          if (existing.valueType.typeCompatibleWith(expressionType)) {
+          if (expressionType.typeCompatibleWith(existing.valueType)) {
             return;
           }
           findings.errors.push(
