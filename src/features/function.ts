@@ -424,13 +424,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
         endHighlight: this.expression,
         messageHighlight: messageHighlight ?? "",
       });
-    // This check is run from the perspective of the return statement.
-    // In this case, the `nothingType` is the supplied type and therefore
-    // is on the lhs of the `typeCompatibleWith` call because
-    // an empty return statement returns `Nothing`.
-    const returnValueRequired = !nothingType(environment).typeCompatibleWith(
-      supposedReturnType,
-    );
+    const returnValueRequired = nothingType(environment) !== supposedReturnType.peel();
     const returnStatementEmpty = actualReturnType.kind === "none";
     if (returnValueRequired && returnStatementEmpty) {
       findings.errors.push(ReturnTypeError(
