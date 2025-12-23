@@ -64,6 +64,9 @@ export interface SymbolType {
    * `suppliedType.typeCompatibleWith(expectedType)`.
    * By passing an instance of `SymbolTypeMismatchHandler`,
    * the caller can gain insight into why the type comparison failed.
+   * When the compared types are part of a type hierarchy, the type
+   * compatability check only succeeds in the following direction:
+   * `subtype.typeCompatibleWith(supertype)`.
    */
   typeCompatibleWith(
     other: SymbolType,
@@ -162,6 +165,7 @@ export class FunctionSymbolType implements SymbolType {
     mismatchHandler?: Partial<SymbolTypeMismatchHandler>,
     memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
+    other = other.peel();
     if (memo.get(this)?.has(other)) {
       return true;
     }
@@ -172,10 +176,7 @@ export class FunctionSymbolType implements SymbolType {
       memo.set(other, new Set());
     }
     memo.get(this)!.add(other);
-    if (
-      other instanceof PlaceholderSymbolType ||
-      other instanceof IgnoreSymbolType
-    ) {
+    if (other instanceof IgnoreSymbolType) {
       return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     // only fork types if placeholders need to be assumed
@@ -375,6 +376,7 @@ export class CompositeSymbolType implements SymbolType {
     mismatchHandler?: SymbolTypeMismatchHandler,
     memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
+    other = other.peel();
     if (memo.get(this)?.has(other)) {
       return true;
     }
@@ -382,10 +384,7 @@ export class CompositeSymbolType implements SymbolType {
       memo.set(this, new Set());
     }
     memo.get(this)!.add(other);
-    if (
-      other instanceof PlaceholderSymbolType ||
-      other instanceof IgnoreSymbolType
-    ) {
+    if (other instanceof IgnoreSymbolType) {
       return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     if (!(other instanceof CompositeSymbolType)) {
@@ -399,12 +398,7 @@ export class CompositeSymbolType implements SymbolType {
       .some((type) => {
         const memoCopy = new Map<SymbolType, Set<SymbolType>>(memo);
         return type.typeCompatibleWith(other, mismatchHandler, memoCopy);
-      }) ||
-      other.traits
-        .some((type) => {
-          const memoCopy = new Map<SymbolType, Set<SymbolType>>(memo);
-          return this.typeCompatibleWith(type, mismatchHandler, memoCopy);
-        });
+      });
     if (compatibleImplementation) {
       return true;
     }
@@ -722,7 +716,11 @@ export class PlaceholderSymbolType implements SymbolType {
  * allows replacing the `IgnoreSymbolType` once the "real" type can be determined.
  */
 export class IgnoreSymbolType implements SymbolType {
-  typeCompatibleWith(): boolean {
+  typeCompatibleWith(
+    _other: SymbolType,
+    _mismatchHandler?: SymbolTypeMismatchHandler,
+    _memo = new Map<SymbolType, Set<SymbolType>>(),
+  ): boolean {
     return true;
   }
 

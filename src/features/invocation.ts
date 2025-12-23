@@ -176,7 +176,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     ) {
       const expectedParameterType = expectedParameterTypes[index];
       const foundParameterType = foundParameterTypes[index];
-      if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
+      if (!foundParameterType.typeCompatibleWith(expectedParameterType)) {
         findings.errors.push(AnalysisError(environment, {
           message:
             `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
