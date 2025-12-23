@@ -15,6 +15,7 @@ import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
+  starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
@@ -187,7 +188,7 @@ loop.setPattern(
         ends_with_breaking_whitespace(str("{")),
         statements,
       ),
-      surround_with_breaking_whitespace(str("}")),
+      starts_with_breaking_whitespace(str("}")),
     ),
     ([keyword, condition, statements, closingBrace]) => {
       return new LoopAstNode({
