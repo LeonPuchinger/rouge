@@ -219,17 +219,6 @@ export type AnalysisSymbolTable = SymbolTable<StaticSymbol>;
 export class SymbolTable<S extends Symbol> {
   private scopes: Scope<S>[] = [new Map()];
   /**
-   * Symbols that belong to the runtime are kept in a separate namespace.
-   * When looking up symbols via their name, runtime bindings are considered first.
-   * This behavior can be disabled by setting `ignoreRuntimeBindings` to `true`.
-   */
-  private runtimeBindings = new Map<string, S>();
-  /**
-   * When set to `true`, the table will act as if symbols stored
-   * in the `runtimeBindings` namespace do not exist.
-   */
-  ignoreRuntimeBindings = true;
-  /**
    * When a flag is set globally as an override, it is automatically
    * applied to all symbols that are inserted into the table.
    * This becomes useful, for instance, when initializing the stdlib.
@@ -244,13 +233,42 @@ export class SymbolTable<S extends Symbol> {
     readonly: "notset",
     stdlib: "notset",
   };
+  /**
+   * Similar to `globalFlagOverrides`, but only applies to the current scope.
+   * Scoped flags have priority over global flags, meaning if both are set,
+   * the scoped flag is applied. To read the effective flag override,
+   * the `getEffectiveFlagOverride` method can be used.
+   */
+  private scopedFlagOverrides: Array<
+    {
+      [K in keyof SymbolFlags]: SymbolFlags[K] | "notset";
+    }
+  > = [
+    {
+      readonly: "notset",
+      stdlib: "notset",
+    },
+  ];
+  /**
+   * Symbols that belong to the runtime are kept in a separate namespace.
+   * When looking up symbols via their name, runtime bindings are considered first.
+   * This behavior can be disabled by setting `ignoreRuntimeBindings` to `true`.
+   */
+  private runtimeBindings = new Map<string, S>();
+  /**
+   * When set to `true`, the table will act as if symbols stored
+   * in the `runtimeBindings` namespace do not exist.
+   */
+  ignoreRuntimeBindings = true;
 
   pushScope() {
     this.scopes.push(new Map());
+    this.scopedFlagOverrides.push({ readonly: "notset", stdlib: "notset" });
   }
 
   popScope() {
     this.scopes.pop();
+    this.scopedFlagOverrides.pop();
     if (this.scopes.length === 0) {
       throw new InternalError(
         "The outermost scope of the symbol table has been popped.",
@@ -316,10 +334,15 @@ export class SymbolTable<S extends Symbol> {
   ) {
     // Find nearest scope where an existing symbol with the same
     // name is defined. If it cannot be found, use the current scope.
-    const currentScope = this.scopes[this.scopes.length - 1];
-    const scope = this.scopes
-      .toReversed()
-      .find((scope) => scope.has(name)) ?? currentScope;
+    const currentScopeIndex = this.scopes.length - 1;
+    let targetScopeIndex = currentScopeIndex;
+    for (let i = this.scopes.length - 1; i >= 0; i--) {
+      if (this.scopes[i].has(name)) {
+        targetScopeIndex = i;
+        break;
+      }
+    }
+    const scope = this.scopes[targetScopeIndex];
     const existingEntry = Some(scope.get(name));
     existingEntry.then((entry) => {
       if (entry.readonly) {
@@ -331,8 +354,36 @@ export class SymbolTable<S extends Symbol> {
     });
     scope.set(name, {
       symbol,
-      readonly: readonly ?? this.getGlobalFlagOverride("readonly"),
-      stdlib: stdlib ?? this.getGlobalFlagOverride("stdlib"),
+      readonly: readonly ??
+        this.getEffectiveFlagOverride("readonly", targetScopeIndex),
+      stdlib: stdlib ??
+        this.getEffectiveFlagOverride("stdlib", targetScopeIndex),
+    });
+  }
+
+  setSymbolInCurrentScope(
+    name: string,
+    symbol: S,
+    readonly?: boolean,
+    stdlib?: boolean,
+  ) {
+    const currentScope = this.scopes[this.scopes.length - 1];
+    const currentScopeIndex = this.scopes.length - 1;
+    const existingEntry = Some(currentScope.get(name));
+    existingEntry.then((entry) => {
+      if (entry.readonly) {
+        throw new InternalError(
+          `Attempted to reassign the existing symbol with the name "${name}".`,
+          `However, the symbol is flagged as readonly.`,
+        );
+      }
+    });
+    currentScope.set(name, {
+      symbol,
+      readonly: readonly ??
+        this.getEffectiveFlagOverride("readonly", currentScopeIndex),
+      stdlib: stdlib ??
+        this.getEffectiveFlagOverride("stdlib", currentScopeIndex),
     });
   }
 
@@ -354,6 +405,21 @@ export class SymbolTable<S extends Symbol> {
   }
 
   /**
+   * Resolves the effective flag for the given scope index, applying precedence:
+   * scoped overrides > global overrides.
+   */
+  private getEffectiveFlagOverride(
+    flag: keyof SymbolFlags,
+    scopeIndex: number,
+  ): SymbolFlags[keyof SymbolFlags] {
+    const scoped = this.scopedFlagOverrides[scopeIndex]?.[flag] ?? "notset";
+    if (scoped === "notset") {
+      return this.getGlobalFlagOverride(flag);
+    }
+    return scoped;
+  }
+
+  /**
    * When a flag is set globally as an override, that flag is automatically
    * applied to all symbols that are inserted into the table.
    * Look at the `globalFlagOverrides` attribute for more information.
@@ -367,6 +433,22 @@ export class SymbolTable<S extends Symbol> {
   }
 
   /**
+   * Sets flag overrides for the current scope only. See
+   * `setGlobalFlagOverrides` for more information.
+   */
+  setScopedFlagOverrides(
+    flags: { [K in keyof SymbolFlags]?: SymbolFlags[K] | "notset" },
+  ) {
+    const idx = this.scopedFlagOverrides.length - 1;
+    const current = this.scopedFlagOverrides[idx];
+    for (const [key, value] of Object.entries(flags)) {
+      current[key as keyof SymbolFlags] = value as
+        | SymbolFlags[keyof SymbolFlags]
+        | "notset";
+    }
+  }
+
+  /**
    * Resets the symbol table to its initial state. Runtime bindings are wiped as well,
    * unless the `keepRuntimeBindings` flag is set to `true` (default setting).
    */
@@ -374,6 +456,10 @@ export class SymbolTable<S extends Symbol> {
     keepRuntimeBindings = true,
   ) {
     this.scopes = [new Map()];
+    this.scopedFlagOverrides = [{
+      readonly: "notset",
+      stdlib: "notset",
+    }];
     if (!keepRuntimeBindings) {
       this.runtimeBindings = new Map();
     }

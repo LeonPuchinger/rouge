@@ -528,6 +528,11 @@ export class TypeDefinitionAstNode implements InterpretableAstNode {
         ) => [placeholder, new PlaceholderSymbolType({ name: placeholder })],
       ),
     );
+    // return erroneous findings early to prevent errors
+    // when modifying the symbol and type tables.
+    if (findings.isErroneous()) {
+      return findings;
+    }
     environment.typeTable.pushScope();
     for (
       const [placeholerName, placeholderType] of unproblematicPlaceholderTypes

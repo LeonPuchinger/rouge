@@ -176,7 +176,7 @@ export class InvocationAstNode implements EvaluableAstNode {
     ) {
       const expectedParameterType = expectedParameterTypes[index];
       const foundParameterType = foundParameterTypes[index];
-      if (!expectedParameterType.typeCompatibleWith(foundParameterType)) {
+      if (!foundParameterType.typeCompatibleWith(expectedParameterType)) {
         findings.errors.push(AnalysisError(environment, {
           message:
             `Type '${foundParameterType.displayName()}' is incompatible with '${expectedParameterType.displayName()}'.`,
@@ -214,8 +214,8 @@ export class InvocationAstNode implements EvaluableAstNode {
     }
     const calledType = this.symbol.resolveType(environment).peel();
     const isFunction = calledType.isFunction();
-    const ignoreFunction = calledType.ignore();
-    const isMethod = isFunction && (!ignoreFunction) &&
+    const ignoreCallee = calledType.ignore();
+    const isMethod = isFunction && (!ignoreCallee) &&
       this.isMethod(environment);
     if (!isFunction) {
       findings.errors.push(AnalysisError(environment, {
@@ -226,7 +226,7 @@ export class InvocationAstNode implements EvaluableAstNode {
         messageHighlight: "",
       }));
     }
-    if (ignoreFunction || findings.isErroneous()) {
+    if (ignoreCallee || findings.isErroneous()) {
       return findings;
     }
     if (isFunction && !isMethod) {
@@ -252,8 +252,12 @@ export class InvocationAstNode implements EvaluableAstNode {
     functionSymbolValue: FunctionSymbolValue,
     defaultParameters: Map<string, SymbolValue> = new Map(),
   ): SymbolValue<unknown> {
-    environment.runtimeTable.pushScope();
     const parameterNames = functionSymbolValue.parameterNames;
+    // don't set parameters symbols in the symbol table directly,
+    // instead save them in a map and push them to the symbol table
+    // all at once. This prevents issues where parameters with the same
+    // name as existing symbols in the table would overwrite them.
+    const parameterSymbols = new Map<string, RuntimeSymbol>();
     let offset = 0;
     for (
       let index = 0;
@@ -263,7 +267,7 @@ export class InvocationAstNode implements EvaluableAstNode {
       const parameterName = parameterNames[index];
       if (defaultParameters.has(parameterName)) {
         offset += 1;
-        environment.runtimeTable.setSymbol(
+        parameterSymbols.set(
           parameterName,
           new RuntimeSymbol({
             value: defaultParameters.get(parameterName)!,
@@ -272,12 +276,16 @@ export class InvocationAstNode implements EvaluableAstNode {
         continue;
       }
       const symbolValue = this.parameters[index - offset].evaluate(environment);
-      environment.runtimeTable.setSymbol(
+      parameterSymbols.set(
         parameterName,
         new RuntimeSymbol({
           value: symbolValue,
         }),
       );
+    }
+    environment.runtimeTable.pushScope();
+    for (const [name, symbol] of parameterSymbols.entries()) {
+      environment.runtimeTable.setSymbolInCurrentScope(name, symbol);
     }
     let returnValue: SymbolValue = nothingInstance;
     try {
@@ -294,6 +302,7 @@ export class InvocationAstNode implements EvaluableAstNode {
   }
 
   evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
+    environment.typeTable.pushScope();
     const calledSymbol = this.symbol.evaluate(environment);
     const partOfStdlib = this.symbol.resolveFlags(environment).get("stdlib") ??
       false;
@@ -305,6 +314,17 @@ export class InvocationAstNode implements EvaluableAstNode {
       const thisParameterName =
         (calledSymbol as FunctionSymbolValue).parameterNames[0];
       defaultParameters.set(thisParameterName, parentInstance);
+      const parentType = parentInstance.valueType.peel();
+      if (parentType instanceof CompositeSymbolType) {
+        for (
+          const [placeholderName, boundTo] of parentType.placeholders.entries()
+        ) {
+          environment.typeTable.setType(
+            placeholderName,
+            boundTo,
+          );
+        }
+      }
     }
     const savedIgnoreRuntimeBindings =
       environment.runtimeTable.ignoreRuntimeBindings;
@@ -318,11 +338,15 @@ export class InvocationAstNode implements EvaluableAstNode {
       defaultParameters,
     );
     environment.runtimeTable.ignoreRuntimeBindings = savedIgnoreRuntimeBindings;
+    environment.typeTable.popScope();
     return result;
   }
 
   resolveType(environment: ExecutionEnvironment): SymbolType {
     const calledType = this.symbol.resolveType(environment).peel();
+    if (calledType.ignore()) {
+      return calledType;
+    }
     const functionType = (calledType as FunctionSymbolType).fork();
     // bind placeholdes to the supplied types
     for (

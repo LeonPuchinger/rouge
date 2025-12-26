@@ -13,18 +13,27 @@ import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
-import { RuntimeSymbol, StaticSymbol } from "../symbol.ts";
+import {
+  CompositeSymbolValue,
+  RuntimeSymbol,
+  StaticSymbol,
+} from "../symbol.ts";
+import { CompositeSymbolType } from "../type.ts";
+import { InternalError } from "../util/error.ts";
 import { None, Option, Some } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
-  kouter,
+  lrec_at_least_once_sc,
   starts_with_breaking_whitespace,
-  surround_with_breaking_whitespace,
 } from "../util/parser.ts";
+import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
 import { WithOptionalAttributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
-import { symbolExpression } from "./symbol_expression.ts";
+import {
+  PropertyAccessAstNode,
+  referenceExpression,
+} from "./symbol_expression.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */
@@ -60,7 +69,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       this.typeAnnotation
         .map((annotation) => annotation.resolveType(environment))
         .then((annotation) => {
-          if (!annotation.typeCompatibleWith(expressionType)) {
+          if (!expressionType.typeCompatibleWith(annotation)) {
             findings.errors.push(AnalysisError(environment, {
               message:
                 "The type of the assigned value is not compatible with the type that was explicitly annotated in the assignment.",
@@ -101,7 +110,7 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
       const expressionType = this.value.resolveType(environment);
       environment.analysisTable.findSymbol(ident)
         .then(([existing, _flags]) => {
-          if (existing.valueType.typeCompatibleWith(expressionType)) {
+          if (expressionType.typeCompatibleWith(existing.valueType)) {
             return;
           }
           findings.errors.push(
@@ -159,7 +168,8 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
 }
 
 export class PropertyWriteAstNode implements InterpretableAstNode {
-  assignee!: EvaluableAstNode;
+  parent!: EvaluableAstNode;
+  child!: Token<TokenKind>;
   typeAnnotation!: Option<TypeLiteralAstNode>;
   value!: EvaluableAstNode;
 
@@ -170,7 +180,7 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     const findings = AnalysisFindings.merge(
-      this.assignee.analyze(environment),
+      this.parent.analyze(environment),
       this.value.analyze(environment),
     );
     this.typeAnnotation.then((annotation) => {
@@ -184,25 +194,47 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
     if (findings.isErroneous()) {
       return findings;
     }
+    const parentType = this.parent.resolveType(environment);
+    const fieldExists = parentType instanceof CompositeSymbolType &&
+      parentType.fields.has(this.child.text);
+    if (!fieldExists) {
+      findings.errors.push(AnalysisError(environment, {
+        message:
+          "The property you are trying to write to does not exist on the object.",
+        beginHighlight: DummyAstNode.fromToken(this.child),
+        endHighlight: None(),
+        messageHighlight:
+          `Type "${parentType.displayName()}" does not include an attibute called "${this.child.text}".`,
+      }));
+      return findings;
+    }
+    const targetType = (parentType as CompositeSymbolType).fields.get(
+      this.child.text,
+    )!;
     const valueType = this.value.resolveType(environment);
-    const assigneeType = this.assignee.resolveType(environment);
-    if (!valueType.typeCompatibleWith(assigneeType)) {
+    if (!valueType.typeCompatibleWith(targetType)) {
       findings.errors.push(AnalysisError(environment, {
         message:
           "The type of the value you are trying to assign is incompatible with the type of the field.",
-        beginHighlight: this.assignee,
+        beginHighlight: DummyAstNode.fromToken(this.child),
         endHighlight: Some(this.value),
         messageHighlight:
-          `Type '${valueType.displayName()}' is incompatible with the type '${assigneeType.displayName()}'.`,
+          `Type '${valueType.displayName()}' is incompatible with the type '${targetType.displayName()}'.`,
       }));
     }
     return findings;
   }
 
   interpret(environment: ExecutionEnvironment): void {
-    const currentValue = this.assignee.evaluate(environment);
+    const parentValue = this.parent.evaluate(environment);
     const newValue = this.value.evaluate(environment);
-    currentValue.write(newValue.value);
+    if (!(parentValue instanceof CompositeSymbolValue)) {
+      throw new InternalError(
+        "The parent value of a property write must be a `CompositeSymbolValue`.",
+        "This should have been caught during static analysis.",
+      );
+    }
+    parentValue.value.set(this.child.text, newValue);
   }
 
   get_representation(environment: ExecutionEnvironment): string {
@@ -211,7 +243,7 @@ export class PropertyWriteAstNode implements InterpretableAstNode {
   }
 
   tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
-    return [this.assignee.tokenRange()[0], this.value.tokenRange()[1]];
+    return [this.parent.tokenRange()[0], this.value.tokenRange()[1]];
   }
 }
 
@@ -226,9 +258,8 @@ const typeAnnotation = kright(
   typeLiteral,
 );
 
-const rhs = kouter(
-  opt_sc(typeAnnotation),
-  surround_with_breaking_whitespace(
+const assignmentSource = kright(
+  ends_with_breaking_whitespace(
     ends_with_breaking_whitespace(str("=")),
   ),
   expression,
@@ -237,9 +268,10 @@ const rhs = kouter(
 const variableAssignment = apply(
   seq(
     tok(TokenKind.ident),
-    starts_with_breaking_whitespace(rhs),
+    opt_sc(starts_with_breaking_whitespace(typeAnnotation)),
+    starts_with_breaking_whitespace(assignmentSource),
   ),
-  ([assignee, [typeAnnotation, value]]) =>
+  ([assignee, typeAnnotation, value]) =>
     new VariableAssignmentAstNode({
       assignee,
       typeAnnotation,
@@ -247,14 +279,57 @@ const variableAssignment = apply(
     }),
 );
 
+const propertyAccess = kright(
+  ends_with_breaking_whitespace(str<TokenKind>(".")),
+  tok(TokenKind.ident),
+);
+
+const propertyWriteTarget = apply(
+  lrec_at_least_once_sc<
+    TokenKind,
+    [EvaluableAstNode, Token<TokenKind> | undefined],
+    [EvaluableAstNode, Token<TokenKind> | undefined],
+    Token<TokenKind>
+  >(
+    apply(
+      referenceExpression,
+      (result) => [result, undefined],
+    ),
+    starts_with_breaking_whitespace(
+      propertyAccess,
+    ),
+    ([previousParent, previousChild], child) => {
+      if (previousChild === undefined) {
+        return [previousParent, child];
+      }
+      return [
+        new PropertyAccessAstNode({
+          parent: previousParent,
+          identifierToken: previousChild,
+        }),
+        child,
+      ];
+    },
+  ),
+  ([parent, child]) => {
+    // `child` will never be `undefined` here because
+    // the parser (`lrec_at_least_once`) requires at least one property access.
+    // When there is at least one property access, the callback passed to `apply`
+    // will absorb the `undefined` value of the first iteration.
+    return [parent, child!] as [EvaluableAstNode, Token<TokenKind>];
+  },
+);
+
 const propertyWrite = apply(
   seq(
-    symbolExpression,
-    starts_with_breaking_whitespace(rhs),
+    propertyWriteTarget,
+    opt_sc(starts_with_breaking_whitespace(typeAnnotation)),
+    starts_with_breaking_whitespace(assignmentSource),
   ),
-  ([assignee, [typeAnnotation, value]]) =>
+  ([[parent, child], typeAnnotation, value]) =>
     new PropertyWriteAstNode({
-      assignee,
+      parent: parent,
+      child: child,
       typeAnnotation,
       value,
     }),

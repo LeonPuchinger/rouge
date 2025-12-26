@@ -60,8 +60,13 @@ interface SymbolTypeMismatchHandler {
 export interface SymbolType {
   /**
    * Compares this type to another type.
+   * The method is supposed to be called in the following direction:
+   * `suppliedType.typeCompatibleWith(expectedType)`.
    * By passing an instance of `SymbolTypeMismatchHandler`,
    * the caller can gain insight into why the type comparison failed.
+   * When the compared types are part of a type hierarchy, the type
+   * compatability check only succeeds in the following direction:
+   * `subtype.typeCompatibleWith(supertype)`.
    */
   typeCompatibleWith(
     other: SymbolType,
@@ -160,6 +165,7 @@ export class FunctionSymbolType implements SymbolType {
     mismatchHandler?: Partial<SymbolTypeMismatchHandler>,
     memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
+    other = other.peel();
     if (memo.get(this)?.has(other)) {
       return true;
     }
@@ -170,10 +176,7 @@ export class FunctionSymbolType implements SymbolType {
       memo.set(other, new Set());
     }
     memo.get(this)!.add(other);
-    if (
-      other instanceof PlaceholderSymbolType ||
-      other instanceof IgnoreSymbolType
-    ) {
+    if (other instanceof IgnoreSymbolType) {
       return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     // only fork types if placeholders need to be assumed
@@ -373,6 +376,7 @@ export class CompositeSymbolType implements SymbolType {
     mismatchHandler?: SymbolTypeMismatchHandler,
     memo = new Map<SymbolType, Set<SymbolType>>(),
   ): boolean {
+    other = other.peel();
     if (memo.get(this)?.has(other)) {
       return true;
     }
@@ -380,10 +384,7 @@ export class CompositeSymbolType implements SymbolType {
       memo.set(this, new Set());
     }
     memo.get(this)!.add(other);
-    if (
-      other instanceof PlaceholderSymbolType ||
-      other instanceof IgnoreSymbolType
-    ) {
+    if (other instanceof IgnoreSymbolType) {
       return other.typeCompatibleWith(this, mismatchHandler, memo);
     }
     if (!(other instanceof CompositeSymbolType)) {
@@ -397,12 +398,7 @@ export class CompositeSymbolType implements SymbolType {
       .some((type) => {
         const memoCopy = new Map<SymbolType, Set<SymbolType>>(memo);
         return type.typeCompatibleWith(other, mismatchHandler, memoCopy);
-      }) ||
-      other.traits
-        .some((type) => {
-          const memoCopy = new Map<SymbolType, Set<SymbolType>>(memo);
-          return this.typeCompatibleWith(type, mismatchHandler, memoCopy);
-        });
+      });
     if (compatibleImplementation) {
       return true;
     }
@@ -720,7 +716,11 @@ export class PlaceholderSymbolType implements SymbolType {
  * allows replacing the `IgnoreSymbolType` once the "real" type can be determined.
  */
 export class IgnoreSymbolType implements SymbolType {
-  typeCompatibleWith(): boolean {
+  typeCompatibleWith(
+    _other: SymbolType,
+    _mismatchHandler?: SymbolTypeMismatchHandler,
+    _memo = new Map<SymbolType, Set<SymbolType>>(),
+  ): boolean {
     return true;
   }
 
@@ -919,6 +919,17 @@ export class TypeTable {
     stdlib: "notset",
   };
   /**
+   * Similar to `globalFlagOverrides`, but only applies to the current scope.
+   * Scoped flags have priority over global flags, meaning if both are set,
+   * the scoped flag is applied. To read the effective flag override,
+   * the `getEffectiveFlagOverride` method can be used.
+   */
+  private scopedFlagOverrides: Array<
+    {
+      [K in keyof TypeFlags]: TypeFlags[K] | "notset";
+    }
+  > = [];
+  /**
    * When set to `true`, the table will act as if types stored
    * in the `runtimeTypes` namespace do not exists.
    */
@@ -945,6 +956,9 @@ export class TypeTable {
     }));
     snapshot.runtimeTypes = new Map(this.runtimeTypes);
     snapshot.globalFlagOverrides = { ...this.globalFlagOverrides };
+    snapshot.scopedFlagOverrides = this.scopedFlagOverrides.map((flags) => ({
+      ...flags,
+    }));
     snapshot.ignoreRuntimeTypes = this.ignoreRuntimeTypes;
     return snapshot;
   }
@@ -964,10 +978,12 @@ export class TypeTable {
       returnType: Some(returnType),
       loop,
     });
+    this.scopedFlagOverrides.push({ readonly: "notset", stdlib: "notset" });
   }
 
   popScope() {
     this.scopes.pop();
+    this.scopedFlagOverrides.pop();
     if (this.scopes.length === 0) {
       throw new InternalError(
         "The outermost scope of the type table has been popped.",
@@ -1041,6 +1057,7 @@ export class TypeTable {
     flags: Partial<TypeFlags> = {},
   ) {
     const currentScope = this.scopes[this.scopes.length - 1];
+    const currentScopeIndex = this.scopes.length - 1;
     const existingEntry = Some(currentScope.types.get(name));
     existingEntry.then((entry) => {
       if (entry.readonly) {
@@ -1052,8 +1069,10 @@ export class TypeTable {
     });
     const entry: TypeEntry = {
       type: symbolType,
-      readonly: flags.readonly ?? this.getGlobalFlagOverride("readonly"),
-      stdlib: flags.stdlib ?? this.getGlobalFlagOverride("stdlib"),
+      readonly: flags.readonly ??
+        this.getEffectiveFlagOverride("readonly", currentScopeIndex),
+      stdlib: flags.stdlib ??
+        this.getEffectiveFlagOverride("stdlib", currentScopeIndex),
     };
     currentScope.types.set(name, entry);
   }
@@ -1146,10 +1165,12 @@ export class TypeTable {
       this.scopes = snapshot.scopes;
       this.runtimeTypes = snapshot.runtimeTypes;
       this.globalFlagOverrides = snapshot.globalFlagOverrides;
+      this.scopedFlagOverrides = snapshot.scopedFlagOverrides;
       this.ignoreRuntimeTypes = snapshot.ignoreRuntimeTypes;
       return;
     }
     this.scopes = [];
+    this.scopedFlagOverrides = [];
     this.pushScope();
     this.initializeStandardLibraryTypes();
   }
@@ -1168,6 +1189,21 @@ export class TypeTable {
   }
 
   /**
+   * Resolves the effective flag for the given scope index, applying precedence:
+   * scoped overrides > global overrides.
+   */
+  private getEffectiveFlagOverride(
+    flag: keyof TypeFlags,
+    scopeIndex: number,
+  ): TypeFlags[keyof TypeFlags] {
+    const scoped = this.scopedFlagOverrides[scopeIndex]?.[flag] ?? "notset";
+    if (scoped === "notset") {
+      return this.getGlobalFlagOverride(flag);
+    }
+    return scoped;
+  }
+
+  /**
    * When a flag is set globally as an override, that flag is automatically
    * applied to all symbols that are inserted into the table.
    * Look at the `globalFlagOverrides` attribute for more information.
@@ -1177,6 +1213,22 @@ export class TypeTable {
   ) {
     for (const [key, value] of Object.entries(flags)) {
       this.globalFlagOverrides[key as keyof TypeFlags] = value;
+    }
+  }
+
+  /**
+   * Sets flag overrides for the current scope only. See
+   * `setGlobalFlagOverrides` for more information.
+   */
+  setScopedFlagOverrides(
+    flags: { [K in keyof TypeFlags]?: TypeFlags[K] | "notset" },
+  ) {
+    const idx = this.scopedFlagOverrides.length - 1;
+    const current = this.scopedFlagOverrides[idx];
+    for (const [key, value] of Object.entries(flags)) {
+      current[key as keyof TypeFlags] = value as
+        | TypeFlags[keyof TypeFlags]
+        | "notset";
     }
   }
 }

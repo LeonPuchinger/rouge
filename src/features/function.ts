@@ -424,9 +424,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
         endHighlight: this.expression,
         messageHighlight: messageHighlight ?? "",
       });
-    const returnValueRequired = !supposedReturnType.typeCompatibleWith(
-      nothingType(environment),
-    );
+    const returnValueRequired = nothingType(environment) !== supposedReturnType.peel();
     const returnStatementEmpty = actualReturnType.kind === "none";
     if (returnValueRequired && returnStatementEmpty) {
       findings.errors.push(ReturnTypeError(

@@ -71,17 +71,25 @@ export class ConditionAstNode implements InterpretableAstNode {
 
   interpret(environment: ExecutionEnvironment): void {
     environment.runtimeTable.pushScope();
-    const conditionResult = (this.condition as BooleanExpressionAstNode)
-      .evaluate(environment);
-    if (conditionResult.value) {
-      this.trueStatements.interpret(environment);
-      environment.runtimeTable.popScope();
-    } else {
-      environment.runtimeTable.popScope();
-      environment.runtimeTable.pushScope();
-      this.falseStatements.then((statements) =>
-        statements.interpret(environment)
-      );
+    try {
+      const conditionResult = (this.condition as BooleanExpressionAstNode)
+        .evaluate(environment);
+      if (conditionResult.value) {
+        this.trueStatements.interpret(environment);
+      } else {
+        environment.runtimeTable.popScope();
+        environment.runtimeTable.pushScope();
+        this.falseStatements.then((statements) =>
+          statements.interpret(environment)
+        );
+      }
+    } finally {
+      // Ensure the scope of the condition is always popped.
+      // This is important in case any statement within the body of the condition
+      // tries to return a value to the enclosing function, which is handled
+      // via exceptions (`ReturnValueContainer`).
+      // The same is true for other control flow modifiers like `break`
+      // or `continue` (`ControlFlowModifier`).
       environment.runtimeTable.popScope();
     }
   }

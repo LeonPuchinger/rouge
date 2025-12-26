@@ -117,6 +117,36 @@ export function operation_chain_sc<
 }
 
 /**
+ * Like `lrec_sc(a, b, f)` from `typescript-parsec`, but b needs to be matched at least once.
+ */
+export function lrec_at_least_once_sc<
+  TKind,
+  TResult,
+  TFirst extends TResult,
+  TSecond,
+>(
+  first: Parser<TKind, TFirst>,
+  second: Parser<TKind, TSecond>,
+  callback: (
+    first: TResult,
+    second: TSecond,
+  ) => TResult,
+): Parser<TKind, TResult> {
+  return apply(
+    seq(
+      first,
+      rep_at_least_once_sc(second),
+    ),
+    ([initial, remainders]) => {
+      return remainders.reduce(
+        callback,
+        initial,
+      );
+    },
+  );
+}
+
+/**
  * Prefixes a parser with another parsers which optionally parses breaking whitespace.
  */
 export function starts_with_breaking_whitespace<T>(

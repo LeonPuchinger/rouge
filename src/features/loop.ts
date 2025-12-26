@@ -15,6 +15,7 @@ import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
 import {
   ends_with_breaking_whitespace,
+  starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
 import { DummyAstNode } from "../util/snippet.ts";
@@ -65,28 +66,39 @@ export class LoopAstNode implements InterpretableAstNode {
   interpret(environment: ExecutionEnvironment): void {
     environment.runtimeTable.pushScope();
     environment.typeTable.pushScope({ loop: true });
-    const conditionTrue = () =>
-      (this.condition as BooleanExpressionAstNode)
-        .evaluate(environment).value;
-    while (conditionTrue()) {
-      environment.runtimeTable.pushScope();
-      try {
-        this.statements.interpret(environment);
-      } catch (error) {
-        if (error instanceof ControlFlowModifier) {
-          if (error.modifier === "continue") {
-            continue;
+    try {
+      const conditionTrue = () =>
+        (this.condition as BooleanExpressionAstNode)
+          .evaluate(environment).value;
+      while (conditionTrue()) {
+        environment.runtimeTable.pushScope();
+        try {
+          this.statements.interpret(environment);
+        } catch (error) {
+          if (error instanceof ControlFlowModifier) {
+            if (error.modifier === "continue") {
+              continue;
+            }
+            if (error.modifier === "break") {
+              break;
+            }
           }
-          if (error.modifier === "break") {
-            break;
-          }
+          throw error;
+        } finally {
+          // Ensure that the scope is popped even if there was
+          // a control flow modifier or a function return value.
+          // Take a look at the implementation of conditions for
+          // furhter explanation.
+          environment.runtimeTable.popScope();
         }
-        throw error;
       }
+    } finally {
+      // Ensure that the loop scope is always popped.
+      // Take a look at the implementation of conditions for
+      // furhter explanation.
+      environment.typeTable.popScope();
       environment.runtimeTable.popScope();
     }
-    environment.typeTable.popScope();
-    environment.runtimeTable.popScope();
   }
 
   get_representation(environment: ExecutionEnvironment): string {
@@ -176,7 +188,7 @@ loop.setPattern(
         ends_with_breaking_whitespace(str("{")),
         statements,
       ),
-      surround_with_breaking_whitespace(str("}")),
+      starts_with_breaking_whitespace(str("}")),
     ),
     ([keyword, condition, statements, closingBrace]) => {
       return new LoopAstNode({

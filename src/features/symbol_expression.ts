@@ -138,6 +138,9 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
     const parentType = this.parent
       .resolveType(environment)
       .peel() as CompositeSymbolType;
+    if (parentType instanceof IgnoreSymbolType) {
+      return parentType;
+    }
     const accessedType = parentType.fields.get(
       this.identifierToken.text,
     );
