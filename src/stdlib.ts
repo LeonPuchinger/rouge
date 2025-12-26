@@ -8,16 +8,40 @@ const stdlib = `
     type Option<T> {
         has_value: Function() -> Boolean,
         get_value: Function(Option<T>) -> T,
+        map: Function(Option<T>, Function(T) -> T) -> Option<T>,
+        flat_map: Function(Option<T>, Function(T) -> Option<T>) -> Option<T>,
+        or: Function(Option<T>, Option<T>) -> Option<T>,
     }
 
     type Nothing<T> implements Option<T> {
         has_value = function() -> Boolean {
             return false
-        }
+        },
 
         get_value = function(this: Nothing<T>) -> T {
             runtime_panic("get_value called on a Nothing object")
-        }
+        },
+
+        map = function(
+            this: Nothing<T>,
+            transform: Function(T) -> T
+        ) -> Option<T> {
+            return this
+        },
+
+        flat_map = function(
+            this: Nothing<T>,
+            transform: Function(T) -> Option<T>
+        ) -> Option<T> {
+            return this
+        },
+
+        or = function(
+            this: Nothing<T>,
+            alternative: Option<T>
+        ) -> Option<T> {
+            return alternative
+        },
     }
 
     type Something<T> implements Option<T> {
@@ -30,6 +54,28 @@ const stdlib = `
         get_value = function(this: Something<T>) -> T {
             return this.value
         }
+
+        map = function(
+            this: Something<T>,
+            transform: Function(T) -> T
+        ) -> Option<T> {
+            mapped_value = transform(this.value)
+            return Something<T>(mapped_value)
+        },
+
+        flat_map = function(
+            this: Something<T>,
+            transform: Function(T) -> Option<T>
+        ) -> Option<T> {
+            return transform(this.value)
+        },
+
+        or = function(
+            this: Something<T>,
+            alternative: Option<T>
+        ) -> Option<T> {
+            return this
+        },
     }
 
     type Result<T, E> {
