@@ -186,10 +186,6 @@ const stdlib = `
     print_no_newline = function(message: String) {
         runtime_print_no_newline(message)
     }
-
-    reverse = function(message: String) -> String {
-        return runtime_reverse(message)
-    }
 `;
 
 /**
