@@ -187,8 +187,8 @@ const stdlib = `
         runtime_print_no_newline(message)
     }
 
-    reverse = function(message: String) -> String {
-        return runtime_reverse(message)
+    floor = function(input: Number) -> Number {
+        return runtime_floor(input)
     }
 `;
 

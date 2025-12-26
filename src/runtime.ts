@@ -7,9 +7,9 @@ import { AnalysisFindings } from "./finding.ts";
 import { TokenKind } from "./lexer.ts";
 import {
     FunctionSymbolValue,
+    NumericSymbolValue,
     RuntimeSymbol,
     StaticSymbol,
-    StringSymbolValue,
     SymbolValue,
 } from "./symbol.ts";
 import {
@@ -251,16 +251,16 @@ export function injectRuntimeBindings(
 
     createRuntimeBinding(
         environment,
-        "runtime_reverse",
+        "runtime_floor",
         [{
-            name: "message",
-            symbolType: new CompositeSymbolType({ id: "String" }),
+            name: "input",
+            symbolType: new CompositeSymbolType({ id: "Number" }),
         }],
-        new CompositeSymbolType({ id: "String" }),
+        new CompositeSymbolType({ id: "Number" }),
         (params) => {
-            const message = params.get("message")!.value as string;
-            const reversed = message.split("").reverse().join("");
-            return new StringSymbolValue(reversed);
+            const input = params.get("input")!.value as number;
+            const floored = Math.floor(Number(input));
+            return new NumericSymbolValue(floored);
         },
         onlyAnalysis,
     );
