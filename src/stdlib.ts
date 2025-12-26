@@ -243,6 +243,7 @@ export function analyzeStdlib(
             "The standard library contains static analysis errors.",
         );
     }
+    // keep the stdlib in a separate scope
     environment.analysisTable.pushScope();
     environment.typeTable.pushScope();
 }
@@ -278,6 +279,7 @@ export function injectStdlib(
         stdlib: "notset",
     });
     environment.source = "";
-    environment.runtimeTable.popScope();
-    environment.typeTable.popScope();
+    // keep the stdlib in a separate scope
+    environment.runtimeTable.pushScope();
+    environment.typeTable.pushScope();
 }
