@@ -186,6 +186,10 @@ const stdlib = `
     print_no_newline = function(message: String) {
         runtime_print_no_newline(message)
     }
+
+    floor = function(input: Number) -> Number {
+        return runtime_floor(input)
+    }
 `;
 
 /**
