@@ -919,6 +919,17 @@ export class TypeTable {
     stdlib: "notset",
   };
   /**
+   * Similar to `globalFlagOverrides`, but only applies to the current scope.
+   * Scoped flags have priority over global flags, meaning if both are set,
+   * the scoped flag is applied. To read the effective flag override,
+   * the `getEffectiveFlagOverride` method can be used.
+   */
+  private scopedFlagOverrides: Array<
+    {
+      [K in keyof TypeFlags]: TypeFlags[K] | "notset";
+    }
+  > = [];
+  /**
    * When set to `true`, the table will act as if types stored
    * in the `runtimeTypes` namespace do not exists.
    */
@@ -945,6 +956,9 @@ export class TypeTable {
     }));
     snapshot.runtimeTypes = new Map(this.runtimeTypes);
     snapshot.globalFlagOverrides = { ...this.globalFlagOverrides };
+    snapshot.scopedFlagOverrides = this.scopedFlagOverrides.map((flags) => ({
+      ...flags,
+    }));
     snapshot.ignoreRuntimeTypes = this.ignoreRuntimeTypes;
     return snapshot;
   }
@@ -964,10 +978,12 @@ export class TypeTable {
       returnType: Some(returnType),
       loop,
     });
+    this.scopedFlagOverrides.push({ readonly: "notset", stdlib: "notset" });
   }
 
   popScope() {
     this.scopes.pop();
+    this.scopedFlagOverrides.pop();
     if (this.scopes.length === 0) {
       throw new InternalError(
         "The outermost scope of the type table has been popped.",
@@ -1041,6 +1057,7 @@ export class TypeTable {
     flags: Partial<TypeFlags> = {},
   ) {
     const currentScope = this.scopes[this.scopes.length - 1];
+    const currentScopeIndex = this.scopes.length - 1;
     const existingEntry = Some(currentScope.types.get(name));
     existingEntry.then((entry) => {
       if (entry.readonly) {
@@ -1052,8 +1069,10 @@ export class TypeTable {
     });
     const entry: TypeEntry = {
       type: symbolType,
-      readonly: flags.readonly ?? this.getGlobalFlagOverride("readonly"),
-      stdlib: flags.stdlib ?? this.getGlobalFlagOverride("stdlib"),
+      readonly: flags.readonly ??
+        this.getEffectiveFlagOverride("readonly", currentScopeIndex),
+      stdlib: flags.stdlib ??
+        this.getEffectiveFlagOverride("stdlib", currentScopeIndex),
     };
     currentScope.types.set(name, entry);
   }
@@ -1146,10 +1165,12 @@ export class TypeTable {
       this.scopes = snapshot.scopes;
       this.runtimeTypes = snapshot.runtimeTypes;
       this.globalFlagOverrides = snapshot.globalFlagOverrides;
+      this.scopedFlagOverrides = snapshot.scopedFlagOverrides;
       this.ignoreRuntimeTypes = snapshot.ignoreRuntimeTypes;
       return;
     }
     this.scopes = [];
+    this.scopedFlagOverrides = [];
     this.pushScope();
     this.initializeStandardLibraryTypes();
   }
@@ -1168,6 +1189,21 @@ export class TypeTable {
   }
 
   /**
+   * Resolves the effective flag for the given scope index, applying precedence:
+   * scoped overrides > global overrides.
+   */
+  private getEffectiveFlagOverride(
+    flag: keyof TypeFlags,
+    scopeIndex: number,
+  ): TypeFlags[keyof TypeFlags] {
+    const scoped = this.scopedFlagOverrides[scopeIndex]?.[flag] ?? "notset";
+    if (scoped === "notset") {
+      return this.getGlobalFlagOverride(flag);
+    }
+    return scoped;
+  }
+
+  /**
    * When a flag is set globally as an override, that flag is automatically
    * applied to all symbols that are inserted into the table.
    * Look at the `globalFlagOverrides` attribute for more information.
@@ -1177,6 +1213,22 @@ export class TypeTable {
   ) {
     for (const [key, value] of Object.entries(flags)) {
       this.globalFlagOverrides[key as keyof TypeFlags] = value;
+    }
+  }
+
+  /**
+   * Sets flag overrides for the current scope only. See
+   * `setGlobalFlagOverrides` for more information.
+   */
+  setScopedFlagOverrides(
+    flags: { [K in keyof TypeFlags]?: TypeFlags[K] | "notset" },
+  ) {
+    const idx = this.scopedFlagOverrides.length - 1;
+    const current = this.scopedFlagOverrides[idx];
+    for (const [key, value] of Object.entries(flags)) {
+      current[key as keyof TypeFlags] = value as
+        | TypeFlags[keyof TypeFlags]
+        | "notset";
     }
   }
 }

@@ -216,8 +216,10 @@ export function analyzeStdlib(
 ) {
     environment.source = stdlib;
     environment.analysisTable.setGlobalFlagOverrides({
-        readonly: true,
         stdlib: true,
+    });
+    environment.analysisTable.setScopedFlagOverrides({
+        readonly: true,
     });
     environment.analysisTable.ignoreRuntimeBindings = false;
     environment.typeTable.setGlobalFlagOverrides({
@@ -228,7 +230,6 @@ export function analyzeStdlib(
     const analysisFindings = stdlibAst.analyze(environment);
     environment.source = "";
     environment.analysisTable.setGlobalFlagOverrides({
-        readonly: "notset",
         stdlib: "notset",
     });
     environment.analysisTable.ignoreRuntimeBindings = true;
@@ -242,6 +243,8 @@ export function analyzeStdlib(
             "The standard library contains static analysis errors.",
         );
     }
+    environment.analysisTable.pushScope();
+    environment.typeTable.pushScope();
 }
 
 /**
@@ -254,12 +257,16 @@ export function injectStdlib(
 ) {
     environment.source = stdlib;
     environment.runtimeTable.setGlobalFlagOverrides({
-        readonly: true,
         stdlib: true,
+    });
+    environment.runtimeTable.setScopedFlagOverrides({
+        readonly: true,
     });
     environment.typeTable.setGlobalFlagOverrides({
         readonly: true,
-        stdlib: true,
+    });
+    environment.typeTable.setScopedFlagOverrides({
+        readonly: true,
     });
     stdlibAst.interpret(environment);
     environment.runtimeTable.setGlobalFlagOverrides({
@@ -271,4 +278,6 @@ export function injectStdlib(
         stdlib: "notset",
     });
     environment.source = "";
+    environment.runtimeTable.popScope();
+    environment.typeTable.popScope();
 }
