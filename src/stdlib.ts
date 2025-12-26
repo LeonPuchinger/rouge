@@ -86,6 +86,99 @@ const stdlib = `
         }
     }
 
+    type Node<T> {
+        append: Function(Node<T>, T) -> Node<T>,
+        at: Function(Node<T>, Number) -> Option<T>,
+        size: Function(Node<T>) -> Number,
+    }
+
+    type Container<T> implements Node<T> {
+        next: Node<T>,
+        value: T,
+
+        append = function(this: Container<T>, element: T) -> Node<T> {
+            this.next = this.next.append(element)
+            return this
+        },
+
+        at = function(this: Container<T>, index: Number) -> Option<T> {
+            if (index == 0) {
+                return Something<T>(this.value)
+            }
+            return this.next.at(index - 1)
+        },
+
+        size = function(this: Container<T>) -> Number {
+            return this.next.size() + 1
+        },
+    }
+
+    type Empty<T> implements Node<T> {
+        append = function(this: Empty<T>, element: T) -> Node<T> {
+            return Container<T>(this, element)
+        },
+
+        at = function(this: Empty<T>, index: Number) -> Option<T> {
+            return Nothing<T>()
+        },
+
+        size = function(this: Empty<T>) -> Number {
+            return 0
+        },
+    }
+
+    type List<T> {
+        first: Node<T> = Empty<T>(),
+
+        append = function(this: List<T>, element: T) {
+            this.first = this.first.append(element)
+        },
+
+        prepend = function(this: List<T>, element: T) {
+            this.first = Container<T>(this.first, element)
+        },
+
+        at = function(this: List<T>, index: Number) -> Option<T> {
+            return this.first.at(index)
+        },
+
+        size = function(this: List<T>) -> Number {
+            return this.first.size()
+        },
+
+        slice = function(this: List<T>, start: Number, end: Number) -> List<T> {
+            current_size = this.size()
+            copy = List<T>()
+            if (current_size == 0) {
+                return copy
+            }
+            slice_start = start
+            if (slice_start > current_size - 1) {
+                slice_start = current_size - 1
+            }
+            if (slice_start < 0) {
+                slice_start = 0
+            }
+            slice_end = end
+            if (slice_end > current_size) {
+                slice_end = current_size
+            }
+            if (slice_end < 0) {
+                slice_end = 0
+            }
+            if (slice_end < slice_start + 1) {
+                return copy
+            }
+            index = slice_start
+            while (index < slice_end) {
+                element = this.at(index)
+                copy.append(element.get_value())
+                index = index + 1
+            }
+            return copy
+        },
+    }
+
     print = function(message: String) {
         runtime_print_newline(message)
     }
