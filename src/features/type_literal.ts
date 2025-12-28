@@ -20,6 +20,7 @@ import {
   FunctionSymbolType,
   SymbolType,
 } from "../type.ts";
+import { zip } from "../util/array.ts";
 import { Option, Some } from "../util/monad/index.ts";
 import { None } from "../util/monad/option.ts";
 import {
@@ -165,7 +166,19 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       the placeholder stored in the `CompositeSymbolType` is not the same reference anymore as the type stored
       for the field `foo`. When `T` is bound globally for the type `Bar`, the type for `foo` is not updated
       accordingly anymore. Therefore, in case a type literal is not parametrized with placeholders, it
-      should not be forked. */
+      should not be forked.
+
+      Also, the type is only forked if the placeholders are not already set to the supplied types.
+      */
+      const placeholdersAlreadySetToSuppliedTypes = zip(
+        Array.from(resolvedType.placeholders.values()),
+        placeholderTypes,
+      ).every(([placeholder, suppliedType]) =>
+        placeholder.typeCompatibleWith(suppliedType)
+      );
+      if (placeholdersAlreadySetToSuppliedTypes) {
+        return resolvedType;
+      }
       resolvedType = resolvedType.fork();
     }
     // positionally bind placeholders to the supplied types
