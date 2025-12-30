@@ -135,6 +135,8 @@ const stdlib = `
     type Node<T> {
         append: Function(Node<T>, T) -> Node<T>,
         at: Function(Node<T>, Number) -> Option<T>,
+        insert_at: Function(Node<T>, Number, T) -> Node<T>,
+        remove_at: Function(Node<T>, Number) -> Node<T>,
         size: Function(Node<T>) -> Number,
     }
 
@@ -154,6 +156,22 @@ const stdlib = `
             return this.next.at(index - 1)
         },
 
+        insert_at = function(this: Container<T>, index: Number, element: T) -> Node<T> {
+            if (index == 0) {
+                return Container<T>(this, element)
+            }
+            this.next = this.next.insert_at(index - 1, element)
+            return this
+        },
+
+        remove_at = function(this: Container<T>, index: Number) -> Node<T> {
+            if (index == 0) {
+                return this.next
+            }
+            this.next = this.next.remove_at(index - 1)
+            return this
+        },
+
         size = function(this: Container<T>) -> Number {
             return this.next.size() + 1
         },
@@ -166,6 +184,14 @@ const stdlib = `
 
         at = function(this: Empty<T>, index: Number) -> Option<T> {
             return Nothing<T>()
+        },
+
+        insert_at = function(this: Empty<T>, index: Number, element: T) -> Node<T> {
+            return Container<T>(this, element)
+        },
+
+        remove_at = function(this: Empty<T>, index: Number) -> Node<T> {
+            return this
         },
 
         size = function(this: Empty<T>) -> Number {
@@ -187,6 +213,16 @@ const stdlib = `
         at = function(this: List<T>, index: Number) -> Option<T> {
             return this.first.at(index)
         },
+
+        insert_at = function(this: List<T>, index: Number, element: T) {
+            this.first = this.first.insert_at(index, element)
+        },
+
+        remove_at = function(this: List<T>, index: Number) -> Option<T> {
+            element = this.at(index)
+            this.first = this.first.remove_at(index)
+            return element
+        }
 
         size = function(this: List<T>) -> Number {
             return this.first.size()
