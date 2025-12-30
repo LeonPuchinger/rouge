@@ -444,8 +444,8 @@ invocation.setPattern(apply(
   seq(
     customExpression,
     opt_sc(starts_with_breaking_whitespace(placeholders)),
-    surround_with_breaking_whitespace(str("(")),
-    opt(parameters),
+    starts_with_breaking_whitespace(str("(")),
+    opt(starts_with_breaking_whitespace(parameters)),
     starts_with_breaking_whitespace(str(")")),
   ),
   (
