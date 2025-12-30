@@ -1,5 +1,4 @@
 import {
-  alt_sc,
   apply,
   kleft,
   kmid,
@@ -491,12 +490,9 @@ export const parameter = apply(
     }),
 );
 
-const parameters = apply(
-  alt_sc(
-    list_sc(parameter, surround_with_breaking_whitespace(str(","))),
-    parameter,
-  ),
-  (v) => [v].flat(),
+const parameters = kleft(
+  list_sc(parameter, surround_with_breaking_whitespace(str(","))),
+  opt_sc(starts_with_breaking_whitespace(str(","))),
 );
 
 const returnType = kright(
