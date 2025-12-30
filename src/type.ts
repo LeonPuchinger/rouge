@@ -1,3 +1,4 @@
+import { DEVELOPER_OPTIONS } from "./execution.ts";
 import { SymbolValue } from "./symbol.ts";
 import { zip } from "./util/array.ts";
 import { InternalError } from "./util/error.ts";
@@ -450,29 +451,31 @@ export class CompositeSymbolType implements SymbolType {
         return false;
       }
     }
-    const thisKeys = Array.from(this.fields.keys());
-    const otherKeys = Array.from(other.fields.keys());
-    if (thisKeys.length !== otherKeys.length) {
-      throw new InternalError(
-        "Encountered two CompositeSymbolTypes with matching IDs but different amounts of fields.",
-      );
-    }
-    for (const key of thisKeys) {
-      if (!other.fields.has(key)) {
+    if (DEVELOPER_OPTIONS.enableSanityChecks) {
+      const thisKeys = Array.from(this.fields.keys());
+      const otherKeys = Array.from(other.fields.keys());
+      if (thisKeys.length !== otherKeys.length) {
         throw new InternalError(
-          "Encountered two CompositeSymbolTypes with matching IDs but different names for their fields.",
+          "Encountered two CompositeSymbolTypes with matching IDs but different amounts of fields.",
         );
       }
-      if (
-        !other.fields.get(key)?.typeCompatibleWith(
-          this.fields.get(key)!,
-          mismatchHandler,
-          memo,
-        )
-      ) {
-        throw new InternalError(
-          "Encountered two CompositeSymbolTypes with matching IDs but at least one type-incompatible field.",
-        );
+      for (const key of thisKeys) {
+        if (!other.fields.has(key)) {
+          throw new InternalError(
+            "Encountered two CompositeSymbolTypes with matching IDs but different names for their fields.",
+          );
+        }
+        if (
+          !other.fields.get(key)?.typeCompatibleWith(
+            this.fields.get(key)!,
+            mismatchHandler,
+            memo,
+          )
+        ) {
+          throw new InternalError(
+            "Encountered two CompositeSymbolTypes with matching IDs but at least one type-incompatible field.",
+          );
+        }
       }
     }
     return true;
