@@ -11,6 +11,7 @@ const stdlib = `
         map: Function(Option<T>, Function(T) -> T) -> Option<T>,
         flat_map: Function(Option<T>, Function(T) -> Option<T>) -> Option<T>,
         or: Function(Option<T>, Option<T>) -> Option<T>,
+        get_value_or: Function(Option<T>, T) -> T,
     }
 
     type Nothing<T> implements Option<T> {
@@ -41,6 +42,13 @@ const stdlib = `
             alternative: Option<T>
         ) -> Option<T> {
             return alternative
+        },
+
+        get_value_or = function(
+            this: Nothing<T>,
+            defaultValue: T
+        ) -> T {
+            return defaultValue
         },
     }
 
@@ -75,6 +83,13 @@ const stdlib = `
             alternative: Option<T>
         ) -> Option<T> {
             return this
+        },
+
+        get_value_or = function(
+            this: Something<T>,
+            defaultValue: T
+        ) -> T {
+            return this.value
         },
     }
 
