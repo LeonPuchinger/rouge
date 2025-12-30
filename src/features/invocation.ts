@@ -392,9 +392,12 @@ const placeholders = kmid(
   str<TokenKind>(">"),
 );
 
-const parameters = list_sc(
-  expression,
-  surround_with_breaking_whitespace(str(",")),
+const parameters = kleft(
+  list_sc(
+    expression,
+    surround_with_breaking_whitespace(str(",")),
+  ),
+  opt_sc(starts_with_breaking_whitespace(str(","))),
 );
 
 const memberAccess = apply(
