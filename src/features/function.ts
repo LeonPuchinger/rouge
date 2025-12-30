@@ -465,7 +465,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
 
 const placeholderNames = kleft(
   list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
-  opt_sc(str(",")),
+  opt_sc(starts_with_breaking_whitespace(str(","))),
 );
 
 const placeholders = kmid(
