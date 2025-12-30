@@ -154,11 +154,13 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       The same placeholders often appear in multiple places, but have to be bound via
       the same reference. This behavior ensures that placeholders are not unnecessarily
       forked, breaking the reference to the original instance.
-      Example:
 
-      ```type Bar<T> {
-        foo: T;
-      }```
+      Example:
+      ```
+      type Bar<T> {
+        foo: T
+      }
+      ```
 
       This type definition results in a `CompositeSymbolType` with a placeholder.
       `CompositeSymbolType`s keep a list of the placeholders that are used in the type so they
@@ -169,12 +171,30 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       should not be forked.
 
       Also, the type is only forked if the placeholders are not already set to the supplied types.
+
+      Example:
+      ```
+      type Bar<T> {
+        foo: Bar<T>
+        bar: Bar<String>
+      }
+      ```
+
+      A recursive (self-referential) type, such as the one in the example above, is created by a type definition
+      that uses its own type literal as a field type or trait. The resolved type should be truly recursive, meaning
+      that, where possible, the original instance should be referenced. If the type is forked every time the type
+      literal is resolved, the recursion is broken and the type becomes unnecessarily nested instead of recursive.
+      It is important, however, to still fork the type when the placeholders are set to a type other than the placeholder(s)
+      that the type defines itself.
+      For instance, in the example above, `foo` is of type `Bar<T>`, where `T` is the placeholder defined by `Bar` itself.
+      Therefore, the parameter type of `foo` should be the original instance of `Bar`, keeping the recursion intact.
+      In contrast, `bar` is of type `Bar<String>`, where the placeholder `T` is set to `String`, a different type.
       */
       const placeholdersAlreadySetToSuppliedTypes = zip(
         Array.from(resolvedType.placeholders.values()),
         placeholderTypes,
       ).every(([placeholder, suppliedType]) =>
-        placeholder.typeCompatibleWith(suppliedType)
+        placeholder == suppliedType
       );
       if (placeholdersAlreadySetToSuppliedTypes) {
         return resolvedType;
