@@ -1,3 +1,4 @@
+import { DEVELOPER_OPTIONS } from "./execution.ts";
 import { SymbolValue } from "./symbol.ts";
 import { zip } from "./util/array.ts";
 import { InternalError } from "./util/error.ts";
@@ -308,6 +309,12 @@ export class FunctionSymbolType implements SymbolType {
     if (memo.has(this)) {
       return memo.get(this) as FunctionSymbolType;
     }
+    const copy = new FunctionSymbolType({
+      parameterTypes: [],
+      returnType: new IgnoreSymbolType(),
+      placeholders: new Map(),
+    });
+    memo.set(this, copy);
     const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
     for (const [name, type] of this.placeholders) {
       const forkedPlaceholder = type.fork(memo) as PlaceholderSymbolType;
@@ -316,12 +323,9 @@ export class FunctionSymbolType implements SymbolType {
     const forkedParameters = this.parameterTypes
       .map((type) => type.fork(memo));
     const forkedReturnType = this.returnType.fork(memo);
-    const copy = new FunctionSymbolType({
-      parameterTypes: forkedParameters,
-      returnType: forkedReturnType,
-      placeholders: forkedPlaceholders,
-    });
-    memo.set(this, copy);
+    copy.parameterTypes = forkedParameters;
+    copy.placeholders = forkedPlaceholders;
+    copy.returnType = forkedReturnType;
     return copy;
   }
 
@@ -447,29 +451,31 @@ export class CompositeSymbolType implements SymbolType {
         return false;
       }
     }
-    const thisKeys = Array.from(this.fields.keys());
-    const otherKeys = Array.from(other.fields.keys());
-    if (thisKeys.length !== otherKeys.length) {
-      throw new InternalError(
-        "Encountered two CompositeSymbolTypes with matching IDs but different amounts of fields.",
-      );
-    }
-    for (const key of thisKeys) {
-      if (!other.fields.has(key)) {
+    if (DEVELOPER_OPTIONS.enableSanityChecks) {
+      const thisKeys = Array.from(this.fields.keys());
+      const otherKeys = Array.from(other.fields.keys());
+      if (thisKeys.length !== otherKeys.length) {
         throw new InternalError(
-          "Encountered two CompositeSymbolTypes with matching IDs but different names for their fields.",
+          "Encountered two CompositeSymbolTypes with matching IDs but different amounts of fields.",
         );
       }
-      if (
-        !other.fields.get(key)?.typeCompatibleWith(
-          this.fields.get(key)!,
-          mismatchHandler,
-          memo,
-        )
-      ) {
-        throw new InternalError(
-          "Encountered two CompositeSymbolTypes with matching IDs but at least one type-incompatible field.",
-        );
+      for (const key of thisKeys) {
+        if (!other.fields.has(key)) {
+          throw new InternalError(
+            "Encountered two CompositeSymbolTypes with matching IDs but different names for their fields.",
+          );
+        }
+        if (
+          !other.fields.get(key)?.typeCompatibleWith(
+            this.fields.get(key)!,
+            mismatchHandler,
+            memo,
+          )
+        ) {
+          throw new InternalError(
+            "Encountered two CompositeSymbolTypes with matching IDs but at least one type-incompatible field.",
+          );
+        }
       }
     }
     return true;
@@ -520,6 +526,13 @@ export class CompositeSymbolType implements SymbolType {
     if (memo.has(this)) {
       return memo.get(this)!;
     }
+    const copy = new CompositeSymbolType({
+      id: this.id,
+      fields: new Map(),
+      placeholders: new Map(),
+      traits: [],
+    });
+    memo.set(this, copy);
     const forkedPlaceholders = new Map<string, PlaceholderSymbolType>();
     for (const [name, type] of this.placeholders) {
       const forkedPlaceholder = type.fork(memo) as PlaceholderSymbolType;
@@ -532,13 +545,9 @@ export class CompositeSymbolType implements SymbolType {
     }
     const forkedTraits = this.traits
       .map((trait) => trait.fork(memo));
-    const copy = new CompositeSymbolType({
-      id: this.id,
-      fields: forkedFields,
-      placeholders: forkedPlaceholders,
-      traits: forkedTraits,
-    });
-    memo.set(this, copy);
+    copy.fields = forkedFields;
+    copy.placeholders = forkedPlaceholders;
+    copy.traits = forkedTraits;
     return copy;
   }
 
@@ -664,15 +673,14 @@ export class PlaceholderSymbolType implements SymbolType {
     if (memo.has(this)) {
       return memo.get(this)!;
     }
-    const forkedReference = this.reference
-      .map((reference) => reference.fork(memo));
     const copy = new PlaceholderSymbolType({
       name: this.name,
-      reference: forkedReference.hasValue()
-        ? forkedReference.unwrap()
-        : undefined,
+      rebindingAllowed: this.rebindingAllowed,
     });
     memo.set(this, copy);
+    const forkedReference = this.reference
+      .map((reference) => reference.fork(memo));
+    copy.reference = forkedReference;
     return copy;
   }
 

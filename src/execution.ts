@@ -40,3 +40,23 @@ export class ExecutionEnvironment {
     this.stdin = Some(params.stdin);
   }
 }
+
+/**
+ * These options are intended for developers of the interpreter
+ * to enable or disable certain sanity checks and debugging features.
+ * They should not be enabled in production environments.
+ * The options are exposed as the global constant `DEVELOPER_OPTIONS` within the project.
+ */
+type DeveloperOptions = {
+  /**
+   * Sanity checks are additional checks that verify the internal consistency
+   * of the interpreter state at various points during execution. They can help
+   * to identify errors made during development, but may introduce significant
+   * overhead.
+   */
+  enableSanityChecks: boolean;
+};
+
+export const DEVELOPER_OPTIONS: DeveloperOptions = {
+  enableSanityChecks: false,
+};

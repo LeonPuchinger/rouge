@@ -1,5 +1,4 @@
 import {
-  alt_sc,
   apply,
   kleft,
   kmid,
@@ -296,6 +295,9 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const returnTypeFindings = returnTypeAnalysis
       .unwrapOr(AnalysisFindings.empty());
     findings = AnalysisFindings.merge(findings, returnTypeFindings);
+    if (returnTypeFindings.isErroneous()) {
+      return findings;
+    }
     returnTypeAnalysis.then((findings) => {
       const returnType = this.returnType
         .map((literal) => literal.resolveType(environment))
@@ -424,7 +426,8 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
         endHighlight: this.expression,
         messageHighlight: messageHighlight ?? "",
       });
-    const returnValueRequired = nothingType(environment) !== supposedReturnType.peel();
+    const returnValueRequired =
+      nothingType(environment) !== supposedReturnType.peel();
     const returnStatementEmpty = actualReturnType.kind === "none";
     if (returnValueRequired && returnStatementEmpty) {
       findings.errors.push(ReturnTypeError(
@@ -465,7 +468,7 @@ export class ReturnStatementAstNode implements InterpretableAstNode {
 
 const placeholderNames = kleft(
   list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
-  opt_sc(str(",")),
+  opt_sc(starts_with_breaking_whitespace(str(","))),
 );
 
 const placeholders = kmid(
@@ -487,12 +490,9 @@ export const parameter = apply(
     }),
 );
 
-const parameters = apply(
-  alt_sc(
-    list_sc(parameter, surround_with_breaking_whitespace(str(","))),
-    parameter,
-  ),
-  (v) => [v].flat(),
+const parameters = kleft(
+  list_sc(parameter, surround_with_breaking_whitespace(str(","))),
+  opt_sc(starts_with_breaking_whitespace(str(","))),
 );
 
 const returnType = kright(

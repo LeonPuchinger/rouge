@@ -8,16 +8,48 @@ const stdlib = `
     type Option<T> {
         has_value: Function() -> Boolean,
         get_value: Function(Option<T>) -> T,
+        map: Function(Option<T>, Function(T) -> T) -> Option<T>,
+        flat_map: Function<U>(Option<T>, Function(T) -> Option<U>) -> Option<U>,
+        or: Function(Option<T>, Option<T>) -> Option<T>,
+        get_value_or: Function(Option<T>, T) -> T,
     }
 
     type Nothing<T> implements Option<T> {
         has_value = function() -> Boolean {
             return false
-        }
+        },
 
         get_value = function(this: Nothing<T>) -> T {
             runtime_panic("get_value called on a Nothing object")
-        }
+        },
+
+        map = function(
+            this: Nothing<T>,
+            transform: Function(T) -> T
+        ) -> Option<T> {
+            return this
+        },
+
+        flat_map = function<U>(
+            this: Nothing<T>,
+            transform: Function(T) -> Option<U>
+        ) -> Option<U> {
+            return this
+        },
+
+        or = function(
+            this: Nothing<T>,
+            alternative: Option<T>
+        ) -> Option<T> {
+            return alternative
+        },
+
+        get_value_or = function(
+            this: Nothing<T>,
+            defaultValue: T
+        ) -> T {
+            return defaultValue
+        },
     }
 
     type Something<T> implements Option<T> {
@@ -30,6 +62,35 @@ const stdlib = `
         get_value = function(this: Something<T>) -> T {
             return this.value
         }
+
+        map = function(
+            this: Something<T>,
+            transform: Function(T) -> T
+        ) -> Option<T> {
+            mapped_value = transform(this.value)
+            return Something<T>(mapped_value)
+        },
+
+        flat_map = function<U>(
+            this: Something<T>,
+            transform: Function(T) -> Option<U>
+        ) -> Option<U> {
+            return transform(this.value)
+        },
+
+        or = function(
+            this: Something<T>,
+            alternative: Option<T>
+        ) -> Option<T> {
+            return this
+        },
+
+        get_value_or = function(
+            this: Something<T>,
+            defaultValue: T
+        ) -> T {
+            return this.value
+        },
     }
 
     type Result<T, E> {
@@ -89,6 +150,8 @@ const stdlib = `
     type Node<T> {
         append: Function(Node<T>, T) -> Node<T>,
         at: Function(Node<T>, Number) -> Option<T>,
+        insert_at: Function(Node<T>, Number, T) -> Node<T>,
+        remove_at: Function(Node<T>, Number) -> Node<T>,
         size: Function(Node<T>) -> Number,
     }
 
@@ -108,6 +171,22 @@ const stdlib = `
             return this.next.at(index - 1)
         },
 
+        insert_at = function(this: Container<T>, index: Number, element: T) -> Node<T> {
+            if (index == 0) {
+                return Container<T>(this, element)
+            }
+            this.next = this.next.insert_at(index - 1, element)
+            return this
+        },
+
+        remove_at = function(this: Container<T>, index: Number) -> Node<T> {
+            if (index == 0) {
+                return this.next
+            }
+            this.next = this.next.remove_at(index - 1)
+            return this
+        },
+
         size = function(this: Container<T>) -> Number {
             return this.next.size() + 1
         },
@@ -120,6 +199,14 @@ const stdlib = `
 
         at = function(this: Empty<T>, index: Number) -> Option<T> {
             return Nothing<T>()
+        },
+
+        insert_at = function(this: Empty<T>, index: Number, element: T) -> Node<T> {
+            return Container<T>(this, element)
+        },
+
+        remove_at = function(this: Empty<T>, index: Number) -> Node<T> {
+            return this
         },
 
         size = function(this: Empty<T>) -> Number {
@@ -141,6 +228,16 @@ const stdlib = `
         at = function(this: List<T>, index: Number) -> Option<T> {
             return this.first.at(index)
         },
+
+        insert_at = function(this: List<T>, index: Number, element: T) {
+            this.first = this.first.insert_at(index, element)
+        },
+
+        remove_at = function(this: List<T>, index: Number) -> Option<T> {
+            element = this.at(index)
+            this.first = this.first.remove_at(index)
+            return element
+        }
 
         size = function(this: List<T>) -> Number {
             return this.first.size()
