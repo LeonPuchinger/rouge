@@ -296,6 +296,9 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     const returnTypeFindings = returnTypeAnalysis
       .unwrapOr(AnalysisFindings.empty());
     findings = AnalysisFindings.merge(findings, returnTypeFindings);
+    if (returnTypeFindings.isErroneous()) {
+      return findings;
+    }
     returnTypeAnalysis.then((findings) => {
       const returnType = this.returnType
         .map((literal) => literal.resolveType(environment))
