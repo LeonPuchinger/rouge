@@ -1,6 +1,8 @@
 import {
   alt_sc,
   apply,
+  kleft,
+  kmid,
   kright,
   list_sc,
   opt_sc,
@@ -18,6 +20,7 @@ import { SymbolFlags } from "../symbol.ts";
 import {
   CompositeSymbolType,
   FunctionSymbolType,
+  PlaceholderSymbolType,
   SymbolType,
 } from "../type.ts";
 import { zip } from "../util/array.ts";
@@ -40,6 +43,7 @@ export type TypeLiteralAstNode =
 export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
   name!: Token<TokenKind>;
   parameters!: TypeLiteralAstNode[];
+  placeholders!: Token<TokenKind>[];
   returnType!: Option<TypeLiteralAstNode>;
   closingParenthesis!: Option<Token<TokenKind>>;
 
@@ -50,6 +54,16 @@ export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
   }
 
   resolveType(environment: ExecutionEnvironment): SymbolType {
+    const placeholders = new Map<string, PlaceholderSymbolType>(
+      this.placeholders.map((placeholder) => [
+        placeholder.text,
+        new PlaceholderSymbolType({ name: placeholder.text }),
+      ]),
+    );
+    environment.typeTable.pushScope();
+    for (const placeholder of placeholders.values()) {
+      environment.typeTable.setType(placeholder.name, placeholder);
+    }
     const parameterTypes = this.parameters.map((parameter) =>
       parameter.resolveType(environment)
     );
@@ -57,14 +71,36 @@ export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       node.resolveType(environment)
     )
       .unwrapOr(nothingType(environment));
+    environment.typeTable.popScope();
     return new FunctionSymbolType({
       parameterTypes: parameterTypes,
+      placeholders: placeholders,
       returnType: returnType,
     });
   }
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
     let findings = AnalysisFindings.empty();
+    for (const placeholder of this.placeholders) {
+      environment.typeTable.findType(placeholder.text)
+        .then(() => {
+          findings.errors.push(AnalysisError(environment, {
+            message:
+              "Placeholders cannot have the same name as types that already exist in an outer scope.",
+            beginHighlight: DummyAstNode.fromToken(placeholder),
+            endHighlight: None(),
+            messageHighlight:
+              `A type by the name "${placeholder.text}" already exists.`,
+          }));
+        });
+    }
+    environment.typeTable.pushScope();
+    for (const placeholder of this.placeholders) {
+      const placeholderType = new PlaceholderSymbolType({
+        name: placeholder.text,
+      });
+      environment.typeTable.setType(placeholder.text, placeholderType);
+    }
     this.returnType.then((type) => {
       findings = AnalysisFindings.merge(findings, type.analyze(environment));
     });
@@ -74,6 +110,7 @@ export class FunctionTypeLiteralAstNode implements Partial<EvaluableAstNode> {
         parameter.analyze(environment),
       );
     }
+    environment.typeTable.popScope();
     return findings;
   }
 
@@ -193,9 +230,7 @@ export class CompositeTypeLiteralAstNode implements Partial<EvaluableAstNode> {
       const placeholdersAlreadySetToSuppliedTypes = zip(
         Array.from(resolvedType.placeholders.values()),
         placeholderTypes,
-      ).every(([placeholder, suppliedType]) =>
-        placeholder == suppliedType
-      );
+      ).every(([placeholder, suppliedType]) => placeholder == suppliedType);
       if (placeholdersAlreadySetToSuppliedTypes) {
         return resolvedType;
       }
@@ -259,9 +294,21 @@ export const compositeTypeLiteral = apply(
     }),
 );
 
+const placeholderNames = kleft(
+  list_sc(tok(TokenKind.ident), surround_with_breaking_whitespace(str(","))),
+  opt_sc(starts_with_breaking_whitespace(str(","))),
+);
+
+const placeholders = kmid(
+  str<TokenKind>("<"),
+  surround_with_breaking_whitespace(opt_sc(placeholderNames)),
+  str<TokenKind>(">"),
+);
+
 export const functionTypeLiteral = apply(
   seq(
     str<TokenKind>("Function"),
+    opt_sc(starts_with_breaking_whitespace(placeholders)),
     opt_sc_default<
       [
         Token<TokenKind> | undefined,
@@ -286,13 +333,15 @@ export const functionTypeLiteral = apply(
   (
     [
       keyword,
+      placeholders,
       [_openingParenthesis, parameterList, closingParenthesis],
       returnType,
     ],
   ) =>
     new FunctionTypeLiteralAstNode({
       name: keyword,
-      parameters: parameterList ?? [],
+      parameters: parameterList,
+      placeholders: placeholders ?? [],
       returnType: returnType,
       closingParenthesis: closingParenthesis,
     }),
