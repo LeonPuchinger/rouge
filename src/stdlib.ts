@@ -9,7 +9,7 @@ const stdlib = `
         has_value: Function() -> Boolean,
         get_value: Function(Option<T>) -> T,
         map: Function(Option<T>, Function(T) -> T) -> Option<T>,
-        flat_map: Function(Option<T>, Function(T) -> Option<T>) -> Option<T>,
+        flat_map: Function<U>(Option<T>, Function(T) -> Option<U>) -> Option<U>,
         or: Function(Option<T>, Option<T>) -> Option<T>,
         get_value_or: Function(Option<T>, T) -> T,
     }
@@ -30,10 +30,10 @@ const stdlib = `
             return this
         },
 
-        flat_map = function(
+        flat_map = function<U>(
             this: Nothing<T>,
-            transform: Function(T) -> Option<T>
-        ) -> Option<T> {
+            transform: Function(T) -> Option<U>
+        ) -> Option<U> {
             return this
         },
 
@@ -71,10 +71,10 @@ const stdlib = `
             return Something<T>(mapped_value)
         },
 
-        flat_map = function(
+        flat_map = function<U>(
             this: Something<T>,
-            transform: Function(T) -> Option<T>
-        ) -> Option<T> {
+            transform: Function(T) -> Option<U>
+        ) -> Option<U> {
             return transform(this.value)
         },
 
