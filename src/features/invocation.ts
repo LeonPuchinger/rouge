@@ -406,6 +406,12 @@ invocation.setPattern(apply(
     configureExpression({
       includeInvocation: false,
       includeChainedAccess: false,
+      // disabled to improve parsing performance,
+      // but does make the grammar less permissive
+      includeBooleanExpression: false,
+      includeNumericExpression: false,
+      includeComplexStringLiteral: false,
+      includeFunctionDefinition: false,
     }),
     starts_with_breaking_whitespace(rhs),
   ),

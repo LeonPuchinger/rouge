@@ -201,6 +201,12 @@ chainedAccess.setPattern(
   lrec(
     configureExpression({
       includeChainedAccess: false,
+      // disabled to improve parsing performance,
+      // but does make the grammar less permissive
+      includeBooleanExpression: false,
+      includeNumericExpression: false,
+      includeComplexStringLiteral: false,
+      includeFunctionDefinition: false,
     }),
     postfix,
     (parent: EvaluableAstNode, postfixFn) => {
