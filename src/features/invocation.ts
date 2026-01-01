@@ -44,7 +44,7 @@ import {
 } from "./expression.ts";
 import { ReturnValueContainer } from "./function.ts";
 import { invocation } from "./parser_declarations.ts";
-import { ReferenceExpressionAstNode } from "./symbol_expression.ts";
+import { PropertyAccessAstNode } from "./symbol_expression.ts";
 
 /* AST NODES */
 
@@ -443,7 +443,10 @@ export const propertyInvocation = apply(
     return (parent: EvaluableAstNode) =>
       new InvocationAstNode({
         parent: parent,
-        symbol: new ReferenceExpressionAstNode(identifierToken),
+        symbol: new PropertyAccessAstNode({
+          identifierToken: identifierToken,
+          parent: parent,
+        }),
         parameters: parameters ?? [],
         placeholders: placeholders ?? [],
         openParenthesis: openParenthesis,
