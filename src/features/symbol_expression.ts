@@ -15,7 +15,10 @@ import { CompositeSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
 import { CompositeSymbolType, IgnoreSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
-import { ends_with_breaking_whitespace } from "../util/parser.ts";
+import {
+  ends_with_breaking_whitespace,
+  starts_with_breaking_whitespace,
+} from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import { configureExpression } from "./expression.ts";
 import { propertyInvocation } from "./invocation.ts";
@@ -208,7 +211,7 @@ chainedAccess.setPattern(
       includeComplexStringLiteral: false,
       includeFunctionDefinition: false,
     }),
-    postfix,
+    starts_with_breaking_whitespace(postfix),
     (parent: EvaluableAstNode, postfixFn) => {
       return postfixFn(parent);
     },
