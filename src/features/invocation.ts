@@ -404,6 +404,7 @@ const rhs = seq(
 invocation.setPattern(apply(
   seq(
     configureExpression({
+      includeInvocation: false,
       includeChainedAccess: false,
     }),
     starts_with_breaking_whitespace(rhs),

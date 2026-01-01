@@ -199,7 +199,9 @@ const postfix = alt_sc(
 
 chainedAccess.setPattern(
   lrec(
-    configureExpression({}),
+    configureExpression({
+      includeChainedAccess: false,
+    }),
     postfix,
     (parent: EvaluableAstNode, postfixFn) => {
       return postfixFn(parent);
