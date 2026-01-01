@@ -30,10 +30,8 @@ import { DummyAstNode } from "../util/snippet.ts";
 import { concatLines } from "../util/string.ts";
 import { WithOptionalAttributes } from "../util/type.ts";
 import { expression } from "./expression.ts";
-import {
-  PropertyAccessAstNode,
-  referenceExpression,
-} from "./symbol_expression.ts";
+import { referenceExpression } from "./parser_declarations.ts";
+import { PropertyAccessAstNode } from "./symbol_expression.ts";
 import { typeLiteral, TypeLiteralAstNode } from "./type_literal.ts";
 
 /* AST NODES */

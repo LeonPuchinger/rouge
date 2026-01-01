@@ -1,4 +1,12 @@
-import { apply, kright, rep_sc, seq, str, tok, Token } from "typescript-parsec";
+import {
+  alt_sc,
+  apply,
+  kright,
+  lrec,
+  str,
+  tok,
+  Token,
+} from "typescript-parsec";
 import { EvaluableAstNode } from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisError, AnalysisFindings } from "../finding.ts";
@@ -7,11 +15,11 @@ import { CompositeSymbolValue, SymbolFlags, SymbolValue } from "../symbol.ts";
 import { CompositeSymbolType, IgnoreSymbolType, SymbolType } from "../type.ts";
 import { InternalError } from "../util/error.ts";
 import { None } from "../util/monad/index.ts";
-import {
-  ends_with_breaking_whitespace,
-  starts_with_breaking_whitespace,
-} from "../util/parser.ts";
+import { ends_with_breaking_whitespace } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
+import { configureExpression } from "./expression.ts";
+import { propertyInvocation } from "./invocation.ts";
+import { chainedAccess, referenceExpression } from "./parser_declarations.ts";
 
 /* AST NODES */
 
@@ -166,33 +174,35 @@ export class PropertyAccessAstNode implements EvaluableAstNode {
 
 /* PARSER */
 
-export const propertyAccess = kright(
-  ends_with_breaking_whitespace(str<TokenKind>(".")),
-  tok(TokenKind.ident),
-);
-
-export const referenceExpression = apply(
-  tok(TokenKind.ident),
-  (identifier) => new ReferenceExpressionAstNode(identifier),
-);
-
-export const symbolExpression = apply(
-  seq(
-    referenceExpression,
-    rep_sc(
-      starts_with_breaking_whitespace(
-        propertyAccess,
-      ),
-    ),
+referenceExpression.setPattern(
+  apply(
+    tok(TokenKind.ident),
+    (identifier) => new ReferenceExpressionAstNode(identifier),
   ),
-  ([rootSymbol, propertyAccesses]) => {
-    return propertyAccesses.reduce(
-      (parent, property) =>
-        new PropertyAccessAstNode({
-          identifierToken: property,
-          parent,
-        }),
-      rootSymbol,
-    );
+);
+
+export const propertyAccess = apply(
+  kright(
+    ends_with_breaking_whitespace(str<TokenKind>(".")),
+    tok(TokenKind.ident),
+  ),
+  (identifier) => {
+    return (parent: EvaluableAstNode) =>
+      new PropertyAccessAstNode({ identifierToken: identifier, parent });
   },
+);
+
+const postfix = alt_sc(
+  propertyInvocation,
+  propertyAccess,
+);
+
+chainedAccess.setPattern(
+  lrec(
+    configureExpression({}),
+    postfix,
+    (parent: EvaluableAstNode, postfixFn) => {
+      return postfixFn(parent);
+    },
+  ),
 );
