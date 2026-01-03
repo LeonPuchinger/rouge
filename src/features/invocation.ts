@@ -1,13 +1,11 @@
 import {
-  alt_sc,
   apply,
   kleft,
   kmid,
+  kright,
   list_sc,
   opt,
   opt_sc,
-  Parser,
-  rep_sc,
   seq,
   str,
   tok,
@@ -33,6 +31,7 @@ import { zip } from "../util/array.ts";
 import { memoize } from "../util/memoize.ts";
 import { None, Some } from "../util/monad/option.ts";
 import {
+  ends_with_breaking_whitespace,
   starts_with_breaking_whitespace,
   surround_with_breaking_whitespace,
 } from "../util/parser.ts";
@@ -44,13 +43,8 @@ import {
   ExpressionAstNode,
 } from "./expression.ts";
 import { ReturnValueContainer } from "./function.ts";
-import { invocation } from "./parser_declarations.ts";
-import {
-  propertyAccess,
-  PropertyAccessAstNode,
-  referenceExpression,
-  ReferenceExpressionAstNode,
-} from "./symbol_expression.ts";
+import { functionInvocation } from "./parser_declarations.ts";
+import { PropertyAccessAstNode } from "./symbol_expression.ts";
 
 /* AST NODES */
 
@@ -400,72 +394,69 @@ const parameters = kleft(
   opt_sc(starts_with_breaking_whitespace(str(","))),
 );
 
-const memberAccess = apply(
-  seq(
-    referenceExpression,
-    rep_sc(
-      starts_with_breaking_whitespace(
-        propertyAccess,
-      ),
-    ),
-  ),
-  ([rootSymbol, propertyAccesses]) => {
-    const [parent, finalMember] = propertyAccesses.reduce<
-      [ReferenceExpressionAstNode | undefined, ReferenceExpressionAstNode]
-    >(
-      ([_, currentMember], property) => {
-        const newMember = new PropertyAccessAstNode({
-          identifierToken: property,
-          parent: currentMember,
-        });
-        return [currentMember, newMember];
-      },
-      [undefined, rootSymbol],
-    );
-    return [parent, finalMember] as [
-      ReferenceExpressionAstNode | undefined,
-      ReferenceExpressionAstNode,
-    ];
-  },
+const rhs = seq(
+  opt_sc(placeholders),
+  starts_with_breaking_whitespace(str("(")),
+  opt(starts_with_breaking_whitespace(parameters)),
+  starts_with_breaking_whitespace(str(")")),
 );
 
-const customExpression: Parser<TokenKind, [
-  EvaluableAstNode | undefined,
-  EvaluableAstNode,
-]> = alt_sc(
-  memberAccess,
-  apply(
+functionInvocation.setPattern(apply(
+  seq(
     configureExpression({
-      includeInvocation: false,
-      includeSymbolExpression: false,
+      includeFunctionInvocation: false,
+      includeChainedAccess: false,
+      // disabled to improve parsing performance,
+      // but does make the grammar less permissive
+      includeBooleanExpression: false,
+      includeNumericExpression: false,
+      includeComplexStringLiteral: false,
+      includeFunctionDefinition: false,
     }),
-    (result) => [undefined, result],
-  ),
-);
-
-invocation.setPattern(apply(
-  seq(
-    customExpression,
-    opt_sc(starts_with_breaking_whitespace(placeholders)),
-    starts_with_breaking_whitespace(str("(")),
-    opt(starts_with_breaking_whitespace(parameters)),
-    starts_with_breaking_whitespace(str(")")),
+    starts_with_breaking_whitespace(rhs),
   ),
   (
     [
-      [parent, member],
-      placeholders,
-      openParenthesis,
-      parameters,
-      closingParenthesis,
+      callee,
+      [placeholders, openParenthesis, parameters, closingParenthesis],
     ],
   ) =>
     new InvocationAstNode({
-      parent: parent,
-      symbol: member,
+      symbol: callee,
       parameters: parameters ?? [],
       placeholders: placeholders ?? [],
       openParenthesis: openParenthesis,
       closingParenthesis: closingParenthesis,
     }),
 ));
+
+export const propertyInvocation = apply(
+  seq(
+    kright(
+      ends_with_breaking_whitespace(str<TokenKind>(".")),
+      tok(TokenKind.ident),
+    ),
+    starts_with_breaking_whitespace(rhs),
+  ),
+  (
+    [identifierToken, [
+      placeholders,
+      openParenthesis,
+      parameters,
+      closingParenthesis,
+    ]],
+  ) => {
+    return (parent: EvaluableAstNode) =>
+      new InvocationAstNode({
+        parent: parent,
+        symbol: new PropertyAccessAstNode({
+          identifierToken: identifierToken,
+          parent: parent,
+        }),
+        parameters: parameters ?? [],
+        placeholders: placeholders ?? [],
+        openParenthesis: openParenthesis,
+        closingParenthesis: closingParenthesis,
+      });
+  },
+);

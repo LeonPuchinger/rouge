@@ -11,6 +11,8 @@ import { StatementsAstNode } from "./statement.ts";
 import { ComplexStringAstNode } from "./string.ts";
 import { NumericExpressionAstNode } from "./numeric_expression.ts";
 import { BooleanExpressionAstNode } from "./boolean_expression.ts";
+import { EvaluableAstNode } from "../ast.ts";
+import { ReferenceExpressionAstNode } from "./symbol_expression.ts";
 
 /*
 This file contains uninitialized parser declarations.
@@ -56,7 +58,7 @@ export const functionDefinition = rule<TokenKind, FunctionDefinitionAstNode>();
 
 export const returnStatement = rule<TokenKind, ReturnStatementAstNode>();
 
-export const invocation = rule<TokenKind, InvocationAstNode>();
+export const functionInvocation = rule<TokenKind, InvocationAstNode>();
 
 export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 
@@ -65,3 +67,7 @@ export const booleanExpression = rule<TokenKind, BooleanExpressionAstNode>();
 export const complexStringLiteral = rule<TokenKind, ComplexStringAstNode>();
 
 export const statements = rule<TokenKind, StatementsAstNode>();
+
+export const chainedAccess = rule<TokenKind, EvaluableAstNode>();
+
+export const referenceExpression = rule<TokenKind, ReferenceExpressionAstNode>();

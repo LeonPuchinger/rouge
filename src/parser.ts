@@ -15,6 +15,7 @@ import "./features/invocation.ts";
 import "./features/numeric_expression.ts";
 import "./features/boolean_expression.ts";
 import "./features/string.ts";
+import "./features/symbol_expression.ts";
 
 /**
  * Top level production/entry point to the parser

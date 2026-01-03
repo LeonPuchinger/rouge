@@ -9,12 +9,13 @@ import { alt_longest_var } from "../util/parser.ts";
 import { Attributes } from "../util/type.ts";
 import {
   booleanExpression,
+  chainedAccess,
   complexStringLiteral,
   functionDefinition,
-  invocation,
+  functionInvocation,
   numericExpression,
+  referenceExpression,
 } from "./parser_declarations.ts";
-import { symbolExpression } from "./symbol_expression.ts";
 
 /* AST NODES */
 
@@ -61,11 +62,12 @@ export class ExpressionAstNode
 /* PARSER */
 
 type ExpressionOptions = {
-  includeInvocation?: boolean;
+  includeFunctionInvocation?: boolean;
   includeBooleanExpression?: boolean;
   includeNumericExpression?: boolean;
   includeComplexStringLiteral?: boolean;
-  includeSymbolExpression?: boolean;
+  includeReferenceExpression?: boolean;
+  includeChainedAccess?: boolean;
   includeFunctionDefinition?: boolean;
 };
 
@@ -74,19 +76,21 @@ type ExpressionOptions = {
  * user to disable certain kinds of expressions.
  */
 export function configureExpression({
-  includeInvocation = true,
+  includeFunctionInvocation = true,
   includeBooleanExpression = true,
   includeNumericExpression = true,
   includeComplexStringLiteral = true,
-  includeSymbolExpression = true,
+  includeReferenceExpression = true,
+  includeChainedAccess = true,
   includeFunctionDefinition = true,
 }: ExpressionOptions): Parser<TokenKind, ExpressionAstNode> {
   const enabledParsers = (<[Parser<TokenKind, EvaluableAstNode>, boolean][]> [
-    [invocation, includeInvocation],
+    [functionInvocation, includeFunctionInvocation],
     [booleanExpression, includeBooleanExpression],
     [numericExpression, includeNumericExpression],
     [complexStringLiteral, includeComplexStringLiteral],
-    [symbolExpression, includeSymbolExpression],
+    [referenceExpression, includeReferenceExpression],
+    [chainedAccess, includeChainedAccess],
     [functionDefinition, includeFunctionDefinition],
   ]).filter(([_, enabled]) => enabled)
     .map(([parser, _]) => parser);
