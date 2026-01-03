@@ -58,7 +58,7 @@ export const functionDefinition = rule<TokenKind, FunctionDefinitionAstNode>();
 
 export const returnStatement = rule<TokenKind, ReturnStatementAstNode>();
 
-export const invocation = rule<TokenKind, InvocationAstNode>();
+export const functionInvocation = rule<TokenKind, InvocationAstNode>();
 
 export const numericExpression = rule<TokenKind, NumericExpressionAstNode>();
 

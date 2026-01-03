@@ -43,7 +43,7 @@ import {
   ExpressionAstNode,
 } from "./expression.ts";
 import { ReturnValueContainer } from "./function.ts";
-import { invocation } from "./parser_declarations.ts";
+import { functionInvocation } from "./parser_declarations.ts";
 import { PropertyAccessAstNode } from "./symbol_expression.ts";
 
 /* AST NODES */
@@ -401,10 +401,10 @@ const rhs = seq(
   starts_with_breaking_whitespace(str(")")),
 );
 
-invocation.setPattern(apply(
+functionInvocation.setPattern(apply(
   seq(
     configureExpression({
-      includeInvocation: false,
+      includeFunctionInvocation: false,
       includeChainedAccess: false,
       // disabled to improve parsing performance,
       // but does make the grammar less permissive

@@ -12,7 +12,7 @@ import {
   chainedAccess,
   complexStringLiteral,
   functionDefinition,
-  invocation,
+  functionInvocation,
   numericExpression,
   referenceExpression,
 } from "./parser_declarations.ts";
@@ -62,7 +62,7 @@ export class ExpressionAstNode
 /* PARSER */
 
 type ExpressionOptions = {
-  includeInvocation?: boolean;
+  includeFunctionInvocation?: boolean;
   includeBooleanExpression?: boolean;
   includeNumericExpression?: boolean;
   includeComplexStringLiteral?: boolean;
@@ -76,7 +76,7 @@ type ExpressionOptions = {
  * user to disable certain kinds of expressions.
  */
 export function configureExpression({
-  includeInvocation = true,
+  includeFunctionInvocation = true,
   includeBooleanExpression = true,
   includeNumericExpression = true,
   includeComplexStringLiteral = true,
@@ -85,7 +85,7 @@ export function configureExpression({
   includeFunctionDefinition = true,
 }: ExpressionOptions): Parser<TokenKind, ExpressionAstNode> {
   const enabledParsers = (<[Parser<TokenKind, EvaluableAstNode>, boolean][]> [
-    [invocation, includeInvocation],
+    [functionInvocation, includeFunctionInvocation],
     [booleanExpression, includeBooleanExpression],
     [numericExpression, includeNumericExpression],
     [complexStringLiteral, includeComplexStringLiteral],
