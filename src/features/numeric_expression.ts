@@ -288,7 +288,7 @@ const factor: Parser<TokenKind, NumericExpressionAstNode> = alt_sc(
 const product = (params: { allow_unary: boolean } = { allow_unary: false }) =>
   operation_chain_sc(
     factor,
-    alt_sc(str("*"), str("/")),
+    alt_sc(str("*"), str("/"), str("%")),
     (first, op, second: NumericExpressionAstNode) =>
       new BinaryNumericExpressionAstNode({
         lhs: first,
