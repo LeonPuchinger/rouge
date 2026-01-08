@@ -10,7 +10,12 @@ import {
   tok,
   Token,
 } from "typescript-parsec";
-import { AstNode, EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import {
+  AnalysisOptions,
+  AstNode,
+  EvaluableAstNode,
+  InterpretableAstNode,
+} from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import {
   AnalysisError,
@@ -228,7 +233,10 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
     return findings;
   }
 
-  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+  analyze(
+    environment: ExecutionEnvironment,
+    options?: AnalysisOptions,
+  ): AnalysisFindings {
     let findings = AnalysisFindings.empty();
     let unproblematicPlaceholders: string[] = [];
     for (const placeholder of this.placeholders) {
@@ -310,6 +318,14 @@ export class FunctionDefinitionAstNode implements EvaluableAstNode {
         );
       }
     });
+    // allow recursive functions
+    if (options?.assignmentTarget !== undefined) {
+      const functionType = this.resolveType(environment);
+      environment.analysisTable.setSymbol(
+        options.assignmentTarget,
+        new StaticSymbol({ valueType: functionType }),
+      );
+    }
     findings = AnalysisFindings.merge(
       findings,
       this.statements.analyze(environment),

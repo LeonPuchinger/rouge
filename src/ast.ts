@@ -7,6 +7,16 @@ import { SymbolFlags, SymbolValue } from "./symbol.ts";
 import { SymbolType } from "./type.ts";
 
 /**
+ * Used to provide additional context during static analysis of AST nodes.
+ * Instances of this type are meant to be passed down the call stack
+ * to child AST nodes during analysis.
+ */
+export type AnalysisOptions = Partial<{
+  assignmentTarget: string;
+  b: boolean;
+}>;
+
+/**
  * The common super type for every AST node in the interpreter.
  * However, this interface is usually not implemented directly.
  * Rather, its subtypes `EvaluableAstNode` and `InterpretableAstNode` are implemented.
@@ -16,8 +26,14 @@ export interface AstNode {
    * Performs the static analysis of the AST node and yields its results.
    * This method is also responsible for gathering the analysis results of any of its
    * child AST nodes and merging them with the results of its own analysis.
+   * Analysis works top-down, meaning that parent AST nodes call `analyze` on their children.
+   * In rare cases, the parent AST node might need to provide additional context to its children
+   * during analysis. This can be done through the optional `options` parameter.
    */
-  analyze(environment: ExecutionEnvironment): AnalysisFindings;
+  analyze(
+    environment: ExecutionEnvironment,
+    options?: AnalysisOptions,
+  ): AnalysisFindings;
 
   /**
    * Returns a range of tokens that represent the extent of the input source code that each AST node covers.

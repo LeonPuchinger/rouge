@@ -47,8 +47,8 @@ export class VariableAssignmentAstNode implements InterpretableAstNode {
   }
 
   analyze(environment: ExecutionEnvironment): AnalysisFindings {
-    let findings = this.value.analyze(environment);
     const ident = this.assignee.text;
+    let findings = this.value.analyze(environment, { assignmentTarget: ident });
     const existingSymbol = environment.analysisTable.findSymbol(ident);
     const isInitialAssignment = !existingSymbol.hasValue();
     const expressionFindingsErroneous = findings.isErroneous();

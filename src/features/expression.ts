@@ -1,5 +1,9 @@
 import { apply, fail, Parser, Token } from "typescript-parsec";
-import { EvaluableAstNode, InterpretableAstNode } from "../ast.ts";
+import {
+  AnalysisOptions,
+  EvaluableAstNode,
+  InterpretableAstNode,
+} from "../ast.ts";
 import { ExecutionEnvironment } from "../execution.ts";
 import { AnalysisFindings } from "../finding.ts";
 import { TokenKind } from "../lexer.ts";
@@ -27,8 +31,11 @@ export class ExpressionAstNode
     Object.assign(this, params);
   }
 
-  analyze(environment: ExecutionEnvironment): AnalysisFindings {
-    return this.child.analyze(environment);
+  analyze(
+    environment: ExecutionEnvironment,
+    options?: AnalysisOptions,
+  ): AnalysisFindings {
+    return this.child.analyze(environment, options);
   }
 
   evaluate(environment: ExecutionEnvironment): SymbolValue<unknown> {
