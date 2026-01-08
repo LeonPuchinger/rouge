@@ -16,6 +16,7 @@ export enum TokenKind {
   stringContents,
   stringDelimiter,
   stringInterpolationDelimiter,
+  stringEscapeSequence,
   unspecified,
 }
 
@@ -45,9 +46,9 @@ statements.push(
 stringLiteral.push(
   [true, /^"/g, TokenKind.stringDelimiter, "pop"],
   [true, /^\${/g, TokenKind.stringInterpolationDelimiter, statements],
+  [true, /^\\./g, TokenKind.stringEscapeSequence],
   [true, /^\\"/g, TokenKind.stringContents],
   [true, /^\$/g, TokenKind.stringContents],
-  [true, /^\\\${/g, TokenKind.stringContents],
   [true, /^[^"$\\]+/g, TokenKind.stringContents],
 );
 
