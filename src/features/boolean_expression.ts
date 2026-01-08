@@ -59,18 +59,33 @@ class BooleanLiteralAstNode implements BooleanExpressionAstNode {
 
 class BooleanNegationAstNode implements BooleanExpressionAstNode {
   negationToken!: Token<TokenKind>;
-  child!: BooleanExpressionAstNode;
+  child!: EvaluableAstNode;
 
   constructor(params: Attributes<BooleanNegationAstNode>) {
     Object.assign(this, params);
   }
 
-  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
-    return AnalysisFindings.empty();
+  analyze(environment: ExecutionEnvironment): AnalysisFindings {
+    const findings = this.child.analyze(environment);
+    if (findings.isErroneous()) {
+      return findings;
+    }
+    const childType = this.child.resolveType(environment);
+    if (!childType.isFundamental("Boolean")) {
+      findings.errors.push(AnalysisError(environment, {
+        message: "Only expressions that evaluate to a Boolean can be negated.",
+        beginHighlight: this,
+        endHighlight: None(),
+      }));
+    }
+    return findings;
   }
 
   evaluate(environment: ExecutionEnvironment): SymbolValue<boolean> {
-    return this.child.evaluate(environment).map((value) => !value);
+    // the value can safely be type-casted because their type has been checked during analysis
+    return (this.child
+      .evaluate(environment) as SymbolValue<boolean>)
+      .map((value) => !(value as boolean));
   }
 
   resolveType(_environment: ExecutionEnvironment): SymbolType {
@@ -217,7 +232,7 @@ const literal = apply(
 const negation: Parser<TokenKind, BooleanExpressionAstNode> = apply(
   seq(
     str("!"),
-    booleanExpression,
+    configureExpression({}),
   ),
   ([token, expression]) =>
     new BooleanNegationAstNode({
