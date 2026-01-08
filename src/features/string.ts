@@ -73,6 +73,55 @@ class StringContentsAstNode implements EvaluableAstNode {
   }
 }
 
+const ESCAPE_SEQUENCE_SUBSTITUTIONS = new Map<string, string>(
+  Object.entries(
+    {
+      '\\"': '"',
+      "\\$": "$",
+      "\\\\": "\\",
+      "\\n": "\n",
+      "\\r": "\r",
+      "\\t": "\t",
+    },
+  ),
+);
+
+class StringEscapeSequenceAstNode implements EvaluableAstNode {
+  escapeSequence!: Token<TokenKind>;
+
+  constructor(params: Attributes<StringEscapeSequenceAstNode>) {
+    Object.assign(this, params);
+  }
+
+  @memoize
+  evaluate(_environment: ExecutionEnvironment): StringSymbolValue {
+    let content = this.escapeSequence.text;
+    const substitution = ESCAPE_SEQUENCE_SUBSTITUTIONS.get(content);
+    if (substitution !== undefined) {
+      content = substitution;
+    }
+    return new StringSymbolValue(content);
+  }
+
+  resolveType(_environment: ExecutionEnvironment): SymbolType {
+    return new CompositeSymbolType({ id: "String" });
+  }
+
+  analyze(_environment: ExecutionEnvironment): AnalysisFindings {
+    return AnalysisFindings.empty();
+  }
+
+  tokenRange(): [Token<TokenKind>, Token<TokenKind>] {
+    return [this.escapeSequence, this.escapeSequence];
+  }
+
+  resolveFlags(
+    _environment: ExecutionEnvironment,
+  ): Map<keyof SymbolFlags, boolean> {
+    return new Map();
+  }
+}
+
 export class StringInterpolationAstNode implements EvaluableAstNode {
   beginDelimiter!: Token<TokenKind>;
   expression!: Option<EvaluableAstNode>;
@@ -199,6 +248,11 @@ const stringContents = apply(
   (token) => new StringContentsAstNode({ contents: token }),
 );
 
+const stringEscapeSequence = apply(
+  tok(TokenKind.stringEscapeSequence),
+  (token) => new StringEscapeSequenceAstNode({ escapeSequence: token }),
+);
+
 const stringInterpolation = apply(
   seq(
     str<TokenKind>("${"),
@@ -220,6 +274,7 @@ complexStringLiteral.setPattern(
       rep_sc(
         alt_sc(
           stringContents,
+          stringEscapeSequence,
           stringInterpolation,
         ),
       ),
